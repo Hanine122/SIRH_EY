@@ -1,0 +1,118 @@
+@model IEnumerable<SIRH.EY.Models.Collaborateur>
+
+@{
+    ViewData["Title"] = "Répertoire";
+    var total = Model.Count();
+}
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success"><i class="fas fa-check-circle me-1"></i> @TempData["Success"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger"><i class="fas fa-exclamation-triangle me-1"></i> @TempData["Error"]</div>
+}
+
+<div class="directory-page-header d-flex flex-column flex-lg-row justify-content-between align-items-lg-start gap-3">
+    <div>
+        <div class="ey-page-kicker">Gestion des collaborateurs</div>
+        <h1 class="ey-page-title">Répertoire</h1>
+        <p class="ey-page-lead mb-0">Gestion de <strong>@total</strong> collaborateurs EY répartis sur <strong>8</strong> bureaux internationaux.</p>
+    </div>
+    <a asp-action="Create" class="ey-btn-main text-decoration-none align-self-lg-center">
+        <i class="fas fa-plus me-1"></i> Ajouter un collaborateur
+    </a>
+</div>
+
+<div class="ey-card p-3 p-md-4 mb-4 directory-toolbar">
+    <form method="get" class="row g-3 align-items-end">
+        <div class="col-lg-4 col-md-6">
+            <label class="form-label small mb-1 text-muted fw-semibold">Recherche</label>
+            <input type="text" name="searchString" class="form-control" placeholder="Rechercher par nom, email ou poste..." value="@ViewBag.Search" />
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <label class="form-label small mb-1 text-muted fw-semibold">Département</label>
+            <select name="departement" class="form-select">
+                <option value="">Tous les départements</option>
+                @foreach (var dep in ViewBag.Departements)
+                {
+                    if (dep == ViewBag.DepartementFilter)
+                    {
+                        <option value="@dep" selected>@dep</option>
+                    }
+                    else
+                    {
+                        <option value="@dep">@dep</option>
+                    }
+                }
+            </select>
+        </div>
+        <div class="col-lg-2 col-md-4">
+            <label class="form-label small mb-1 text-muted fw-semibold">Tri</label>
+            <select name="sortOrder" class="form-select">
+                <option value="name_asc" selected="@(ViewBag.CurrentSort == "name_asc")">A → Z</option>
+                <option value="name_desc" selected="@(ViewBag.CurrentSort == "name_desc")">Z → A</option>
+            </select>
+        </div>
+        <div class="col-lg-1 col-md-4">
+            <button type="button" class="directory-filters-btn w-100" title="Filtres avancés"><i class="fas fa-sliders-h me-1"></i>Filtres</button>
+        </div>
+        <div class="col-lg-2 col-md-4">
+            <button type="submit" class="ey-btn-main w-100">Appliquer</button>
+        </div>
+    </form>
+</div>
+
+<div class="row g-3 g-xl-4">
+    @foreach (var item in Model)
+    {
+        var statut = !item.Actif ? "INACTIF" : (item.Id % 7 == 0 ? "CONGÉ" : "ACTIF");
+        var statutClass = statut == "ACTIF" ? "active" : (statut == "CONGÉ" ? "leave" : "inactive");
+        var initials = $"{(string.IsNullOrWhiteSpace(item.Prenom) ? "?" : item.Prenom[0])}{(string.IsNullOrWhiteSpace(item.Nom) ? "?" : item.Nom[0])}";
+        var tone = item.Id % 6;
+        var avatarState = statut == "CONGÉ" ? "is-conge" : (statut == "INACTIF" ? "is-inactif" : "");
+        <div class="col-sm-6 col-lg-4 col-xl-3">
+            <div class="directory-card directory-card-modern">
+                <span class="ey-pill @statutClass directory-status-pill">@statut</span>
+                <div class="d-flex justify-content-center">
+                    <div class="directory-avatar directory-avatar--tone-@tone @avatarState">@initials.ToUpperInvariant()</div>
+                </div>
+                <div class="text-center mt-3">
+                    <div class="fw-bold fs-5" style="line-height:1.2;">@item.Prenom @item.Nom</div>
+                    <div class="text-muted mt-1 small">@(item.Poste ?? "Consultant")</div>
+                    <div class="directory-grade mt-2">@((item.Grade ?? "Junior").ToUpperInvariant())</div>
+                </div>
+
+                <div class="small text-muted mt-3 directory-meta">
+                    <div class="mb-2 text-truncate" title="@item.Email"><i class="far fa-envelope me-2"></i>@item.Email</div>
+                    <div class="text-truncate" title="@(item.Departement ?? "")"><i class="fas fa-map-marker-alt me-2"></i>@(item.Departement ?? "Non renseigné")</div>
+                </div>
+
+                <div class="mt-4 d-flex flex-column gap-2">
+                    <a asp-action="Details" asp-route-id="@item.Id" class="directory-btn-profile text-decoration-none w-100 text-center">Consulter le profil <i class="fas fa-arrow-right ms-1"></i></a>
+                    @if (item.Actif)
+                    {
+                        <a asp-action="ChoisirRemplacant" asp-route-id="@item.Id" class="btn btn-sm w-100 rounded-pill text-decoration-none text-center" style="background:#111827;color:#fbbf24;border:1px solid rgba(251,191,36,.5);">
+                            <i class="fas fa-people-arrows me-1"></i> Départ / choisir un remplaçant
+                        </a>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+
+    <div class="col-sm-6 col-lg-4 col-xl-3">
+        <a asp-action="Create" class="text-decoration-none text-reset h-100 d-block">
+            <div class="directory-card d-flex flex-column justify-content-center align-items-center text-muted h-100" style="border-style:dashed;border-top-color:#cbd5e1;min-height:248px;">
+                <i class="fas fa-plus fs-2 mb-2"></i>
+                <div class="fw-semibold small">NOUVEL ENREGISTREMENT</div>
+            </div>
+        </a>
+    </div>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info mt-3">Aucun collaborateur trouvé.</div>
+}

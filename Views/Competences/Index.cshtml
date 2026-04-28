@@ -1,0 +1,183 @@
+@model IEnumerable<SIRH.EY.Models.Competence>
+
+@{
+    ViewData["Title"] = "Compétences";
+    var collaborateurNom = ViewBag.CollaborateurNom;
+    var grade = ViewBag.GradeCollaborateur as string;
+    var categories = ViewBag.Categories as List<string> ?? new List<string>();
+    var categorieCourante = ViewBag.CategorieCourante as string;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3">Compétences de @collaborateurNom</h1>
+        <p class="text-muted">Grade actuel : <strong>@(grade ?? "Non défini")</strong></p>
+    </div>
+    <div>
+        <a asp-action="Create" asp-route-collaborateurId="@ViewBag.CollaborateurId" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Nouvelle compétence
+        </a>
+    </div>
+</div>
+
+<div class="ey-form-shell p-3 mb-4">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+        <div class="small fw-semibold text-muted">Filtrer et explorer</div>
+        <div class="small text-muted">@Model.Count() compétence(s)</div>
+    </div>
+    <div class="card-body p-0">
+        <form method="get" class="row g-3">
+            <input type="hidden" name="collaborateurId" value="@ViewBag.CollaborateurId" />
+            <div class="col-md-8">
+                <label class="form-label">Filtrer par catégorie</label>
+                <select name="categorie" class="form-select ey-select">
+                    <option value="">Toutes les catégories</option>
+                    @foreach (var cat in categories)
+                    {
+                        if (cat == categorieCourante)
+                        {
+                            <option value="@cat" selected>@cat</option>
+                        }
+                        else
+                        {
+                            <option value="@cat">@cat</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+                <button type="submit" class="ey-btn-main w-100">Filtrer</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="row g-4">
+    @foreach (var comp in Model)
+    {
+        var seuilRequis = SIRH.EY.Services.CompetenceRules.GetSeuilRequis(grade ?? "Junior");
+        bool sousSeuil = comp.NiveauActuel < seuilRequis;
+        var evaluation = comp.EvaluationCompetence;
+        var seuilRhPourcent = evaluation?.SeuilRh ?? (comp.NiveauCible * 20);
+        var autoEvalPourcent = evaluation?.AutoEvaluationCollaborateur;
+        var managerPourcent = evaluation?.EvaluationManager;
+        var cardState = comp.NiveauActuel >= comp.NiveauCible ? "is-ontrack" : (comp.NiveauCible - comp.NiveauActuel <= 1 ? "is-watch" : "is-critical");
+        <div class="col-md-6 col-lg-4">
+            <div class="ey-card ey-competence-card ey-interactive-card @cardState">
+                <div class="card-body">
+                    <h5 class="card-title">@comp.Nom</h5>
+                    <span class="badge bg-light text-dark mb-2 border">@comp.Categorie</span>
+                    <div class="mt-3">
+                        <div class="d-flex justify-content-between small">
+                            <span>Niveau Actuel</span><span>@comp.NiveauActuel/5</span>
+                        </div>
+                        <div class="progress mt-1 mb-3" style="height:6px">
+                            @{
+                                string couleur = comp.NiveauActuel >= comp.NiveauCible ? "bg-success" : (comp.NiveauCible - comp.NiveauActuel <= 1 ? "bg-warning" : "bg-danger");
+                            }
+                            <div class="progress-bar @couleur" style="width: @((comp.NiveauActuel/5.0)*100)%"></div>
+                        </div>
+                        <div class="d-flex justify-content-between small">
+                            <span>Niveau Cible</span><span>@comp.NiveauCible/5</span>
+                        </div>
+                        <div class="progress mt-1" style="height:6px">
+                            <div class="progress-bar bg-secondary" style="width: @((comp.NiveauCible/5.0)*100)%"></div>
+                        </div>
+                    </div>
+                    <div class="mt-2 text-muted small">
+                        <i class="far fa-calendar-alt"></i> @comp.DateEvaluation.ToString("dd/MM/yyyy")
+                    </div>
+                    @if (comp.NiveauActuel < comp.NiveauCible)
+                    {
+                        <div class="alert alert-warning mt-2 py-1 small">
+                            <i class="fas fa-exclamation-triangle"></i> Gap : @(comp.NiveauCible - comp.NiveauActuel) niveau(x)
+                        </div>
+                    }
+                    @if (sousSeuil)
+                    {
+                        <div class="alert alert-danger mt-2 py-1 small">
+                            <i class="fas fa-times-circle"></i> Niveau insuffisant pour un @grade (requis : @seuilRequis/5)
+                        </div>
+                    }
+                    <div class="ey-meta-panel p-2 mt-3">
+                        <div class="small text-muted fw-semibold mb-2">Pilotage RH & évaluations</div>
+                        <div class="d-flex justify-content-between small mb-1">
+                            <span>Objectif RH</span><strong>@seuilRhPourcent%</strong>
+                        </div>
+                        <div class="d-flex justify-content-between small mb-1">
+                            <span>Auto-évaluation collaborateur</span>
+                            <strong>@(autoEvalPourcent.HasValue ? $"{autoEvalPourcent.Value}%" : "Non saisie")</strong>
+                        </div>
+                        <div class="d-flex justify-content-between small">
+                            <span>Validation manager</span>
+                            <strong>
+                                @if (managerPourcent.HasValue)
+                                {
+                                    <span class="ey-dot-live ok"></span><span>@managerPourcent.Value%</span>
+                                }
+                                else
+                                {
+                                    <span class="ey-dot-live pending"></span><span>En attente</span>
+                                }
+                            </strong>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent border-0 pt-0">
+                    <div class="d-grid gap-2">
+                        <a asp-action="AutoEvaluation" asp-route-id="@comp.Id" class="ey-btn-ghost w-100 text-center text-decoration-none">
+                            <i class="fas fa-user-edit"></i> Auto-évaluation
+                        </a>
+                        <a asp-action="ValidationManager" asp-route-id="@comp.Id" class="ey-btn-main w-100 text-center text-decoration-none">
+                            <i class="fas fa-user-check"></i> Validation manager
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Plan de développement -->
+<div class="mt-5">
+    <h4>Plan de développement personnalisé</h4>
+    @if (ViewBag.PlanDeveloppement != null && ((List<SIRH.EY.Models.PlanDeveloppement>)ViewBag.PlanDeveloppement).Any())
+    {
+        <div class="row">
+            @foreach (var plan in ViewBag.PlanDeveloppement)
+            {
+                <div class="col-md-4">
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <h6 class="card-title">@plan.Formation?.Titre</h6>
+                            <p class="card-text small">Statut : @plan.Statut</p>
+                            <p class="card-text small">Recommandé le : @plan.DateRecommandation.ToString("dd/MM/yyyy")</p>
+                            <button class="btn btn-sm btn-outline-primary" onclick="alert('Détails à venir')">Détails</button>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <p class="text-muted">Aucune formation recommandée pour le moment.</p>
+    }
+</div>
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info mt-4">Aucune compétence trouvée pour ce collaborateur.</div>
+}
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success mt-4"><i class="fas fa-check-circle me-1"></i> @TempData["Success"]</div>
+}
+<div class="mt-4 d-flex gap-2 flex-wrap">
+    <a asp-action="MatriceEquipe" asp-route-collaborateurId="@ViewBag.CollaborateurId" class="ey-btn-ghost text-decoration-none">
+        Matrice équipe
+    </a>
+    <a asp-controller="Collaborateurs" asp-action="Index" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Retour au Core RH
+    </a>
+</div>

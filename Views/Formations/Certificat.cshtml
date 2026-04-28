@@ -1,0 +1,29 @@
+@model SIRH.EY.Models.Inscription
+
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Certificat de formation</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }
+        h1 { color: #005c8a; }
+        .certificat { border: 2px solid #ddd; padding: 30px; width: 80%; margin: auto; }
+        .date { margin-top: 30px; font-style: italic; }
+    </style>
+</head>
+<body>
+    <div class="certificat">
+        <h1>Certificat de formation</h1>
+        <p>Ceci certifie que</p>
+        <h2>@(Model.Collaborateur?.Prenom) @(Model.Collaborateur?.Nom)</h2>
+        <p>a suivi avec succès la formation</p>
+        <h3>@(Model.Formation?.Titre)</h3>
+        <p>Date d'obtention : @DateTime.Now.ToString("dd/MM/yyyy")</p>
+        <div class="date">Fait à Paris, le @DateTime.Now.ToString("dd/MM/yyyy")</div>
+    </div>
+</body>
+</html>

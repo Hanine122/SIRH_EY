@@ -1,0 +1,244 @@
+﻿@model SIRH.EY.Models.Collaborateur
+
+@{
+    ViewData["Title"] = $"{Model.Prenom} {Model.Nom}";
+    var competences = ViewBag.Competences as List<SIRH.EY.Models.Competence> ?? new List<SIRH.EY.Models.Competence>();
+    var inscriptions = ViewBag.Inscriptions as List<SIRH.EY.Models.Inscription> ?? new List<SIRH.EY.Models.Inscription>();
+    var manager = ViewBag.Manager as SIRH.EY.Models.Collaborateur;
+    var totalFormations = inscriptions.Count;
+    var totalCertifs = inscriptions.Count(i => i.Terminee);
+    var enCours = inscriptions.Count(i => !i.Terminee);
+    var statutPresence = !Model.Actif ? "INACTIF" : (Model.Id % 7 == 0 ? "CONGÉ" : "ACTIF");
+    var statutPresenceClass = statutPresence == "ACTIF" ? "active" : (statutPresence == "CONGÉ" ? "leave" : "inactive");
+    var initialsProfile = $"{(string.IsNullOrWhiteSpace(Model.Prenom) ? "?" : Model.Prenom[0])}{(string.IsNullOrWhiteSpace(Model.Nom) ? "?" : Model.Nom[0])}".ToUpperInvariant();
+    var avatarDotClass = statutPresence == "CONGÉ" ? "leave" : (statutPresence == "INACTIF" ? "inactive" : "");
+}
+
+<div class="mb-3 text-uppercase small text-muted fw-semibold">Répertoire &gt; @Model.Prenom @Model.Nom</div>
+
+<div class="row g-3">
+    <div class="col-lg-4">
+        <div class="profile-side mb-3">
+            <div class="profile-side-header"></div>
+            <div class="p-3">
+                <div class="profile-avatar">
+                    <span class="profile-initials">@initialsProfile</span>
+                    <span class="profile-status-dot @avatarDotClass"></span>
+                </div>
+                <div class="text-center mt-2">
+                    <h1 class="ey-serif-title mb-1">@Model.Prenom @Model.Nom</h1>
+                    <div class="text-muted fs-6">@Model.Poste</div>
+                    <div class="d-flex justify-content-center gap-2 mt-2">
+                        <span class="ey-pill @statutPresenceClass">@statutPresence</span>
+                        <span class="ey-pill">TEMPS PLEIN</span>
+                    </div>
+                </div>
+                <hr />
+                <div class="small fs-6">
+                    <div class="mb-2"><i class="far fa-envelope me-2 text-muted"></i>@Model.Email</div>
+                    <div class="mb-2"><i class="fas fa-map-marker-alt me-2 text-muted"></i>@(Model.Departement ?? "Non défini")</div>
+                    <div class="mb-2"><i class="fas fa-briefcase me-2 text-muted"></i>@(Model.Poste ?? "Non défini")</div>
+                    <div class="mb-2"><i class="fas fa-sitemap me-2 text-muted"></i>Grade : @(Model.Grade ?? "Non défini")</div>
+                </div>
+                <a asp-action="Edit" asp-route-id="@Model.Id" class="ey-btn-yellow text-decoration-none d-block text-center mt-3"><i class="fas fa-pen me-1"></i> MODIFIER LE PROFIL</a>
+            </div>
+        </div>
+
+        <div class="ey-card p-3">
+            <div class="text-uppercase small text-muted fw-semibold mb-2" style="letter-spacing:.12em;">Reporting line</div>
+            @if (manager != null)
+            {
+                <div class="d-flex align-items-center gap-2">
+                    <i class="fas fa-user-circle fs-2 text-secondary"></i>
+                    <div>
+                        <div class="fw-semibold">@manager.Prenom @manager.Nom</div>
+                        <div class="text-muted">@(manager.Poste ?? "Manager")</div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="text-muted">Aucun manager assigné.</div>
+            }
+        </div>
+
+        <div class="row g-2 mt-1">
+            <div class="col-4">
+                <div class="ey-card p-2 text-center profile-mini-kpi">
+                    <i class="fas fa-graduation-cap text-warning"></i>
+                    <div class="fw-bold fs-5 mt-1">@totalFormations</div>
+                    <div>FORMATIONS</div>
+                </div>
+            </div>
+            <div class="col-4">
+                <div class="ey-card p-2 text-center profile-mini-kpi">
+                    <i class="fas fa-award text-warning"></i>
+                    <div class="fw-bold fs-5 mt-1">@totalCertifs</div>
+                    <div>CERTIFS</div>
+                </div>
+            </div>
+            <div class="col-4">
+                <div class="ey-card p-2 text-center profile-mini-kpi">
+                    <i class="fas fa-bolt text-warning"></i>
+                    <div class="fw-bold fs-5 mt-1">@enCours</div>
+                    <div>EN COURS</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <div class="ey-card p-4">
+            <ul class="nav ey-tab mb-4" id="collabTab" role="tablist">
+                <li class="nav-item" role="presentation"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#competences" type="button"><i class="fas fa-bolt me-1"></i> Compétences</button></li>
+                <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#formations" type="button"><i class="fas fa-graduation-cap me-1"></i> Formations</button></li>
+                <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#certificats" type="button"><i class="fas fa-certificate me-1"></i> Certificats</button></li>
+            </ul>
+
+            <div class="tab-content">
+                <div class="tab-pane fade show active" id="competences">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h2 class="ey-serif-title mb-1">Analyse des compétences</h2>
+                            <p class="text-muted mb-0 small">Évaluation actuelle vs objectifs de carrière @(Model.Grade ?? "Partner").</p>
+                        </div>
+                        <a asp-controller="Competences" asp-action="Create" asp-route-collaborateurId="@Model.Id" class="text-decoration-none fw-semibold text-muted small">+ Ajouter</a>
+                    </div>
+
+                    @if (!competences.Any())
+                    {
+                        <div class="alert alert-info">Aucune compétence renseignée.</div>
+                    }
+                    else
+                    {
+                        @foreach (var comp in competences)
+                        {
+                            var pct = (int)Math.Min(100, (comp.NiveauActuel / 5.0) * 100);
+                            var target = (int)Math.Min(100, (comp.NiveauCible / 5.0) * 100);
+                            var ecart = comp.NiveauCible - comp.NiveauActuel;
+                            var progressionColor = ecart >= 2 ? "#e5484d" : (ecart == 1 ? "#f4c542" : "#12b981");
+                            <div class="skill-analyse-row border-bottom">
+                                <div class="d-flex justify-content-between align-items-baseline flex-wrap gap-2">
+                                    <div class="fw-semibold fs-6">@comp.Nom</div>
+                                    <div class="small">
+                                        <span class="text-muted">Objectif : <strong>@target%</strong></span>
+                                        <span class="text-dark fw-bold fs-5 ms-2">@pct%</span>
+                                    </div>
+                                </div>
+                                <div class="skill-progress-wrap">
+                                    <div class="skill-progress-track">
+                                        <span class="skill-progress-fill" style="width:@pct%;background:@progressionColor;"></span>
+                                        <span class="skill-progress-marker" style="left:@(target)%"></span>
+                                    </div>
+                                </div>
+                                @if (ecart >= 2)
+                                {
+                                    <span class="skill-alert skill-alert--critical"><i class="fas fa-exclamation-triangle me-1"></i>ÉCART CRITIQUE : PRIORISER UN PARCOURS</span>
+                                }
+                                else if (ecart == 1)
+                                {
+                                    <span class="skill-alert skill-alert--warn"><i class="fas fa-exclamation-triangle me-1"></i>ÉCART IDENTIFIÉ : FORMATION RECOMMANDÉE</span>
+                                }
+                                else
+                                {
+                                    <span class="skill-alert skill-alert--ok"><i class="fas fa-check-circle me-1"></i>OBJECTIF ATTEINT OU DÉPASSÉ</span>
+                                }
+                            </div>
+                        }
+                    }
+                </div>
+
+                <div class="tab-pane fade" id="formations">
+                    <div class="d-flex justify-content-between align-items-end mb-3">
+                        <div>
+                            <h2 class="ey-serif-title mb-1">Parcours de formation</h2>
+                            <p class="text-muted mb-0">@totalCertifs terminées - @enCours en cours</p>
+                        </div>
+                    </div>
+                    @if (!inscriptions.Any())
+                    {
+                        <div class="alert alert-info">Aucune inscription.</div>
+                    }
+                    else
+                    {
+                        @foreach (var insc in inscriptions)
+                        {
+                            var formation = insc.Formation;
+                            if (formation == null) continue;
+                            var statut = insc.Terminee ? "Terminée" : "En cours";
+                            var progression = insc.Terminee ? 100 : Math.Min(95, Math.Max(15, (DateTime.Today - insc.DateInscription.Date).Days * 6));
+                            <div class="course-card course-progress-card mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="course-icon"><i class="fas fa-book-open"></i></div>
+                                        <div class="fw-semibold">@formation.Titre</div>
+                                    </div>
+                                    <div class="small fw-semibold">@progression%</div>
+                                </div>
+                                <div class="learning-progress profile-learning-progress">
+                                    <span style="width:@progression%"></span>
+                                </div>
+                                <div class="small text-muted mt-2">
+                                    <span class="ey-pill @(insc.Terminee ? "active" : "in-progress")">@statut</span>
+                                </div>
+                            </div>
+                        }
+                    }
+                </div>
+
+                <div class="tab-pane fade" id="certificats">
+                    @{
+                        var certifs = inscriptions.Where(i => i.Terminee).ToList();
+                    }
+                    @if (!certifs.Any())
+                    {
+                        <div class="alert alert-secondary">Aucune certification obtenue.</div>
+                    }
+                    else
+                    {
+                        <h2 class="ey-serif-title mb-1">Certifications obtenues</h2>
+                        <p class="text-muted mb-3">@certifs.Count certification(s) validée(s)</p>
+                        @foreach (var certif in certifs)
+                        {
+                            <div class="course-card mb-2 certificate-card">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <div class="text-warning mb-2"><i class="fas fa-award"></i></div>
+                                        <div class="fw-semibold">@certif.Formation?.Titre</div>
+                                        <small class="text-muted">EY Learning - validée le @certif.DateInscription.ToString("dd/MM/yyyy")</small>
+                                        <div class="small text-success fw-semibold mt-2"><i class="fas fa-check-circle me-1"></i>VERIFIED BADGE</div>
+                                    </div>
+                                    <i class="fas fa-download text-muted"></i>
+                                </div>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="ey-card p-3 mt-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h4 class="ey-serif-title mb-0">Inventaire des compétences techniques</h4>
+                <a asp-controller="Competences" asp-action="Create" asp-route-collaborateurId="@Model.Id" class="text-decoration-none small">+ Ajouter</a>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                @if (competences.Any())
+                {
+                    @foreach (var comp in competences.Take(8))
+                    {
+                        <span class="skill-chip @(comp.NiveauActuel >= comp.NiveauCible ? "highlight" : "")">@comp.Nom</span>
+                    }
+                }
+                else
+                {
+                    <span class="skill-chip">Power BI</span>
+                    <span class="skill-chip highlight">Financial Modeling</span>
+                    <span class="skill-chip">Python</span>
+                    <span class="skill-chip">Risk Assessment</span>
+                    <span class="skill-chip">ESG Reporting</span>
+                }
+            </div>
+        </div>
+    </div>
+</div>

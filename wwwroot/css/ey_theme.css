@@ -1,0 +1,72 @@
+/* Palette EY */
+:root {
+    --ey-yellow: #FFE600;
+    --ey-black: #000000;
+    --ey-gray-light: #F4F4F4;
+    --ey-gray-dark: #333333;
+    --ey-white: #FFFFFF;
+}
+
+/* Bandeau supérieur (navbar) */
+.navbar {
+    background-color: var(--ey-black) !important;
+    border-bottom: 3px solid var(--ey-yellow);
+}
+
+.navbar-brand, .navbar-nav .nav-link {
+    color: var(--ey-white) !important;
+    font-weight: 500;
+}
+
+.navbar-nav .nav-link:hover {
+    color: var(--ey-yellow) !important;
+}
+
+/* Boutons */
+.btn-primary {
+    background-color: var(--ey-black);
+    border-color: var(--ey-yellow);
+    color: var(--ey-yellow);
+}
+.btn-primary:hover {
+    background-color: var(--ey-yellow);
+    border-color: var(--ey-black);
+    color: var(--ey-black);
+}
+
+.btn-outline-primary {
+    border-color: var(--ey-black);
+    color: var(--ey-black);
+}
+.btn-outline-primary:hover {
+    background-color: var(--ey-black);
+    color: var(--ey-yellow);
+}
+
+/* Cartes */
+.card {
+    border-top: 4px solid var(--ey-yellow);
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    transition: transform 0.2s;
+}
+.card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+/* Alertes */
+.alert-warning {
+    background-color: #FFF3CD;
+    border-left: 4px solid var(--ey-yellow);
+    color: #856404;
+}
+
+/* Pied de page */
+footer {
+    background-color: var(--ey-black);
+    color: var(--ey-white);
+    padding: 1rem;
+    margin-top: 2rem;
+    text-align: center;
+}

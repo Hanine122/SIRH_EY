@@ -1,0 +1,148 @@
+@model SIRH.EY.Models.MatriceEquipeViewModel
+@{
+    ViewData["Title"] = "Reporting compétences";
+    var competences = Model.CompetencesParCollaborateur.Values.SelectMany(c => c).Select(c => c.Nom).Distinct().ToList();
+    var totalCollaborateurs = Model.Collaborateurs.Count;
+    var totalEvalues = Model.CompetencesParCollaborateur.Values.SelectMany(c => c).Count();
+    var forts = Model.CompetencesParCollaborateur.Values.SelectMany(c => c).Count(c => c.NiveauActuel >= 4);
+    var faibles = Model.CompetencesParCollaborateur.Values.SelectMany(c => c).Count(c => c.NiveauActuel <= 1);
+    var tauxEleve = totalEvalues == 0 ? 0 : (int)Math.Round((double)forts * 100 / totalEvalues);
+    var retourId = ViewBag.CollaborateurId as int? ?? Model.Collaborateurs.FirstOrDefault()?.Id;
+}
+
+<div class="report-breadcrumb">Reporting RH</div>
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-start gap-3 mb-4">
+    <div>
+        <h1 class="report-title">Reporting compétences</h1>
+        <p class="report-subtitle mb-0">Matrice des compétences par équipe — vue stratégique pour la planification RH.</p>
+    </div>
+    <div class="d-flex gap-2 flex-shrink-0">
+        @if (retourId != null)
+        {
+            <a asp-controller="Competences" asp-action="Index" asp-route-collaborateurId="@retourId" class="btn btn-outline-dark rounded-3 px-3"><i class="fas fa-arrow-left me-2"></i>Retour</a>
+        }
+        else
+        {
+            <a asp-controller="Home" asp-action="Index" class="btn btn-outline-dark rounded-3 px-3"><i class="fas fa-arrow-left me-2"></i>Retour</a>
+        }
+        <button type="button" class="ey-btn-main rounded-3 px-3"><i class="fas fa-download me-2"></i>Exporter</button>
+    </div>
+</div>
+
+<div class="ey-card p-3 p-md-4 mb-4">
+    <div class="row g-3">
+        <div class="col-sm-6 col-xl-3">
+            <div class="report-kpi h-100">
+                <div class="report-kpi-inner">
+                    <div class="report-kpi-icon report-kpi-icon--dark"><i class="fas fa-user-friends"></i></div>
+                    <div>
+                        <div class="report-kpi-label">COLLABORATEURS</div>
+                        <div class="report-kpi-value">@totalCollaborateurs</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="report-kpi h-100">
+                <div class="report-kpi-inner">
+                    <div class="report-kpi-icon report-kpi-icon--yellow"><i class="fas fa-graduation-cap"></i></div>
+                    <div>
+                        <div class="report-kpi-label">COMPÉTENCES ÉVALUÉES</div>
+                        <div class="report-kpi-value">@totalEvalues</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="report-kpi h-100">
+                <div class="report-kpi-inner">
+                    <div class="report-kpi-icon report-kpi-icon--green"><i class="fas fa-ribbon"></i></div>
+                    <div>
+                        <div class="report-kpi-label">NIVEAU ÉLEVÉ (4-5)</div>
+                        <div class="report-kpi-value">@tauxEleve%</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="report-kpi h-100">
+                <div class="report-kpi-inner">
+                    <div class="report-kpi-icon report-kpi-icon--red"><i class="fas fa-chart-line"></i></div>
+                    <div>
+                        <div class="report-kpi-label">ÉCARTS À COMBLER</div>
+                        <div class="report-kpi-value">@faibles</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="ey-card p-3 p-md-4 mb-3">
+    <div class="d-flex flex-wrap gap-3 align-items-center justify-content-between">
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+            <span class="fw-semibold text-secondary small">Légende :</span>
+            <span class="ey-pill" style="background:#e8faf4;border-color:#bcefd9;color:#0f8a5e;">Niveau élevé (4-5)</span>
+            <span class="ey-pill" style="background:#fff7de;border-color:#ffe39a;color:#8a6500;">Niveau moyen (2-3)</span>
+            <span class="ey-pill" style="background:#fde8ea;border-color:#f8c3c8;color:#b4232d;">Niveau faible (0-1)</span>
+            <span class="ey-pill pending">Non évalué</span>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <button type="button" class="matrix-chip-filter active">Tous</button>
+            <button type="button" class="matrix-chip-filter">Élevé</button>
+            <button type="button" class="matrix-chip-filter">Moyen</button>
+            <button type="button" class="matrix-chip-filter">Faible</button>
+        </div>
+    </div>
+</div>
+
+<div class="matrix-wrap">
+    <table class="table table-bordered matrix-table mb-0">
+        <thead>
+            <tr>
+                <th>Collaborateur</th>
+                @foreach (var compNom in competences)
+                {
+                    <th>@compNom.ToUpperInvariant()</th>
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var collab in Model.Collaborateurs)
+            {
+                <tr>
+                    <td>
+                        <div class="d-flex align-items-center gap-2 py-1">
+                            <span class="matrix-avatar">@($"{collab.Prenom.FirstOrDefault()}{collab.Nom.FirstOrDefault()}".ToUpper())</span>
+                            <div class="lh-sm">
+                                <div class="fw-semibold small">@collab.Prenom @collab.Nom</div>
+                                <small class="text-muted">@(collab.Poste ?? "Collaborateur")</small>
+                            </div>
+                        </div>
+                    </td>
+                    @{
+                        var competencesCollab = Model.CompetencesParCollaborateur.ContainsKey(collab.Id)
+                            ? Model.CompetencesParCollaborateur[collab.Id]
+                            : new List<Competence>();
+                    }
+                    @foreach (var compNom in competences)
+                    {
+                        var comp = competencesCollab.FirstOrDefault(c => c.Nom == compNom);
+                        var niveau = comp?.NiveauActuel ?? 0;
+                        var cls = niveau >= 4 ? "lvl-high" : (niveau >= 2 ? "lvl-mid" : "lvl-low");
+                        <td>
+                            @if (niveau > 0)
+                            {
+                                <span class="matrix-level @cls">@niveau</span>
+                            }
+                            else
+                            {
+                                <span class="matrix-level none">—</span>
+                            }
+                        </td>
+                    }
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

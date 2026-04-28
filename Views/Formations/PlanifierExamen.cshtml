@@ -1,0 +1,61 @@
+@model SIRH.EY.Models.Inscription
+@{
+    ViewData["Title"] = "Planifier l'examen";
+    var f = Model.Formation;
+    var dateMin = DateTime.Today.ToString("yyyy-MM-dd");
+}
+
+<div class="mb-3">
+    <a asp-action="Index" asp-route-collaborateurId="@Model.CollaborateurId" class="text-decoration-none small text-muted">
+        <i class="fas fa-arrow-left me-1"></i> Retour au centre de formation
+    </a>
+</div>
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+        <div class="ey-card ey-form-shell p-4 ey-interactive-card">
+            <div class="text-warning fw-semibold small mb-2">CERTIFICATION / EXAMEN</div>
+            <h1 class="ey-serif-title mb-2">Planifier l'examen</h1>
+            <p class="text-muted mb-4">
+                Formation : <strong>@(f?.Titre)</strong><br />
+                Collaborateur : <strong>@(Model.Collaborateur?.Prenom) @(Model.Collaborateur?.Nom)</strong>
+                @if (Model.DateExamen.HasValue)
+                {
+                    <span class="d-block mt-2 small">Date déjà planifiée : <strong>@Model.DateExamen.Value.ToString("dd/MM/yyyy HH:mm")</strong> — vous pouvez la modifier ci-dessous.</span>
+                }
+            </p>
+
+            <form asp-action="PlanifierExamen" method="post" class="vstack gap-3">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="inscriptionId" value="@Model.Id" />
+
+                <div>
+                    <label class="form-label fw-semibold">Date et heure de l'examen</label>
+                    <input class="form-control ey-input" type="datetime-local" name="dateExamen" required
+                           value="@(Model.DateExamen?.ToString("yyyy-MM-ddTHH:mm") ?? "")"
+                           min="@dateMin" />
+                </div>
+
+                <div>
+                    <label class="form-label fw-semibold">Lieu ou modalité (optionnel)</label>
+                    <input class="form-control ey-input" name="lieu" maxlength="200" placeholder="Ex. : Centre EY La Défense / Distanciel Teams" />
+                </div>
+
+                <div>
+                    <label class="form-label fw-semibold">Commentaire pour l'organisateur (optionnel)</label>
+                    <textarea class="form-control ey-textarea" name="commentaire" rows="3" maxlength="1000" placeholder="Contraintes horaires, aménagement, etc."></textarea>
+                </div>
+
+                <div class="d-flex flex-wrap gap-2 pt-2">
+                    <button type="submit" class="ey-btn-main">Enregistrer la planification</button>
+                    <a asp-action="Index" asp-route-collaborateurId="@Model.CollaborateurId" class="ey-btn-ghost text-decoration-none text-center">Annuler</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

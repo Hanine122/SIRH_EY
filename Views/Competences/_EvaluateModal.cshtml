@@ -1,0 +1,58 @@
+@model SIRH.EY.Models.Competence
+@Html.AntiForgeryToken()
+
+<div class="modal fade" id="evaluateModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title">Évaluation de @Model.Nom</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="evaluateForm">
+                    <input type="hidden" id="competenceId" value="@Model.Id" />
+                    <div class="mb-3">
+                        <label class="form-label">Niveau actuel (1 à 5)</label>
+                        <input type="range" class="form-range" id="niveauActuel" min="1" max="5" step="1" value="@Model.NiveauActuel" />
+                        <span id="niveauValue" class="badge bg-primary mt-1">@Model.NiveauActuel / 5</span>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Date de l'évaluation</label>
+                        <input type="date" class="form-control" id="dateEvaluation" value="@DateTime.Now.ToString("yyyy-MM-dd")" />
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" id="saveEvaluation">Enregistrer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('niveauActuel').addEventListener('input', function() {
+        document.getElementById('niveauValue').innerText = this.value + ' / 5';
+    });
+
+    document.getElementById('saveEvaluation').addEventListener('click', function() {
+        var id = document.getElementById('competenceId').value;
+        var niveau = document.getElementById('niveauActuel').value;
+        var date = document.getElementById('dateEvaluation').value;
+
+        fetch('/Competences/Evaluate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+            },
+            body: JSON.stringify({ id: id, nouveauNiveau: niveau, dateEvaluation: date })
+        }).then(response => response.json()).then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Erreur lors de la sauvegarde');
+            }
+        });
+    });
+</script>

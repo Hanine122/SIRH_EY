@@ -1,0 +1,306 @@
+@{
+    ViewData["Title"] = "Centre de formation";
+    var collaborateurId = ViewBag.CollaborateurId;
+    var inscriptions = ViewBag.Inscriptions as List<SIRH.EY.Models.Inscription> ?? new List<SIRH.EY.Models.Inscription>();
+    var catalogue = ViewBag.Catalogue as List<SIRH.EY.Models.Formation> ?? new List<SIRH.EY.Models.Formation>();
+    var toutesFormations = ViewBag.ToutesFormations as List<SIRH.EY.Models.Formation> ?? catalogue;
+    var idsInscrits = ViewBag.FormationsInscritesIds as List<int> ?? new List<int>();
+    var certifications = ViewBag.Certifications as List<SIRH.EY.Models.Inscription> ?? new List<SIRH.EY.Models.Inscription>();
+    var enCours = inscriptions.Count(i => !i.Terminee);
+    var premInscriptionEncours = inscriptions.FirstOrDefault(i => !i.Terminee);
+}
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success"><i class="fas fa-check-circle me-1"></i> @TempData["Success"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger"><i class="fas fa-exclamation-triangle me-1"></i> @TempData["Error"]</div>
+}
+
+<div class="learning-hero ey-card mb-4">
+    <div class="row align-items-center g-3">
+        <div class="col-lg-8">
+            <div class="text-warning fw-bold mb-2">PROGRESSION ACTUELLE</div>
+            <h3 class="mb-1">Vous êtes sur la bonne voie.</h3>
+            <p class="mb-3 text-white-50">Continuez sur ce rythme pour finaliser vos objectifs de montée en compétences.</p>
+            @{
+                var totalInscriptions = inscriptions.Count;
+                var terminees = inscriptions.Count(i => i.Terminee);
+                var progress = totalInscriptions == 0 ? 0 : (int)((double)terminees / totalInscriptions * 100);
+            }
+            <div class="learning-progress"><span style="width:@progress%"></span></div>
+            <div class="d-flex justify-content-between mt-1">
+                <small>@progress% COMPLÉTÉ</small>
+                <small>@(100 - progress)% RESTANT</small>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="ey-card p-3" style="background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.2);">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <i class="fas fa-award text-warning"></i>
+                    <div class="fw-semibold">BADGES OBTENUS</div>
+                </div>
+                <div class="display-6 fw-bold">@certifications.Count</div>
+                <button type="button" class="ey-btn-yellow mt-2 w-100" id="btn-feuille-route">Voir la feuille de route</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<ul class="nav ey-tab mb-3" id="formationTab" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="mes-formations-tab" data-bs-toggle="tab" data-bs-target="#mes-formations" type="button">
+            Parcours en cours
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="catalogue-tab" data-bs-toggle="tab" data-bs-target="#catalogue" type="button">
+            Catalogue
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="certifications-tab" data-bs-toggle="tab" data-bs-target="#certifications" type="button">
+            Certifications
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content">
+    <div class="tab-pane fade show active ey-tab-pane" id="mes-formations">
+        <div id="eyTabSkeleton" class="ey-skeleton-wrap">
+            <div class="ey-skeleton-card"></div>
+            <div class="ey-skeleton-card"></div>
+        </div>
+        <div class="row g-3">
+            <div class="col-lg-8">
+                <div class="ey-card p-2 mb-3 ey-form-shell">
+                    <div class="d-flex gap-2">
+                        <input id="formationSearchInput" class="form-control form-control-sm ey-input" placeholder="Rechercher une formation, un instructeur..." />
+                        <button class="btn btn-sm btn-outline-secondary"><i class="fas fa-filter me-1"></i>Filtres</button>
+                    </div>
+                </div>
+                @if (!inscriptions.Any())
+                {
+                    <div class="alert alert-info">Vous n'êtes inscrit à aucune formation.</div>
+                }
+                else
+                {
+                    @foreach (var insc in inscriptions)
+                    {
+                        var formation = insc.Formation;
+                        if (formation == null) continue;
+                        var statut = insc.Terminee ? "Terminée" : (insc.DateInscription.Date == DateTime.Today ? "Non commencée" : "En cours");
+                        var statutClasse = insc.Terminee ? "active" : (statut == "Non commencée" ? "pending" : "in-progress");
+                        var progression = insc.Terminee ? 100 : Math.Clamp(insc.Progression, 0, 100);
+                        if (!insc.Terminee && progression == 0 && statut != "Non commencée")
+                            progression = Math.Min(95, Math.Max(15, (DateTime.Today - insc.DateInscription.Date).Days * 5));
+                        var progressionColor = progression < 40 ? "#e5484d" : (progression < 75 ? "#f4c542" : "#12b981");
+                        <div class="course-card course-card-training mb-3 ey-interactive-card formation-item" data-search="@(formation.Titre) @(formation.Formateur) @(formation.Categorie)">
+                            <div class="d-flex justify-content-between align-items-start gap-2">
+                                <div class="d-flex gap-3 w-100">
+                                    <div class="course-icon"><i class="fas fa-book-open"></i></div>
+                                    <div class="w-100">
+                                    <div class="course-badges mb-2">
+                                        <span class="course-state">@statut.ToUpperInvariant()</span>
+                                        <span class="course-meta-tag">@((formation.Categorie ?? "MODULE").ToUpperInvariant())</span>
+                                        <span class="course-meta-tag">INTERMÉDIAIRE</span>
+                                    </div>
+                                    <div class="fw-bold fs-5">@formation.Titre</div>
+                                    <div class="course-meta">@(string.IsNullOrWhiteSpace(formation.Formateur) ? "Instructeur non défini" : formation.Formateur) &nbsp; <i class="far fa-clock ms-2 me-1"></i>@formation.DureeHeures h</div>
+                                    <div class="learning-progress mt-2"><span style="width:@progression%;background:@progressionColor;"></span></div>
+                                    <div class="small text-muted mt-1 text-end">@progression%</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-3 d-flex gap-2 flex-wrap">
+                                @if (!insc.Terminee)
+                                {
+                                    <!-- Bouton Démarrer/Reprendre → action ReprendreFormation -->
+                                    <a asp-action="ReprendreFormation" asp-route-inscriptionId="@insc.Id" class="@(statut == "Non commencée" ? "ey-btn-main" : "ey-btn-yellow") flex-grow-1 text-center text-decoration-none">
+                                        @((statut == "Non commencée") ? "Démarrer" : "Reprendre")
+                                    </a>
+                                    <form asp-action="TerminerFormation" method="post" class="flex-grow-1">
+                                        <input type="hidden" name="inscriptionId" value="@insc.Id" />
+                                        <button type="submit" class="ey-btn-ghost w-100">Marquer terminée</button>
+                                    </form>
+                                }
+                                else
+                                {
+                                    <!-- Certificat → action TelechargerCertificat du contrôleur Formations -->
+                                    <a asp-action="TelechargerCertificat" asp-route-inscriptionId="@insc.Id" class="ey-btn-ghost text-decoration-none w-100 text-center">
+                                        <i class="fas fa-download me-1"></i>Certificat
+                                    </a>
+                                }
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+            <div class="col-lg-4">
+                <div class="ey-card p-3">
+                    <h5>Compétences recommandées</h5>
+                    <div class="course-meta mb-2">Priorisées selon votre parcours actuel.</div>
+                    <div class="d-flex flex-column gap-2">
+                        <div class="d-flex justify-content-between"><span>Gestion de projet agile</span><small>6 H - INTERMÉDIAIRE</small></div>
+                        <div class="d-flex justify-content-between"><span>Power BI avancé</span><small>8 H - AVANCÉ</small></div>
+                        <div class="d-flex justify-content-between"><span>RGPD & conformité</span><small>4 H - FONDAMENTAL</small></div>
+                        <div class="d-flex justify-content-between"><span>Generative AI in Audit</span><small>4 H - AVANCÉ</small></div>
+                    </div>
+                    <a asp-controller="Competences" asp-action="Index" asp-route-collaborateurId="@collaborateurId" class="btn btn-outline-dark btn-sm w-100 mt-3 text-decoration-none text-center">
+                        EXPLORER TOUTES LES COMPÉTENCES
+                    </a>
+                    <a asp-controller="Competences" asp-action="MatriceEquipe" asp-route-collaborateurId="@collaborateurId" class="btn btn-outline-secondary btn-sm w-100 mt-2 text-decoration-none text-center">
+                        Matrice équipe
+                    </a>
+                </div>
+                <div class="ey-dark-hero mt-3 p-3">
+                    <div class="small text-warning fw-semibold mb-2">CERTIFICATION PROCHAINE</div>
+                    <div class="fw-semibold mb-1">Préparez votre examen PMP</div>
+                    <div class="small text-white-50 mb-2">Prêt pour l'examen</div>
+                    <div class="learning-progress mb-2"><span style="width:73%"></span></div>
+                    @if (premInscriptionEncours != null)
+                    {
+                        <a asp-action="PlanifierExamen" asp-route-inscriptionId="@premInscriptionEncours.Id" class="ey-btn-yellow w-100 text-center text-decoration-none d-inline-block">
+                            <i class="far fa-lightbulb me-1"></i>Planifier l'examen
+                        </a>
+                    }
+                    else
+                    {
+                        <button type="button" class="ey-btn-yellow w-100 opacity-50" disabled title="Inscrivez-vous à une formation en cours depuis le catalogue.">
+                            <i class="far fa-lightbulb me-1"></i>Planifier l'examen
+                        </button>
+                        <div class="small text-white-50 mt-2">Inscrivez-vous à une formation (onglet Catalogue) pour activer la planification.</div>
+                    }
+                </div>
+                <div class="ey-card p-3 mt-3">
+                    <h5>Votre impact</h5>
+                    <div class="course-meta mb-2">Heures d'apprentissage</div>
+                    <div class="d-flex justify-content-between"><small>142/200</small><small>objectif</small></div>
+                    <div class="learning-progress mt-1"><span style="width:71%"></span></div>
+                    <div class="row g-2 mt-2">
+                        <div class="col-6"><div class="ey-card p-2 text-center"><div class="fw-bold">4.8</div><small class="text-muted">NOTE MOY.</small></div></div>
+                        <div class="col-6"><div class="ey-card p-2 text-center"><div class="fw-bold">@enCours</div><small class="text-muted">EN COURS</small></div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="tab-pane fade ey-tab-pane" id="catalogue">
+        <p class="text-muted small mb-3">Catalogue complet : les formations déjà suivies par ce collaborateur sont marquées <span class="badge bg-secondary">Inscrit</span> ; les autres sont ouvertes à l’inscription si des places restent.</p>
+        <div class="row g-3">
+            @if (!toutesFormations.Any())
+            {
+                <div class="col-12"><div class="alert alert-info">Aucune formation dans le référentiel.</div></div>
+            }
+            else
+            {
+                @foreach (var formation in toutesFormations)
+                {
+                    var deja = idsInscrits.Contains(formation.Id);
+                    <div class="col-md-6 col-xl-4">
+                        <div class="course-card h-100 ey-interactive-card formation-catalogue-item" data-search="@(formation.Titre) @(formation.Formateur) @(formation.Categorie) @(formation.CompetenceVisee)">
+                            <div class="d-flex justify-content-between align-items-start gap-2 mb-1">
+                                <div class="fw-bold">@formation.Titre</div>
+                                @if (deja)
+                                {
+                                    <span class="badge bg-secondary">Inscrit</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-success">Disponible</span>
+                                }
+                            </div>
+                            <div class="course-meta mb-2">@(string.IsNullOrWhiteSpace(formation.Formateur) ? "Formateur à confirmer" : formation.Formateur)</div>
+                            <div class="course-meta">
+                                <div><i class="far fa-clock me-1"></i>@formation.DureeHeures h</div>
+                                <div><i class="fas fa-chair me-1"></i>Places restantes : @(formation.CapaciteMax - formation.PlacesPrises) / @formation.CapaciteMax</div>
+                                <div><i class="fas fa-tag me-1"></i>@(formation.Categorie ?? "—")</div>
+                                @if (!string.IsNullOrWhiteSpace(formation.CompetenceVisee))
+                                {
+                                    <div><i class="fas fa-bullseye me-1"></i>Comp. visée : @formation.CompetenceVisee</div>
+                                }
+                            </div>
+                            <div class="mt-3">
+                                @if (deja)
+                                {
+                                    <button class="btn btn-outline-secondary w-100" disabled>Déjà au parcours</button>
+                                }
+                                else if (formation.PlacesPrises < formation.CapaciteMax)
+                                {
+                                    <form asp-action="Inscrire" method="post">
+                                        <input type="hidden" name="formationId" value="@formation.Id" />
+                                        <input type="hidden" name="collaborateurId" value="@collaborateurId" />
+                                        <button type="submit" class="ey-btn-main w-100">S'inscrire</button>
+                                    </form>
+                                }
+                                else
+                                {
+                                    <button class="btn btn-secondary w-100" disabled>Complet</button>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+
+    <div class="tab-pane fade ey-tab-pane" id="certifications">
+        <div class="row g-3">
+            @if (!certifications.Any())
+            {
+                <div class="col-12"><div class="alert alert-secondary">Aucune certification obtenue pour l'instant.</div></div>
+            }
+            else
+            {
+                @foreach (var certif in certifications)
+                {
+                    var formation = certif.Formation;
+                    if (formation == null) continue;
+                    <div class="col-md-6 col-xl-4">
+                        <div class="course-card h-100 ey-interactive-card">
+                            <div class="text-warning mb-2"><i class="fas fa-certificate"></i></div>
+                            <div class="fw-bold">@formation.Titre</div>
+                            <div class="course-meta">
+                                <div>Obtenue le : @certif.DateInscription.ToString("dd/MM/yyyy")</div>
+                                <div>Durée : @formation.DureeHeures h</div>
+                                <div>Organisme : @(string.IsNullOrEmpty(formation.Organisme) ? "Non spécifié" : formation.Organisme)</div>
+                            </div>
+                            <!-- Ici aussi, utiliser TelechargerCertificat avec inscriptionId -->
+                            <a asp-action="TelechargerCertificat" asp-route-inscriptionId="@certif.Id" class="btn btn-outline-success w-100 mt-3">Télécharger le certificat</a>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('btn-feuille-route')?.addEventListener('click', function () {
+        var el = document.getElementById('certifications-tab');
+        if (el && window.bootstrap && bootstrap.Tab) {
+            bootstrap.Tab.getOrCreateInstance(el).show();
+        }
+    });
+
+    document.getElementById('formationSearchInput')?.addEventListener('input', function () {
+        const q = (this.value || '').toLowerCase().trim();
+        document.querySelectorAll('.formation-item, .formation-catalogue-item').forEach(function (el) {
+            const text = (el.getAttribute('data-search') || '').toLowerCase();
+            el.style.display = !q || text.includes(q) ? '' : 'none';
+        });
+    });
+
+    document.querySelectorAll('#formationTab button[data-bs-toggle="tab"]').forEach(function (btn) {
+        btn.addEventListener('shown.bs.tab', function () {
+            const sk = document.getElementById('eyTabSkeleton');
+            if (!sk) return;
+            sk.classList.add('show');
+            setTimeout(function () { sk.classList.remove('show'); }, 240);
+        });
+    });
+</script>

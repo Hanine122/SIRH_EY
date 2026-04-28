@@ -1,0 +1,87 @@
+﻿<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - SIRH EY</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/ey-modern-overrides.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/ey-modern-overrides.css" asp-append-version="true" />
+</head>
+<body>
+    @{
+        var currentController = ViewContext.RouteData.Values["Controller"]?.ToString();
+        var currentAction = ViewContext.RouteData.Values["Action"]?.ToString();
+    }
+    <div class="ey-app">
+        <aside class="ey-sidebar">
+            <div>
+                <div class="ey-logo-wrap">
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <img src="~/images/ey-logo.png" alt="EY" class="ey-brand-logo" />
+                        <div class="ey-logo-main">SIRH EY</div>
+                    </div>
+                    <div class="ey-logo-sub">Bâtir un monde du travail plus performant</div>
+                </div>
+
+                <nav class="nav flex-column ey-nav">
+                    <a class="nav-link @(currentController == "Home" ? "active" : "")" asp-controller="Home" asp-action="Index">
+                        <i class="fas fa-th-large"></i><span class="nav-link-label">Tableau de bord</span>
+                    </a>
+                    <a class="nav-link @((currentController == "Collaborateurs" && currentAction == "Index") ? "active" : "")" asp-controller="Collaborateurs" asp-action="Index">
+                        <i class="fas fa-users"></i><span class="nav-link-label">Répertoire</span>
+                    </a>
+                    <a class="nav-link @((currentController == "Collaborateurs" && currentAction == "Details") ? "active" : "")" asp-controller="Collaborateurs" asp-action="Details" asp-route-id="1">
+                        <i class="fas fa-id-card"></i><span class="nav-link-label">Profil collaborateur</span>
+                    </a>
+                    <a class="nav-link @(currentController == "Formations" ? "active" : "")" asp-controller="Formations" asp-action="Index">
+                        <i class="fas fa-graduation-cap"></i><span class="nav-link-label">Centre de formation</span>
+                    </a>
+                    <a class="nav-link @(currentController == "Competences" ? "active" : "")" asp-controller="Competences" asp-action="MatriceEquipe">
+                        <i class="fas fa-chart-bar"></i><span class="nav-link-label">Reporting</span>
+                    </a>
+                </nav>
+            </div>
+
+            <div class="ey-sidebar-footer">
+                <a class="nav-link" href="#"><i class="fas fa-cog"></i><span class="nav-link-label">Paramètres</span></a>
+                <a class="nav-link" href="#"><i class="fas fa-sign-out-alt"></i><span class="nav-link-label">Déconnexion</span></a>
+            </div>
+        </aside>
+
+        <div class="ey-main">
+            <div class="ey-topbar">
+                <div class="ey-topbar-brand fw-semibold text-dark">Portail RH EY</div>
+                <div class="ey-search flex-grow-1 mx-3">
+                    <input class="form-control form-control-sm ey-search-input" placeholder="Rechercher un collaborateur, une formation, une compétence..." />
+                </div>
+                <div class="d-flex align-items-center gap-3 ey-topbar-actions">
+                    <span class="ey-icon-btn position-relative"><i class="far fa-bell"></i><span class="ey-dot-alert"></span></span>
+                    <span class="ey-icon-btn"><i class="far fa-question-circle"></i></span>
+                    <span class="ey-icon-btn"><i class="fas fa-cog"></i></span>
+                    <div class="d-flex align-items-center gap-2 ey-user-pill ms-1">
+                        <div class="text-end lh-sm d-none d-md-block">
+                            <div class="fw-semibold small mb-0">Hanine Hammami</div>
+                            <div class="text-muted" style="font-size:10px;letter-spacing:.04em;">DIRECTRICE RH</div>
+                        </div>
+                        <div class="ey-user-avatar">HH</div>
+                    </div>
+                </div>
+            </div>
+
+            <main class="ey-content">
+                @RenderBody()
+            </main>
+        </div>
+    </div>
+   
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

@@ -1,0 +1,59 @@
+@model SIRH.EY.Models.DepartViewModel
+
+@{
+    ViewData["Title"] = "Départ d'un collaborateur";
+}
+
+<div class="card">
+    <div class="card-header">
+        <i class="fas fa-user-slash"></i> Départ de @Model.CollaborateurPartant.Prenom @Model.CollaborateurPartant.Nom
+    </div>
+    <div class="card-body">
+        <div class="alert alert-warning">
+            <strong>Collaborateur remplaçant proposé :</strong>
+            @Model.CollaborateurRemplacant.Prenom @Model.CollaborateurRemplacant.Nom
+            (Département : @Model.CollaborateurRemplacant.Departement, Poste : @Model.CollaborateurRemplacant.Poste)
+        </div>
+
+        @if (Model.CompetencesManquantes.Any())
+        {
+            <div class="alert alert-info mt-3">
+                <strong>Compétences manquantes chez le remplaçant :</strong>
+                <ul>
+                    @foreach (var comp in Model.CompetencesManquantes)
+                    {
+                        <li>@comp</li>
+                    }
+                </ul>
+            </div>
+
+            @if (Model.FormationsRecommande.Any())
+            {
+                <div class="alert alert-success mt-3">
+                    <strong>Formations recommandées :</strong>
+                    <ul>
+                        @foreach (var formation in Model.FormationsRecommande)
+                        {
+                            <li>@formation</li>
+                        }
+                    </ul>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-secondary">Aucune formation spécifique recommandée.</div>
+            }
+        }
+        else
+        {
+            <div class="alert alert-success">Le remplaçant possède déjà toutes les compétences nécessaires.</div>
+        }
+
+        <form asp-action="ConfirmDepart" method="post" class="mt-4">
+            <input type="hidden" name="idPartant" value="@Model.CollaborateurPartant.Id" />
+            <input type="hidden" name="idRemplacant" value="@Model.CollaborateurRemplacant.Id" />
+            <button type="submit" class="btn btn-primary">Confirmer le départ et activer le remplacement</button>
+            <a asp-action="Index" class="btn btn-secondary">Annuler</a>
+        </form>
+    </div>
+</div>

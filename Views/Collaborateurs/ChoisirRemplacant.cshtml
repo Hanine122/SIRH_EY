@@ -1,0 +1,411 @@
+@model SIRH.EY.Models.ChoisirRemplacantViewModel
+
+@{
+    ViewData["Title"] = "Choisir un remplaçant";
+    var totalCompetencesRequises = Model.CompetencesRequises?.Count ?? 0;
+}
+
+<div class="ey-card p-4 mb-4">
+    <div class="text-uppercase small text-muted fw-semibold mb-2">Succession & transversalité</div>
+    <h1 class="ey-serif-title mb-2">Départ de @Model.Partant.Prenom @Model.Partant.Nom</h1>
+    @if (totalCompetencesRequises > 0)
+    {
+        <div class="small fw-semibold mb-1">Compétences retenues pour le matching (@totalCompetencesRequises)</div>
+        <div class="d-flex flex-wrap gap-1">
+            @foreach (var c in Model.CompetencesRequises)
+            {
+                <span class="badge rounded-pill bg-light text-dark border">@c</span>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-warning py-2 small mb-0">
+            Aucune compétence sur le profil ni dans le référentiel poste « @Model.Partant.Poste » : le classement repose sur les données disponibles — enrichissez le profil ou le référentiel pour un matching plus fin.
+        </div>
+    }
+</div>
+
+@if (Model.Candidats.Any())
+{
+    <div class="ey-card p-4 mb-4 ey-detector">
+        <div class="d-flex justify-content-between align-items-end flex-wrap gap-2 mb-3">
+            <div>
+                <div class="text-uppercase small text-muted fw-semibold" style="letter-spacing:.12em;">Détecteur</div>
+                <div class="ey-serif-title mb-0" style="font-size:22px;">Top 3 des remplaçants</div>
+            </div>
+            <a class="ey-btn-ghost text-decoration-none" href="#liste-candidats">
+                Aller à la liste complète <i class="fas fa-arrow-down ms-1"></i>
+            </a>
+        </div>
+
+        <div class="row g-3">
+            @{
+                var top3 = Model.Candidats.Take(3).ToList();
+            }
+            @for (var i = 0; i < top3.Count; i++)
+            {
+                var c = top3[i];
+                var nbManquantes = c.CompetencesManquantes.Count;
+                var possedes = totalCompetencesRequises == 0 ? c.NbCompetencesCommunes : (totalCompetencesRequises - nbManquantes);
+                var pourcentage = totalCompetencesRequises == 0
+                    ? Math.Min(100, c.NbCompetencesCommunes * 25)
+                    : (int)Math.Round(100.0 * Math.Max(0, possedes) / totalCompetencesRequises);
+                var pillClass = pourcentage >= 80 ? "active" : (pourcentage >= 50 ? "in-progress" : "inactive");
+                <div class="col-md-4">
+                    <div class="ey-detector-card">
+                        <div class="ey-detector-rank">TOP @(i + 1)</div>
+
+                        <div class="d-flex align-items-start justify-content-between gap-2">
+                            <div>
+                                <div class="fw-bold fs-5" style="line-height:1.15;">@c.Prenom @c.Nom</div>
+                                <div class="small text-muted mt-1">
+                                    @(string.IsNullOrWhiteSpace(c.Poste) ? "Poste" : c.Poste) · @(string.IsNullOrWhiteSpace(c.Departement) ? "Département" : c.Departement)
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex flex-wrap gap-2 mt-3">
+                            <span class="ey-pill @pillClass">@pourcentage% match</span>
+                            @if (c.ProfilTransversal)
+                            {
+                                <span class="ey-pill in-progress">Transversal</span>
+                            }
+                            <span class="ey-pill pending">@c.NbCompetencesCommunes commun</span>
+                            <span class="ey-pill pending">@nbManquantes manquante(s)</span>
+                        </div>
+
+                        <div class="mt-3">
+                            <div class="d-flex justify-content-between small text-muted mb-1">
+                                <span>Compatibilité poste</span>
+                                <span class="fw-semibold text-dark">@pourcentage%</span>
+                            </div>
+                            <div class="ey-compat-bar">
+                                <span style="width:@pourcentage%"></span>
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2 mt-3">
+                            <a class="ey-btn-ghost text-decoration-none w-100 text-center" href="#cand_@c.Id">Voir</a>
+                            <button type="button" class="ey-btn-main w-100" onclick="window.__eyCompare?.toggle(@c.Id)">
+                                Comparer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div class="ey-compare-strip mt-3">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                <div class="fw-semibold">Comparaison manager</div>
+                <div class="d-flex gap-2">
+                    <form id="exportPdfForm" asp-action="ExportComparaisonRemplacantsPdf" method="post" class="d-inline">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="partantId" value="@Model.Partant.Id" />
+                        <input type="hidden" name="candidatIds" id="exportCandidatIds" value="" />
+                        <button type="submit" class="btn btn-sm btn-outline-dark" id="btnExportPdf" disabled title="Sélectionnez 1 à 3 candidats via « Comparer ».">
+                            <i class="far fa-file-pdf me-1"></i> Exporter (PDF)
+                        </button>
+                    </form>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.__eyCompare?.clear?.()">Vider</button>
+                </div>
+            </div>
+            <div class="small text-muted mb-2">Sélectionnez jusqu’à 3 candidats via « Comparer ». La matrice ci-dessous montre la couverture des compétences requises.</div>
+            <div id="compareBody" class="d-flex flex-wrap gap-2 mb-3">
+                <span class="text-muted small">Aucune sélection.</span>
+            </div>
+
+            <div id="compareMatrixWrap" class="table-responsive" style="display:none;">
+                <table class="table table-sm align-middle mb-0">
+                    <thead id="compareMatrixHead"></thead>
+                    <tbody id="compareMatrixBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}
+
+@if (!Model.Candidats.Any())
+{
+    <div class="alert alert-secondary">Aucun collaborateur actif disponible pour la comparaison.</div>
+}
+else
+{
+    <div id="liste-candidats" class="row g-3">
+        @foreach (var candidat in Model.Candidats)
+        {
+            var nbManquantes = candidat.CompetencesManquantes.Count;
+            var possedes = totalCompetencesRequises == 0 ? candidat.NbCompetencesCommunes : (totalCompetencesRequises - nbManquantes);
+            var pourcentage = totalCompetencesRequises == 0
+                ? Math.Min(100, candidat.NbCompetencesCommunes * 25)
+                : (int)Math.Round(100.0 * Math.Max(0, possedes) / totalCompetencesRequises);
+            var statusColor = pourcentage >= 80 ? "bg-success" : (pourcentage >= 50 ? "bg-warning" : "bg-danger");
+            var statusText = pourcentage >= 80 ? "Très compatible" : (pourcentage >= 50 ? "Compatible sous condition" : "Écarts importants — plan de formation");
+            var badgeColor = nbManquantes == 0 ? "bg-success" : (nbManquantes <= 2 ? "bg-warning text-dark" : "bg-danger");
+
+            <div class="col-md-6 col-lg-4" id="cand_@candidat.Id">
+                <div class="card h-100 shadow-sm border-0 rounded-4">
+                    <div class="card-body">
+                        <div class="d-flex flex-wrap gap-1 mb-2">
+                            @if (candidat.ProfilTransversal)
+                            {
+                                <span class="badge rounded-pill" style="background:#FFD600;color:#000;">Profil transversal</span>
+                            }
+                            <span class="badge @badgeColor">@nbManquantes manquante(s)</span>
+                            <span class="badge bg-dark">@candidat.NbCompetencesCommunes en commun</span>
+                        </div>
+                        <div class="form-check mt-1 mb-2">
+                            <input class="form-check-input" type="checkbox" name="selectedIds" value="@candidat.Id" id="chk_@candidat.Id">
+                            <label class="form-check-label small" for="chk_@candidat.Id">Shortlist pour demande RH</label>
+                        </div>
+                        <div class="fw-bold fs-5">@candidat.Prenom @candidat.Nom</div>
+                        <p class="small text-muted mb-2 mt-2">
+                            <i class="fas fa-briefcase me-1"></i> @candidat.Poste<br />
+                            <i class="fas fa-building me-1"></i> @candidat.Departement<br />
+                            <i class="fas fa-chart-line me-1"></i> Grade : @(string.IsNullOrWhiteSpace(candidat.Grade) ? "Non défini" : candidat.Grade)
+                        </p>
+                        <hr class="my-2" />
+
+                        <div class="mt-2">
+                            <div class="d-flex justify-content-between small">
+                                <span>Couverture du poste</span>
+                                <span>@pourcentage%</span>
+                            </div>
+                            <div class="progress" style="height: 6px;">
+                                <div class="progress-bar @statusColor" style="width: @pourcentage%;"></div>
+                            </div>
+                            <div class="small text-muted mt-1">@statusText</div>
+                        </div>
+
+                        @if (nbManquantes == 0)
+                        {
+                            <div class="alert alert-success py-1 small mb-0 mt-2">
+                                <i class="fas fa-check-circle"></i> Couverture complète des compétences retenues.
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="mb-2 mt-2">
+                                <strong class="small">Compétences à combler :</strong>
+                                <div class="d-flex flex-wrap gap-1 mt-1">
+                                    @foreach (var comp in candidat.CompetencesManquantes.Take(4))
+                                    {
+                                        <span class="badge bg-light text-dark border">@comp</span>
+                                    }
+                                    @if (candidat.CompetencesManquantes.Count > 4)
+                                    {
+                                        <span class="badge bg-light text-dark border">+@(candidat.CompetencesManquantes.Count - 4)</span>
+                                    }
+                                </div>
+                            </div>
+                            if (candidat.FormationsRecommande.Any())
+                            {
+                                <div>
+                                    <strong class="small">Formations recommandées (succession) :</strong>
+                                    <ul class="small mb-0 mt-1 ps-3">
+                                        @foreach (var formation in candidat.FormationsRecommande.Take(5))
+                                        {
+                                            <li>@formation</li>
+                                        }
+                                    </ul>
+                                </div>
+                            }
+                        }
+                    </div>
+                    <div class="card-footer bg-transparent border-0 pt-0">
+                        <form asp-action="ConfirmerRemplacement" method="post" class="d-grid">
+                            <input type="hidden" name="partantId" value="@Model.Partant.Id" />
+                            <input type="hidden" name="remplacantId" value="@candidat.Id" />
+                            <button type="submit" class="btn btn-sm w-100 rounded-pill" style="background-color: #FFD600; color: #000;">
+                                <i class="fas fa-user-check me-1"></i> Choisir ce remplaçant
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+<div class="mt-4 d-flex justify-content-between flex-wrap gap-2">
+    <a asp-action="Index" class="btn btn-outline-secondary rounded-pill">
+        <i class="fas fa-arrow-left me-1"></i> Retour au répertoire
+    </a>
+    @if (Model.Candidats.Any())
+    {
+        <button type="button" class="btn btn-primary rounded-pill" id="sendToRhBtn">
+            <i class="fas fa-envelope me-1"></i> Envoyer la sélection au RH
+        </button>
+    }
+</div>
+
+@if (Model.Candidats.Any())
+{
+    <script>
+        // Mini comparaison manager (prototype)
+        (function () {
+            const data = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+                Model.Candidats.Select(c => new
+                {
+                    id = c.Id,
+                    prenom = c.Prenom,
+                    nom = c.Nom,
+                    departement = c.Departement,
+                    transversal = c.ProfilTransversal,
+                    nbCommunes = c.NbCompetencesCommunes,
+                    nbManquantes = c.CompetencesManquantes.Count,
+                    manquantes = c.CompetencesManquantes,
+                    formations = c.FormationsRecommande,
+                    compat = (totalCompetencesRequises == 0)
+                        ? Math.Min(100, c.NbCompetencesCommunes * 25)
+                        : (int)Math.Round(100.0 * Math.Max(0, (totalCompetencesRequises - c.CompetencesManquantes.Count)) / totalCompetencesRequises)
+                })
+            ));
+            const competencesRequises = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.CompetencesRequises ?? new List<string>()));
+
+            const selected = new Set();
+            const body = document.getElementById('compareBody');
+            const matrixWrap = document.getElementById('compareMatrixWrap');
+            const matrixHead = document.getElementById('compareMatrixHead');
+            const matrixBody = document.getElementById('compareMatrixBody');
+
+            function escapeHtml(s) {
+                return (s || '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+            }
+
+            function isMissing(r, competence) {
+                if (!r || !r.manquantes) return false;
+                const comp = (competence || '').toLowerCase();
+                return r.manquantes.some(m => (m || '').toLowerCase() === comp);
+            }
+
+            function renderMatrix(rows) {
+                if (!matrixWrap || !matrixHead || !matrixBody) return;
+                if (!rows || rows.length === 0 || !competencesRequises || competencesRequises.length === 0) {
+                    matrixWrap.style.display = 'none';
+                    matrixHead.innerHTML = '';
+                    matrixBody.innerHTML = '';
+                    return;
+                }
+
+                matrixWrap.style.display = '';
+                matrixHead.innerHTML = `
+                    <tr>
+                        <th style="min-width:220px;">Compétence requise</th>
+                        ${rows.map(r => `
+                            <th style="min-width:180px;">
+                                <div class="d-flex justify-content-between align-items-start gap-2">
+                                    <div>
+                                        <div class="fw-semibold">${escapeHtml(r.prenom)} ${escapeHtml(r.nom)}</div>
+                                        <div class="small text-muted">${escapeHtml(r.departement || '-')}</div>
+                                    </div>
+                                    <span class="badge bg-dark">${r.compat}%</span>
+                                </div>
+                            </th>
+                        `).join('')}
+                    </tr>`;
+
+                const lines = competencesRequises.map(comp => {
+                    const cells = rows.map(r => {
+                        const miss = isMissing(r, comp);
+                        const icon = miss ? '<i class="fas fa-times-circle text-danger"></i>' : '<i class="fas fa-check-circle text-success"></i>';
+                        const txt = miss ? 'À combler' : 'OK';
+                        return `<td>${icon} <span class="small ms-1">${txt}</span></td>`;
+                    }).join('');
+                    return `<tr><td class="fw-semibold">${escapeHtml(comp)}</td>${cells}</tr>`;
+                });
+
+                const recap = `
+                    <tr class="table-light">
+                        <td class="text-muted small">Synthèse</td>
+                        ${rows.map(r => {
+                            const toFill = (r.manquantes || []).slice(0, 3);
+                            const f = (r.formations || []).slice(0, 2);
+                            return `
+                                <td>
+                                    <div class="small"><strong>${r.nbManquantes}</strong> manquante(s)</div>
+                                    ${toFill.length ? `<div class="small text-muted mt-1">À prioriser : ${escapeHtml(toFill.join(', '))}</div>` : `<div class="small text-muted mt-1">Couverture complète</div>`}
+                                    ${f.length ? `<div class="small text-muted mt-1">Formations : ${escapeHtml(f.join(' • '))}</div>` : ``}
+                                </td>`;
+                        }).join('')}
+                    </tr>`;
+
+                matrixBody.innerHTML = lines.join('') + recap;
+            }
+
+            function render() {
+                if (!body) return;
+                const rows = [...selected].map(id => data.find(x => x.id === id)).filter(Boolean);
+                const btn = document.getElementById('btnExportPdf');
+                const exportIds = document.getElementById('exportCandidatIds');
+                if (exportIds) exportIds.value = [...selected].join(',');
+                if (btn) btn.disabled = rows.length === 0;
+                if (rows.length === 0) {
+                    body.innerHTML = '<span class="text-muted small">Aucune sélection.</span>';
+                    renderMatrix([]);
+                    return;
+                }
+                body.innerHTML = rows.map(r => `
+                    <span class="ey-compare-chip">
+                        <a href="#cand_${r.id}" class="text-decoration-none">${r.prenom} ${r.nom}</a>
+                        ${r.transversal ? '<span class="meta">· Transversal</span>' : '<span class="meta">·</span>'}
+                        <span class="meta">${r.departement || '-'}</span>
+                        <span class="meta">·</span>
+                        <span>${r.compat}%</span>
+                        <span class="meta">·</span>
+                        <span>${r.nbManquantes} manq.</span>
+                        <button type="button" class="btn btn-sm btn-link p-0 ms-1 text-muted" title="Retirer" onclick="window.__eyCompare.remove(${r.id})">×</button>
+                    </span>
+                `).join('');
+                renderMatrix(rows);
+            }
+
+            window.__eyCompare = {
+                toggle: function (id) {
+                    if (selected.has(id)) selected.delete(id);
+                    else {
+                        // garder une comparaison lisible (max 3)
+                        if (selected.size >= 3) selected.delete([...selected][0]);
+                        selected.add(id);
+                    }
+                    render();
+                },
+                remove: function (id) {
+                    selected.delete(id);
+                    render();
+                },
+                clear: function () {
+                    selected.clear();
+                    render();
+                }
+            };
+
+            render();
+        })();
+
+        document.getElementById('sendToRhBtn').addEventListener('click', async function () {
+            const selected = [];
+            document.querySelectorAll('input[name="selectedIds"]:checked').forEach(cb => {
+                selected.push(parseInt(cb.value));
+            });
+            if (selected.length === 0) {
+                alert('Cochez au moins une case « shortlist » sur les fiches (fonctionnalité RH — à brancher), ou utilisez « Choisir ce remplaçant » pour une décision immédiate.');
+                return;
+            }
+            const partantId = @Model.Partant.Id;
+            const commentaire = prompt("Commentaire pour le RH (optionnel) :");
+            const response = await fetch('@Url.Action("EnvoyerDemandeEntretiens", "Collaborateurs")', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ partantId: partantId, candidatsIds: selected, commentaire: commentaire })
+            });
+            const result = await response.json();
+            if (result.success) {
+                alert('Demande transmise (simulation).');
+            } else {
+                alert('Erreur : ' + (result.message || 'inconnue'));
+            }
+        });
+    </script>
+}

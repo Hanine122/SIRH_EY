@@ -1,0 +1,46 @@
+@model IEnumerable<SIRH.EY.Models.Inscription>
+
+@{
+    ViewData["Title"] = "Mes certificats";
+    var collaborateurNom = ViewBag.CollaborateurNom ?? "Collaborateur";
+}
+
+<h1>Certificats de @collaborateurNom</h1>
+<p class="text-muted mb-4">Formations que vous avez terminées avec succès.</p>
+
+@if (!Model.Any())
+{
+    <div class="card text-center p-5">
+        <i class="fas fa-certificate fa-4x text-muted mb-3"></i>
+        <h5>Aucun certificat pour le moment</h5>
+        <p>Terminez une formation pour générer votre certificat.</p>
+    </div>
+}
+else
+{
+    <div class="row g-4">
+        @foreach (var inscription in Model)
+        {
+            <div class="col-md-6 col-lg-4">
+                <div class="card h-100 border-success">
+                    <div class="card-body text-center">
+                        <i class="fas fa-certificate fa-3x text-warning mb-3"></i>
+                        <h5 class="card-title">@inscription.Formation?.Titre</h5>
+                        <p class="card-text">
+                            <strong>Date d'obtention :</strong> @inscription.DateInscription.ToString("dd/MM/yyyy")<br />
+                            <strong>Durée :</strong> @inscription.Formation?.DureeHeures h<br />
+                            <strong>Organisme :</strong> @inscription.Formation?.Organisme
+                        </p>
+                        <span class="badge bg-success">Certifié</span>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+<div class="mt-4">
+    <a asp-controller="Collaborateurs" asp-action="Index" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Retour
+    </a>
+</div>

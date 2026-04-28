@@ -1,0 +1,144 @@
+@model SIRH.EY.Models.ValidationManagerCompetenceViewModel
+
+@{
+    ViewData["Title"] = "Validation manager";
+    var ecartPerception = Model.EvaluationManager - Model.AutoEvaluationCollaborateur;
+    var ecartObjectif = Model.EvaluationManager - Model.SeuilRh;
+}
+
+<div class="mb-3">
+    <a asp-action="Index" asp-route-collaborateurId="@Model.CollaborateurId" class="text-decoration-none small text-muted">
+        <i class="fas fa-arrow-left me-1"></i> Retour aux compétences
+    </a>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="ey-card ey-form-shell p-4 ey-interactive-card">
+            <div class="text-uppercase small text-muted fw-semibold mb-2">Validation manager</div>
+            <h1 class="ey-serif-title mb-2">@Model.CompetenceNom</h1>
+            <div class="small text-muted mb-4">
+                @Model.CollaborateurNom
+                @if (!string.IsNullOrWhiteSpace(Model.Poste))
+                {
+                    <span> · @Model.Poste</span>
+                }
+                @if (!string.IsNullOrWhiteSpace(Model.Categorie))
+                {
+                    <span> · @Model.Categorie</span>
+                }
+            </div>
+
+            <form asp-action="ValidationManager" method="post" class="vstack gap-4">
+                @Html.AntiForgeryToken()
+                <input asp-for="CompetenceId" type="hidden" />
+                <input asp-for="CollaborateurId" type="hidden" />
+                <input asp-for="CompetenceNom" type="hidden" />
+                <input asp-for="CollaborateurNom" type="hidden" />
+                <input asp-for="Poste" type="hidden" />
+                <input asp-for="Categorie" type="hidden" />
+                <input asp-for="SeuilRh" type="hidden" />
+                <input asp-for="AutoEvaluationCollaborateur" type="hidden" />
+                <input asp-for="CommentaireCollaborateur" type="hidden" />
+
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <div class="ey-card ey-soft-kpi p-3 h-100">
+                            <div class="small text-muted">Objectif RH</div>
+                            <div class="display-6 fw-bold">@Model.SeuilRh%</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="ey-card ey-soft-kpi p-3 h-100">
+                            <div class="small text-muted">Auto-évaluation collaborateur</div>
+                            <div class="display-6 fw-bold">@Model.AutoEvaluationCollaborateur%</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="ey-card ey-soft-kpi p-3 h-100">
+                            <div class="small text-muted">Écart à l'objectif</div>
+                            <div class="display-6 fw-bold @(ecartObjectif >= 0 ? "text-success" : "text-danger")" id="resumeGapObjectif">
+                                @(ecartObjectif >= 0 ? "+" : "")@ecartObjectif%
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="alert alert-light border mb-0">
+                    <div class="fw-semibold mb-1">Avis du collaborateur</div>
+                    <div class="small mb-1">Niveau déclaré : <strong>@Model.AutoEvaluationCollaborateur%</strong></div>
+                    <div class="small text-muted">
+                        @(string.IsNullOrWhiteSpace(Model.CommentaireCollaborateur) ? "Aucun commentaire collaborateur." : Model.CommentaireCollaborateur)
+                    </div>
+                </div>
+
+                <div>
+                    <label asp-for="EvaluationManager" class="form-label fw-semibold"></label>
+                    <input asp-for="EvaluationManager" type="range" min="0" max="100" step="5" class="form-range"
+                           oninput="document.getElementById('managerValue').innerText = this.value + '%'; updateManagerResume();" />
+                    <div class="d-flex justify-content-between small text-muted">
+                        <span>0%</span>
+                        <span id="managerValue">@Model.EvaluationManager%</span>
+                        <span>100%</span>
+                    </div>
+                    <div class="form-text">Le manager peut confirmer ou corriger l'estimation du collaborateur.</div>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="ey-card ey-soft-kpi p-3 h-100">
+                            <div class="small text-muted">Écart manager vs collaborateur</div>
+                            <div class="display-6 fw-bold @(ecartPerception == 0 ? "" : (ecartPerception > 0 ? "text-success" : "text-warning"))" id="resumeGapPerception">
+                                @(ecartPerception >= 0 ? "+" : "")@ecartPerception%
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="ey-card ey-soft-kpi p-3 h-100 d-flex align-items-center">
+                            <div class="form-check">
+                                <input asp-for="ValidationManager" class="form-check-input" />
+                                <label asp-for="ValidationManager" class="form-check-label fw-semibold"></label>
+                                <div class="small text-muted">À cocher quand le manager considère l'évaluation finalisée.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label asp-for="CommentaireManager" class="form-label fw-semibold"></label>
+                    <textarea asp-for="CommentaireManager" rows="4" class="form-control ey-textarea"
+                              placeholder="Ex. : bon niveau opérationnel, mais besoin de renforcement sur la prise de parole en comité..."></textarea>
+                    <span asp-validation-for="CommentaireManager" class="text-danger small"></span>
+                </div>
+
+                <div class="d-flex flex-wrap gap-2">
+                    <button type="submit" class="ey-btn-main">Enregistrer l'avis manager</button>
+                    <a asp-action="Index" asp-route-collaborateurId="@Model.CollaborateurId" class="ey-btn-ghost text-decoration-none text-center">Annuler</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        function updateManagerResume() {
+            var manager = parseInt(document.getElementById('EvaluationManager').value || '0');
+            var autoEval = @Model.AutoEvaluationCollaborateur;
+            var objectif = @Model.SeuilRh;
+            var gapPerception = manager - autoEval;
+            var gapObjectif = manager - objectif;
+
+            document.getElementById('managerValue').innerText = manager + '%';
+
+            var perceptionEl = document.getElementById('resumeGapPerception');
+            perceptionEl.innerText = (gapPerception >= 0 ? '+' : '') + gapPerception + '%';
+            perceptionEl.className = 'display-6 fw-bold ' + (gapPerception === 0 ? '' : (gapPerception > 0 ? 'text-success' : 'text-warning'));
+
+            var objectifEl = document.getElementById('resumeGapObjectif');
+            objectifEl.innerText = (gapObjectif >= 0 ? '+' : '') + gapObjectif + '%';
+            objectifEl.className = 'display-6 fw-bold ' + (gapObjectif >= 0 ? 'text-success' : 'text-danger');
+        }
+    </script>
+}

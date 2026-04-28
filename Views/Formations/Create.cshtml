@@ -1,0 +1,72 @@
+@model SIRH.EY.Models.Formation
+
+@{
+    ViewData["Title"] = "Créer une formation";
+}
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-plus-circle"></i> Nouvelle formation</h5>
+    </div>
+    <div class="card-body">
+        <form asp-action="Create">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label asp-for="Titre" class="form-label"></label>
+                    <input asp-for="Titre" class="form-control" />
+                    <span asp-validation-for="Titre" class="text-danger"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="Formateur" class="form-label"></label>
+                    <input asp-for="Formateur" class="form-control" />
+                    <span asp-validation-for="Formateur" class="text-danger"></span>
+                </div>
+                <div class="col-md-3">
+                    <label asp-for="DureeHeures" class="form-label"></label>
+                    <input asp-for="DureeHeures" class="form-control" />
+                    <span asp-validation-for="DureeHeures" class="text-danger"></span>
+                </div>
+                <div class="col-md-3">
+                    <label asp-for="CapaciteMax" class="form-label"></label>
+                    <input asp-for="CapaciteMax" class="form-control" />
+                    <span asp-validation-for="CapaciteMax" class="text-danger"></span>
+                </div>
+                <div class="col-md-3">
+                    <label asp-for="PlacesPrises" class="form-label"></label>
+                    <input asp-for="PlacesPrises" class="form-control" />
+                    <span asp-validation-for="PlacesPrises" class="text-danger"></span>
+                </div>
+                <div class="col-md-3">
+                    <label asp-for="Categorie" class="form-label"></label>
+                    <input asp-for="Categorie" class="form-control" />
+                    <span asp-validation-for="Categorie" class="text-danger"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="Organisme" class="form-label"></label>
+                    <select asp-for="Organisme" class="form-select">
+                        <option value="">Sélectionnez</option>
+                        <option value="Interne">Interne (EY Academy)</option>
+                        <option value="Externe">Externe (partenaire)</option>
+                    </select>
+                    <span asp-validation-for="Organisme" class="text-danger"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="DateDebut" class="form-label"></label>
+                    <input asp-for="DateDebut" class="form-control" type="date" />
+                    <span asp-validation-for="DateDebut" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="mt-4 d-flex gap-2">
+                <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Créer</button>
+                <a asp-action="Index" class="btn btn-secondary">Annuler</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

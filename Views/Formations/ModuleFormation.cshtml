@@ -1,0 +1,75 @@
+@model SIRH.EY.Models.Inscription
+@{
+    ViewData["Title"] = Model.Formation?.Titre ?? "Formation";
+    var collaborateurId = Model.CollaborateurId;
+    var prog = Model.Progression;
+}
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success">@TempData["Success"]</div>
+}
+
+<div class="mb-3">
+    <a asp-action="Index" asp-route-collaborateurId="@collaborateurId" class="text-decoration-none small text-muted">
+        <i class="fas fa-arrow-left me-1"></i> Retour au centre de formation
+    </a>
+</div>
+
+<div class="ey-card p-4 mb-3 ey-interactive-card">
+    <div class="text-warning fw-semibold small mb-2">MODULE EN LIGNE</div>
+    <h1 class="ey-serif-title mb-2">@Model.Formation?.Titre</h1>
+    <p class="text-muted mb-3">
+        Prototype : enregistrez votre progression par paliers (+20 % par étape). Les données sont enregistrées en base.
+    </p>
+    <div class="learning-progress mb-1"><span style="width:@prog%"></span></div>
+    <div class="d-flex justify-content-between small text-muted">
+        <span>@prog % complété</span>
+        <span>@(Model.Collaborateur?.Prenom) @(Model.Collaborateur?.Nom)</span>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-4">
+        <div class="ey-card ey-interactive-card p-3 h-100">
+            <div class="fw-semibold mb-2"><i class="fas fa-play-circle text-warning me-1"></i> Module 1 — Introduction</div>
+            <p class="small text-muted">Objectifs, contexte métier et glossaire.</p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="ey-card ey-interactive-card p-3 h-100">
+            <div class="fw-semibold mb-2"><i class="fas fa-layer-group text-warning me-1"></i> Module 2 — Pratique</div>
+            <p class="small text-muted">Études de cas, quiz et ressources téléchargeables.</p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="ey-card ey-interactive-card p-3 h-100">
+            <div class="fw-semibold mb-2"><i class="fas fa-flag-checkered text-warning me-1"></i> Module 3 — Synthèse</div>
+            <p class="small text-muted">Check-list avant validation manager / RH.</p>
+        </div>
+    </div>
+</div>
+
+<div class="ey-card ey-form-shell p-4 mt-3 d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+    <div>
+        <div class="fw-semibold">Enregistrer une progression</div>
+        <div class="small text-muted">Chaque clic ajoute 20 % jusqu’à 100 %.</div>
+    </div>
+    <form asp-action="AvancerModule" method="post" class="d-flex flex-wrap gap-2 align-items-center">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="inscriptionId" value="@Model.Id" />
+        <input type="hidden" name="deltaPourcent" value="20" />
+        @if (prog < 100)
+        {
+            <button type="submit" class="ey-btn-main">Marquer une étape complétée (+20 %)</button>
+        }
+        else
+        {
+            <span class="text-success fw-semibold"><i class="fas fa-check-circle me-1"></i>Parcours module à 100 %</span>
+        }
+    </form>
+</div>
+
+<div class="alert alert-secondary mt-4 small mb-0">
+    Retour au <a asp-action="Index" asp-route-collaborateurId="@collaborateurId">centre de formation</a>, puis <strong>Marquer terminée</strong> pour le certificat et la mise à jour des compétences.
+</div>

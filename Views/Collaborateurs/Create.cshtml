@@ -1,0 +1,70 @@
+@model SIRH.EY.Models.Collaborateur
+@{
+    ViewData["Title"] = "Nouveau collaborateur";
+    var managers = ViewBag.Managers as List<SIRH.EY.Models.Collaborateur> ?? new List<SIRH.EY.Models.Collaborateur>();
+}
+
+<div class="ey-card p-3">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0"><i class="fas fa-user-plus me-1"></i> Ajouter un collaborateur</h5>
+        <a asp-action="Index" class="btn btn-outline-secondary btn-sm">Retour</a>
+    </div>
+    <form asp-action="Create">
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label asp-for="Nom"></label>
+                <input asp-for="Nom" class="form-control" />
+            </div>
+            <div class="col-md-6">
+                <label asp-for="Prenom"></label>
+                <input asp-for="Prenom" class="form-control" />
+            </div>
+            <div class="col-12">
+                <label asp-for="Email"></label>
+                <input asp-for="Email" class="form-control" />
+            </div>
+            <div class="col-md-6">
+                <label asp-for="Departement"></label>
+                <input asp-for="Departement" class="form-control" />
+            </div>
+            <div class="col-md-6">
+                <label asp-for="Poste"></label>
+                <input asp-for="Poste" class="form-control" />
+            </div>
+            <div class="col-md-6">
+                <label asp-for="Grade" class="form-label"></label>
+                <select asp-for="Grade" class="form-select">
+                    <option value="">Sélectionnez un grade</option>
+                    <option value="Junior">Junior</option>
+                    <option value="Senior">Senior</option>
+                    <option value="Manager">Manager</option>
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Manager</label>
+                <select asp-for="ManagerId" class="form-select">
+                    <option value="">Aucun manager</option>
+                    @foreach (var manager in managers)
+                    {
+                        <option value="@manager.Id">@manager.Prenom @manager.Nom</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="DateEmbauche"></label>
+                <input asp-for="DateEmbauche" class="form-control" type="date" />
+            </div>
+            <div class="col-md-6">
+                <div class="form-check mt-4">
+                    <input asp-for="Actif" class="form-check-input" />
+                    <label asp-for="Actif" class="form-check-label"></label>
+                </div>
+            </div>
+        </div>
+        <div class="mt-4 d-flex gap-2">
+            <button type="submit" class="ey-btn-main">Créer</button>
+            <a asp-action="Index" class="btn btn-secondary">Annuler</a>
+        </div>
+    </form>
+</div>

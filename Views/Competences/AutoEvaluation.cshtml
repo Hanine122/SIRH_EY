@@ -1,0 +1,130 @@
+@model SIRH.EY.Models.AutoEvaluationCompetenceViewModel
+
+@{
+    ViewData["Title"] = "Auto-évaluation compétence";
+    var ecartObjectif = Model.AutoEvaluationCollaborateur - Model.SeuilRh;
+}
+
+<div class="mb-3">
+    <a asp-action="Index" asp-route-collaborateurId="@Model.CollaborateurId" class="text-decoration-none small text-muted">
+        <i class="fas fa-arrow-left me-1"></i> Retour aux compétences
+    </a>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="ey-card ey-form-shell p-4 ey-interactive-card">
+            <div class="text-uppercase small text-muted fw-semibold mb-2">Auto-évaluation collaborateur</div>
+            <h1 class="ey-serif-title mb-2">@Model.CompetenceNom</h1>
+            <div class="small text-muted mb-4">
+                @Model.CollaborateurNom
+                @if (!string.IsNullOrWhiteSpace(Model.Poste))
+                {
+                    <span> · @Model.Poste</span>
+                }
+                @if (!string.IsNullOrWhiteSpace(Model.Categorie))
+                {
+                    <span> · @Model.Categorie</span>
+                }
+            </div>
+
+            <form asp-action="AutoEvaluation" method="post" class="vstack gap-4">
+                @Html.AntiForgeryToken()
+                <input asp-for="CompetenceId" type="hidden" />
+                <input asp-for="CollaborateurId" type="hidden" />
+                <input asp-for="CompetenceNom" type="hidden" />
+                <input asp-for="CollaborateurNom" type="hidden" />
+                <input asp-for="Poste" type="hidden" />
+                <input asp-for="Categorie" type="hidden" />
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label asp-for="SeuilRh" class="form-label fw-semibold"></label>
+                        <input asp-for="SeuilRh" type="range" min="0" max="100" step="5" class="form-range"
+                               oninput="document.getElementById('seuilRhValue').innerText = this.value + '%'; updateGap();" />
+                        <div class="d-flex justify-content-between small text-muted">
+                            <span>0%</span>
+                            <span id="seuilRhValue">@Model.SeuilRh%</span>
+                            <span>100%</span>
+                        </div>
+                        <div class="form-text">Valeur RH cible pour cette compétence.</div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="AutoEvaluationCollaborateur" class="form-label fw-semibold"></label>
+                        <input asp-for="AutoEvaluationCollaborateur" type="range" min="0" max="100" step="5" class="form-range"
+                               oninput="document.getElementById('autoEvalValue').innerText = this.value + '%'; updateGap();" />
+                        <div class="d-flex justify-content-between small text-muted">
+                            <span>0%</span>
+                            <span id="autoEvalValue">@Model.AutoEvaluationCollaborateur%</span>
+                            <span>100%</span>
+                        </div>
+                        <div class="form-text">Niveau que vous estimez avoir atteint aujourd'hui.</div>
+                    </div>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <div class="ey-card ey-soft-kpi p-3 h-100">
+                            <div class="small text-muted">Objectif RH</div>
+                            <div class="display-6 fw-bold" id="resumeSeuil">@Model.SeuilRh%</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="ey-card ey-soft-kpi p-3 h-100">
+                            <div class="small text-muted">Votre estimation</div>
+                            <div class="display-6 fw-bold" id="resumeAuto">@Model.AutoEvaluationCollaborateur%</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="ey-card ey-soft-kpi p-3 h-100">
+                            <div class="small text-muted">Écart à l'objectif</div>
+                            <div class="display-6 fw-bold @(ecartObjectif >= 0 ? "text-success" : "text-danger")" id="resumeGap">
+                                @(ecartObjectif >= 0 ? "+" : "")@ecartObjectif%
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label asp-for="CommentaireCollaborateur" class="form-label fw-semibold"></label>
+                    <textarea asp-for="CommentaireCollaborateur" rows="4" class="form-control ey-textarea"
+                              placeholder="Ex. : j'applique cette compétence sur les missions X/Y, mais j'ai encore besoin d'appui sur..."></textarea>
+                    <span asp-validation-for="CommentaireCollaborateur" class="text-danger small"></span>
+                </div>
+
+                @if (Model.EvaluationManager.HasValue)
+                {
+                    <div class="alert alert-secondary mb-0">
+                        <div class="fw-semibold mb-1">Dernier avis manager</div>
+                        <div class="small">Évaluation manager : <strong>@Model.EvaluationManager.Value%</strong></div>
+                        @if (!string.IsNullOrWhiteSpace(Model.CommentaireManager))
+                        {
+                            <div class="small mt-1">Commentaire : @Model.CommentaireManager</div>
+                        }
+                    </div>
+                }
+
+                <div class="d-flex flex-wrap gap-2">
+                    <button type="submit" class="ey-btn-main">Enregistrer mon auto-évaluation</button>
+                    <a asp-action="Index" asp-route-collaborateurId="@Model.CollaborateurId" class="ey-btn-ghost text-decoration-none text-center">Annuler</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        function updateGap() {
+            var seuil = parseInt(document.getElementById('SeuilRh').value || '0');
+            var autoEval = parseInt(document.getElementById('AutoEvaluationCollaborateur').value || '0');
+            var gap = autoEval - seuil;
+            document.getElementById('resumeSeuil').innerText = seuil + '%';
+            document.getElementById('resumeAuto').innerText = autoEval + '%';
+            document.getElementById('resumeGap').innerText = (gap >= 0 ? '+' : '') + gap + '%';
+            document.getElementById('resumeGap').className = 'display-6 fw-bold ' + (gap >= 0 ? 'text-success' : 'text-danger');
+        }
+    </script>
+}
