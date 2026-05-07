@@ -5,7 +5,7 @@ public class Inscription
     public int Id { get; set; }
     public DateTime DateInscription { get; set; } = DateTime.Now;
     public bool Terminee { get; set; } = false;
-    
+    public virtual ICollection<EvaluationCompetence> EvaluationsFormation { get; set; }
     // Ajouté pour la planification d'examen
     public DateTime? DateExamen { get; set; }
     

@@ -140,6 +140,15 @@
 
 <!-- Plan de développement -->
 <div class="mt-5">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+        <form asp-action="GenererPlanDeveloppement" method="post" class="ms-auto">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="collaborateurId" value="@ViewBag.CollaborateurId" />
+            <button type="submit" class="ey-btn-main">
+                <i class="fas fa-wand-magic-sparkles"></i> Generer les recommandations
+            </button>
+        </form>
+    </div>
     <h4>Plan de développement personnalisé</h4>
     @if (ViewBag.PlanDeveloppement != null && ((List<SIRH.EY.Models.PlanDeveloppement>)ViewBag.PlanDeveloppement).Any())
     {
@@ -151,6 +160,10 @@
                         <div class="card-body">
                             <h6 class="card-title">@plan.Formation?.Titre</h6>
                             <p class="card-text small">Statut : @plan.Statut</p>
+                            @if (!string.IsNullOrWhiteSpace(plan.Commentaire))
+                            {
+                                <p class="card-text small text-muted">@plan.Commentaire</p>
+                            }
                             <p class="card-text small">Recommandé le : @plan.DateRecommandation.ToString("dd/MM/yyyy")</p>
                             <button class="btn btn-sm btn-outline-primary" onclick="alert('Détails à venir')">Détails</button>
                         </div>

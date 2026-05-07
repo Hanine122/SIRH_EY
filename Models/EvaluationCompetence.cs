@@ -8,6 +8,8 @@ public class EvaluationCompetence
 
     [Required]
     public int CompetenceId { get; set; }
+    public int? InscriptionId { get; set; } 
+    public virtual Inscription? Inscription { get; set; }
 
     [Range(0, 100)]
     public int SeuilRh { get; set; }

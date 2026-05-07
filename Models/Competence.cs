@@ -7,9 +7,10 @@ public class Competence
     public int Id { get; set; }
 
     [Required]
-    public string Nom { get; set; } = string.Empty;   // ex: "Leadership"
+    public string Nom { get; set; } = string.Empty;   
 
-    public string? Categorie { get; set; }            // "Métier", "Transversale"
+    public string? Categorie { get; set; }      
+          
 
     [Range(1,5)]
     public int NiveauActuel { get; set; } = 1;
@@ -19,7 +20,7 @@ public class Competence
 
     public DateTime DateEvaluation { get; set; } = DateTime.Now;
 
-    // Clé étrangère vers Collaborateur
+
     public int CollaborateurId { get; set; }
     public Collaborateur? Collaborateur { get; set; }
 

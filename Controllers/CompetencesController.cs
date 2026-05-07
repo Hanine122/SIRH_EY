@@ -283,6 +283,66 @@ public async Task<IActionResult> PlanifierExamen(int inscriptionId, DateTime dat
     return RedirectToAction(nameof(Index), new { collaborateurId = inscription.CollaborateurId });
 }
 
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> GenererPlanDeveloppement(int collaborateurId)
+    {
+        var collaborateur = await _context.Collaborateurs.FindAsync(collaborateurId);
+        if (collaborateur == null) return NotFound();
+
+        var competencesEnEcart = await _context.Competences
+            .Where(c => c.CollaborateurId == collaborateurId && c.NiveauActuel < c.NiveauCible)
+            .ToListAsync();
+
+        if (!competencesEnEcart.Any())
+        {
+            TempData["Success"] = "Aucun ecart de competence a traiter : le profil est aligne avec ses objectifs.";
+            return RedirectToAction(nameof(Index), new { collaborateurId });
+        }
+
+        var formations = await _context.Formations.ToListAsync();
+        var plansExistants = await _context.PlansDeveloppement
+            .Where(p => p.CollaborateurId == collaborateurId)
+            .Select(p => p.FormationId)
+            .ToListAsync();
+
+        var nouveauxPlans = new List<PlanDeveloppement>();
+        foreach (var competence in competencesEnEcart)
+        {
+            var formation = formations
+                .Where(f => !plansExistants.Contains(f.Id) && !nouveauxPlans.Any(p => p.FormationId == f.Id))
+                .FirstOrDefault(f =>
+                    !string.IsNullOrWhiteSpace(f.CompetenceVisee) &&
+                    f.CompetenceVisee.Trim().Equals(competence.Nom.Trim(), StringComparison.OrdinalIgnoreCase));
+
+            formation ??= formations
+                .Where(f => !plansExistants.Contains(f.Id) && !nouveauxPlans.Any(p => p.FormationId == f.Id))
+                .FirstOrDefault(f => (f.Titre ?? "").Contains(competence.Nom, StringComparison.OrdinalIgnoreCase));
+
+            if (formation == null) continue;
+
+            nouveauxPlans.Add(new PlanDeveloppement
+            {
+                CollaborateurId = collaborateurId,
+                FormationId = formation.Id,
+                Statut = "A faire",
+                Commentaire = $"Recommande pour combler l'ecart sur {competence.Nom} ({competence.NiveauActuel}/{competence.NiveauCible})."
+            });
+        }
+
+        if (!nouveauxPlans.Any())
+        {
+            TempData["Success"] = "Aucune nouvelle formation correspondante trouvee pour les ecarts actuels.";
+            return RedirectToAction(nameof(Index), new { collaborateurId });
+        }
+
+        _context.PlansDeveloppement.AddRange(nouveauxPlans);
+        await _context.SaveChangesAsync();
+
+        TempData["Success"] = $"{nouveauxPlans.Count} recommandation(s) ajoutee(s) au plan de developpement.";
+        return RedirectToAction(nameof(Index), new { collaborateurId });
+    }
+
     // GET: Competences/Details/5
     public async Task<IActionResult> Details(int? id)
     {

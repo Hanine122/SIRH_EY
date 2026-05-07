@@ -1,4 +1,13 @@
-﻿<!DOCTYPE html>
+﻿@using Microsoft.AspNetCore.Identity
+@inject UserManager<ApplicationUser> UserManager
+
+@{
+    var user = await UserManager.GetUserAsync(User);
+    var roles = user != null ? await UserManager.GetRolesAsync(user) : new List<string>();
+    var role = roles.FirstOrDefault() ?? "Utilisateur";
+}
+
+<!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="utf-8" />
@@ -63,13 +72,19 @@
                     <span class="ey-icon-btn position-relative"><i class="far fa-bell"></i><span class="ey-dot-alert"></span></span>
                     <span class="ey-icon-btn"><i class="far fa-question-circle"></i></span>
                     <span class="ey-icon-btn"><i class="fas fa-cog"></i></span>
-                    <div class="d-flex align-items-center gap-2 ey-user-pill ms-1">
-                        <div class="text-end lh-sm d-none d-md-block">
-                            <div class="fw-semibold small mb-0">Hanine Hammami</div>
-                            <div class="text-muted" style="font-size:10px;letter-spacing:.04em;">DIRECTRICE RH</div>
-                        </div>
-                        <div class="ey-user-avatar">HH</div>
-                    </div>
+                    <div class="text-end lh-sm d-none d-md-block">
+    <div class="fw-semibold small mb-0">
+        @User.Identity.Name
+    </div>
+
+    <div class="text-muted" style="font-size:10px;letter-spacing:.04em;">
+        @role.ToUpper()
+    </div>
+</div>
+
+<div class="ey-user-avatar">
+    @(User.Identity.Name != null ? User.Identity.Name.Substring(0, 2).ToUpper() : "U")
+</div>
                 </div>
             </div>
 

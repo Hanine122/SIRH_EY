@@ -18,61 +18,38 @@ public static class DemoDataSeeder
         if (await context.Parametres.AnyAsync(p => p.Code == seedVersion))
             return;
 
-        // --- Collaborateurs (réalistes, uniques) ---
-        var collaborateurs = new List<Collaborateur>
-        {
-            new() { Prenom = "Hanine", Nom = "Hammami", Email = "hanine.hammami@ey.com", Departement = "RH", Poste = "HR Director", Grade = "Manager", Actif = true, DateEmbauche = DateTime.Today.AddYears(-9) },
-            new() { Prenom = "Smiäi", Nom = "Nour", Email = "smiai.nour@ey.com", Departement = "Tax", Poste = "Data Analyst", Grade = "Senior", Actif = true, DateEmbauche = DateTime.Today.AddYears(-4) },
-            new() { Prenom = "Mariem", Nom = "Safri", Email = "mariem.safri@ey.com", Departement = "Audit", Poste = "Senior Auditor", Grade = "Senior", Actif = true, DateEmbauche = DateTime.Today.AddYears(-5) },
-            new() { Prenom = "Raed", Nom = "Amri", Email = "raed.amri@ey.com", Departement = "Consulting", Poste = "Consultant", Grade = "Junior", Actif = true, DateEmbauche = DateTime.Today.AddMonths(-10) },
-            new() { Prenom = "Ayoub", Nom = "Gomra", Email = "ayoub.gomra@ey.com", Departement = "Tax", Poste = "Consultant", Grade = "Junior", Actif = true, DateEmbauche = DateTime.Today.AddMonths(-11) },
-            new() { Prenom = "Chloé", Nom = "Ben Youssef", Email = "chloe.benyoussef@ey.com", Departement = "Audit", Poste = "Audit Manager", Grade = "Manager", Actif = true, DateEmbauche = DateTime.Today.AddYears(-7) },
-            new() { Prenom = "Sofien", Nom = "Klaou", Email = "sofien.klaou@ey.com", Departement = "Advisory", Poste = "Senior Consultant", Grade = "Senior", Actif = true, DateEmbauche = DateTime.Today.AddYears(-3) },
-            new() { Prenom = "Léa", Nom = "Ben Ali", Email = "lea.benali@ey.com", Departement = "Risk", Poste = "Risk Manager", Grade = "Manager", Actif = true, DateEmbauche = DateTime.Today.AddYears(-6) }
-        };
-        context.Collaborateurs.AddRange(collaborateurs);
-        await context.SaveChangesAsync();
-
+        // ========== 1. Récupérer les collaborateurs existants (créés par Program.cs) ==========
         var collabs = await context.Collaborateurs.ToListAsync();
-        var managerAudit = collabs.First(c => c.Poste == "Audit Manager").Id;
-        foreach (var c in collabs.Where(c => c.Departement == "Audit" && c.Poste != "Audit Manager"))
-            c.ManagerId = managerAudit;
-        await context.SaveChangesAsync();
+        var byEmail = collabs.ToDictionary(c => c.Email);
 
-        // --- Référentiel compétences requises par poste (NiveauRequis 1..5) ---
+        // ========== 2. Référentiel compétences requises par poste ==========
         var referentiel = new List<CompetenceRequiseParPoste>
         {
-            // Consultant (générique)
             new() { Poste = "Consultant", Competence = "Communication", NiveauRequis = 4 },
             new() { Poste = "Consultant", Competence = "Excel avancé", NiveauRequis = 4 },
             new() { Poste = "Consultant", Competence = "Gestion de projet", NiveauRequis = 3 },
             new() { Poste = "Consultant", Competence = "Analyse & résolution de problèmes", NiveauRequis = 4 },
 
-            // Senior Auditor
             new() { Poste = "Senior Auditor", Competence = "Audit & contrôle interne", NiveauRequis = 4 },
             new() { Poste = "Senior Auditor", Competence = "IFRS / normes comptables", NiveauRequis = 3 },
             new() { Poste = "Senior Auditor", Competence = "Communication", NiveauRequis = 4 },
             new() { Poste = "Senior Auditor", Competence = "Gestion des risques", NiveauRequis = 3 },
 
-            // Data Analyst
             new() { Poste = "Data Analyst", Competence = "Power BI", NiveauRequis = 4 },
             new() { Poste = "Data Analyst", Competence = "SQL", NiveauRequis = 3 },
             new() { Poste = "Data Analyst", Competence = "Modélisation de données", NiveauRequis = 3 },
             new() { Poste = "Data Analyst", Competence = "Data storytelling", NiveauRequis = 3 },
 
-            // Manager
             new() { Poste = "Audit Manager", Competence = "Leadership", NiveauRequis = 4 },
             new() { Poste = "Audit Manager", Competence = "Gestion de projet", NiveauRequis = 4 },
             new() { Poste = "Audit Manager", Competence = "Stakeholder management", NiveauRequis = 4 },
             new() { Poste = "Audit Manager", Competence = "Quality review (audit)", NiveauRequis = 4 },
 
-            // Risk Manager
             new() { Poste = "Risk Manager", Competence = "Risk assessment", NiveauRequis = 4 },
             new() { Poste = "Risk Manager", Competence = "RGPD & conformité", NiveauRequis = 4 },
             new() { Poste = "Risk Manager", Competence = "Communication", NiveauRequis = 4 },
             new() { Poste = "Risk Manager", Competence = "Change management", NiveauRequis = 3 },
 
-            // HR Director
             new() { Poste = "HR Director", Competence = "Leadership", NiveauRequis = 4 },
             new() { Poste = "HR Director", Competence = "Communication", NiveauRequis = 5 },
             new() { Poste = "HR Director", Competence = "Gestion des talents", NiveauRequis = 4 },
@@ -80,7 +57,7 @@ public static class DemoDataSeeder
         };
         context.CompetencesRequisesParPoste.AddRange(referentiel);
 
-        // --- Formations (liées aux compétences) ---
+        // ========== 3. Formations ==========
         var formations = new List<Formation>
         {
             new() { Titre = "Communication impactante & feedback", Formateur = "Centre EY Learning", DureeHeures = 6, DateDebut = DateTime.Today.AddDays(7), Categorie = "Soft skills", Organisme = "EY Learning", CompetenceVisee = "Communication", CapaciteMax = 25, PlacesPrises = 3 },
@@ -94,23 +71,28 @@ public static class DemoDataSeeder
             new() { Titre = "Leadership — piloter une équipe", Formateur = "Centre EY Learning", DureeHeures = 12, DateDebut = DateTime.Today.AddDays(30), Categorie = "Leadership", Organisme = "EY Learning", CompetenceVisee = "Leadership", CapaciteMax = 16, PlacesPrises = 2 },
             new() { Titre = "Change management — outils & conduite", Formateur = "Centre EY Learning", DureeHeures = 10, DateDebut = DateTime.Today.AddDays(25), Categorie = "Management", Organisme = "EY Learning", CompetenceVisee = "Change management", CapaciteMax = 18, PlacesPrises = 3 }
         };
+        // Supprimer les anciennes formations pour éviter les doublons
+var oldFormations = await context.Formations.ToListAsync();
+if (oldFormations.Any())
+{
+    context.Formations.RemoveRange(oldFormations);
+    await context.SaveChangesAsync();
+}
         context.Formations.AddRange(formations);
 
         await context.SaveChangesAsync();
 
-        // --- Compétences (variées, propres) ---
-        var byEmail = collabs.ToDictionary(c => c.Email);
+        // ========== 4. Compétences des collaborateurs ==========
         var now = DateTime.Today;
-
-        List<Competence> comps =
-        [
+        var comps = new List<Competence>
+        {
             // Hanine (RH)
             new() { CollaborateurId = byEmail["hanine.hammami@ey.com"].Id, Nom = "Communication", Categorie = "Soft skills", NiveauActuel = 4, NiveauCible = 5, DateEvaluation = now.AddDays(-12) },
             new() { CollaborateurId = byEmail["hanine.hammami@ey.com"].Id, Nom = "Leadership", Categorie = "Leadership", NiveauActuel = 4, NiveauCible = 5, DateEvaluation = now.AddDays(-20) },
             new() { CollaborateurId = byEmail["hanine.hammami@ey.com"].Id, Nom = "Gestion des talents", Categorie = "RH", NiveauActuel = 4, NiveauCible = 4, DateEvaluation = now.AddDays(-9) },
             new() { CollaborateurId = byEmail["hanine.hammami@ey.com"].Id, Nom = "Conduite du changement", Categorie = "Management", NiveauActuel = 3, NiveauCible = 4, DateEvaluation = now.AddDays(-8) },
 
-            // Smiäi (Data)
+            // Smiai (Data)
             new() { CollaborateurId = byEmail["smiai.nour@ey.com"].Id, Nom = "Power BI", Categorie = "Data", NiveauActuel = 4, NiveauCible = 4, DateEvaluation = now.AddDays(-7) },
             new() { CollaborateurId = byEmail["smiai.nour@ey.com"].Id, Nom = "SQL", Categorie = "Data", NiveauActuel = 3, NiveauCible = 4, DateEvaluation = now.AddDays(-10) },
             new() { CollaborateurId = byEmail["smiai.nour@ey.com"].Id, Nom = "Modélisation de données", Categorie = "Data", NiveauActuel = 3, NiveauCible = 4, DateEvaluation = now.AddDays(-14) },
@@ -129,16 +111,16 @@ public static class DemoDataSeeder
             new() { CollaborateurId = byEmail["raed.amri@ey.com"].Id, Nom = "Analyse & résolution de problèmes", Categorie = "Méthodes", NiveauActuel = 3, NiveauCible = 4, DateEvaluation = now.AddDays(-7) },
 
             // Ayoub (Tax)
-            new() { CollaborateurId = byEmail["ayoub.gomra@ey.com"].Id, Nom = "Communication", Categorie = "Soft skills", NiveauActuel = 2, NiveauCible = 4, DateEvaluation = now.AddDays(-6) },
-            new() { CollaborateurId = byEmail["ayoub.gomra@ey.com"].Id, Nom = "Excel avancé", Categorie = "Outils", NiveauActuel = 2, NiveauCible = 4, DateEvaluation = now.AddDays(-10) },
-            new() { CollaborateurId = byEmail["ayoub.gomra@ey.com"].Id, Nom = "Fiscalité (bases)", Categorie = "Fiscalité", NiveauActuel = 2, NiveauCible = 3, DateEvaluation = now.AddDays(-20) },
-            new() { CollaborateurId = byEmail["ayoub.gomra@ey.com"].Id, Nom = "Tax compliance", Categorie = "Fiscalité", NiveauActuel = 2, NiveauCible = 3, DateEvaluation = now.AddDays(-15) },
+            new() { CollaborateurId = byEmail["ayoub.gombra@ey.com"].Id, Nom = "Communication", Categorie = "Soft skills", NiveauActuel = 2, NiveauCible = 4, DateEvaluation = now.AddDays(-6) },
+            new() { CollaborateurId = byEmail["ayoub.gombra@ey.com"].Id, Nom = "Excel avancé", Categorie = "Outils", NiveauActuel = 2, NiveauCible = 4, DateEvaluation = now.AddDays(-10) },
+            new() { CollaborateurId = byEmail["ayoub.gombra@ey.com"].Id, Nom = "Fiscalité (bases)", Categorie = "Fiscalité", NiveauActuel = 2, NiveauCible = 3, DateEvaluation = now.AddDays(-20) },
+            new() { CollaborateurId = byEmail["ayoub.gombra@ey.com"].Id, Nom = "Tax compliance", Categorie = "Fiscalité", NiveauActuel = 2, NiveauCible = 3, DateEvaluation = now.AddDays(-15) },
 
-            // Chloé (Audit Manager)
-            new() { CollaborateurId = byEmail["chloe.benyoussef@ey.com"].Id, Nom = "Leadership", Categorie = "Leadership", NiveauActuel = 4, NiveauCible = 4, DateEvaluation = now.AddDays(-22) },
-            new() { CollaborateurId = byEmail["chloe.benyoussef@ey.com"].Id, Nom = "Gestion de projet", Categorie = "Management", NiveauActuel = 4, NiveauCible = 4, DateEvaluation = now.AddDays(-14) },
-            new() { CollaborateurId = byEmail["chloe.benyoussef@ey.com"].Id, Nom = "Stakeholder management", Categorie = "Management", NiveauActuel = 4, NiveauCible = 4, DateEvaluation = now.AddDays(-10) },
-            new() { CollaborateurId = byEmail["chloe.benyoussef@ey.com"].Id, Nom = "Quality review (audit)", Categorie = "Audit", NiveauActuel = 4, NiveauCible = 4, DateEvaluation = now.AddDays(-16) },
+            // CIbtissem (Audit Manager)
+            new() { CollaborateurId = byEmail["ibtissem.bessrour@ey.com"].Id, Nom = "Leadership", Categorie = "Leadership", NiveauActuel = 4, NiveauCible = 4, DateEvaluation = now.AddDays(-22) },
+            new() { CollaborateurId = byEmail["ibtissem.bessrour@ey.com"].Id, Nom = "Gestion de projet", Categorie = "Management", NiveauActuel = 4, NiveauCible = 4, DateEvaluation = now.AddDays(-14) },
+            new() { CollaborateurId = byEmail["ibtissem.bessrour@ey.com"].Id, Nom = "Stakeholder management", Categorie = "Management", NiveauActuel = 4, NiveauCible = 4, DateEvaluation = now.AddDays(-10) },
+            new() { CollaborateurId = byEmail["ibtissem.bessrour@ey.com"].Id, Nom = "Quality review (audit)", Categorie = "Audit", NiveauActuel = 4, NiveauCible = 4, DateEvaluation = now.AddDays(-16) },
 
             // Sofien (Advisory)
             new() { CollaborateurId = byEmail["sofien.klaou@ey.com"].Id, Nom = "Change management", Categorie = "Management", NiveauActuel = 3, NiveauCible = 4, DateEvaluation = now.AddDays(-9) },
@@ -146,17 +128,12 @@ public static class DemoDataSeeder
             new() { CollaborateurId = byEmail["sofien.klaou@ey.com"].Id, Nom = "Communication", Categorie = "Soft skills", NiveauActuel = 3, NiveauCible = 4, DateEvaluation = now.AddDays(-8) },
             new() { CollaborateurId = byEmail["sofien.klaou@ey.com"].Id, Nom = "Analyse & résolution de problèmes", Categorie = "Méthodes", NiveauActuel = 4, NiveauCible = 4, DateEvaluation = now.AddDays(-19) },
 
-            // Léa (Risk Manager)
-            new() { CollaborateurId = byEmail["lea.benali@ey.com"].Id, Nom = "Risk assessment", Categorie = "Risk", NiveauActuel = 4, NiveauCible = 4, DateEvaluation = now.AddDays(-12) },
-            new() { CollaborateurId = byEmail["lea.benali@ey.com"].Id, Nom = "RGPD & conformité", Categorie = "Risk", NiveauActuel = 4, NiveauCible = 4, DateEvaluation = now.AddDays(-7) },
-            new() { CollaborateurId = byEmail["lea.benali@ey.com"].Id, Nom = "Communication", Categorie = "Soft skills", NiveauActuel = 3, NiveauCible = 4, DateEvaluation = now.AddDays(-10) },
-            new() { CollaborateurId = byEmail["lea.benali@ey.com"].Id, Nom = "Change management", Categorie = "Management", NiveauActuel = 3, NiveauCible = 3, DateEvaluation = now.AddDays(-18) }
-        ];
-
+           
+        };
         context.Competences.AddRange(comps);
         await context.SaveChangesAsync();
 
-        // --- Inscriptions (parcours formation) ---
+        // ========== 5. Inscriptions (parcours formation) ==========
         var fByCompetence = await context.Formations.ToDictionaryAsync(f => f.CompetenceVisee ?? f.Titre);
         var raedId = byEmail["raed.amri@ey.com"].Id;
         var mariemId = byEmail["mariem.safri@ey.com"].Id;
@@ -173,7 +150,7 @@ public static class DemoDataSeeder
         context.Inscriptions.AddRange(inscriptions);
         await context.SaveChangesAsync();
 
-        // --- Evaluations (quelques exemples : auto-éval + validation manager) ---
+        // ========== 6. Évaluations ==========
         var compList = await context.Competences
             .Include(c => c.Collaborateur)
             .ToListAsync();
@@ -220,7 +197,7 @@ public static class DemoDataSeeder
         };
         context.EvaluationsCompetences.AddRange(evals);
 
-        // --- Marker de seed version ---
+        // ========== 7. Marqueur de version ==========
         context.Parametres.Add(new Parametre
         {
             Code = seedVersion,

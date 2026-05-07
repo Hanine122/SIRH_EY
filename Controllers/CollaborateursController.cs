@@ -3,6 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using SIRH.EY.Data;
 using SIRH.EY.Models;
 using SIRH.EY.Services;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,42 +15,94 @@ namespace SIRH.EY.Controllers;
 public class CollaborateursController : Controller
 {
     private readonly ApplicationDbContext _context;
+    private readonly UserManager<ApplicationUser> _userManager;
 
-    public CollaborateursController(ApplicationDbContext context)
-    {
-        _context = context;
-    }
-
+  public CollaborateursController(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
+{
+    _context = context;
+    _userManager = userManager;
+}
     // GET: Collaborateurs
-    public async Task<IActionResult> Index(string searchString = null, string sortOrder = null, string departement = null)
+   [Authorize]
+public async Task<IActionResult> Index(string searchString = null, string sortOrder = null, string departement = null)
+{
+    ViewBag.Search = searchString;
+    ViewBag.CurrentSort = sortOrder;
+    ViewBag.NameSortParam = sortOrder == "name_asc" ? "name_desc" : "name_asc";
+    ViewBag.DepartementFilter = departement;
+
+    var user = await _userManager.GetUserAsync(User);
+    
+
+var collaborateurs = _context.Collaborateurs.AsQueryable();
+// 🔐 PRIORITÉ DES RÔLES
+
+if (User.IsInRole("RH"))
+{
+    // RH voit tout → rien à filtrer
+}
+else if (User.IsInRole("Manager"))
+{
+    var manager = await _context.Collaborateurs
+        .FirstOrDefaultAsync(c => c.UserId == user.Id);
+
+    if (manager != null)
     {
-        ViewBag.Search = searchString;
-        ViewBag.CurrentSort = sortOrder;
-        ViewBag.NameSortParam = sortOrder == "name_asc" ? "name_desc" : "name_asc";
-        ViewBag.DepartementFilter = departement;
-
-        var collaborateurs = from c in _context.Collaborateurs select c;
-
-        if (!string.IsNullOrEmpty(departement))
-            collaborateurs = collaborateurs.Where(c => c.Departement == departement);
-
-        if (!string.IsNullOrEmpty(searchString))
-            collaborateurs = collaborateurs.Where(c => c.Nom.Contains(searchString) || c.Prenom.Contains(searchString) || c.Email.Contains(searchString));
-
-        if (sortOrder == "name_desc")
-            collaborateurs = collaborateurs.OrderByDescending(c => c.Nom);
-        else
-            collaborateurs = collaborateurs.OrderBy(c => c.Nom);
-
-        ViewBag.Departements = await _context.Collaborateurs.Select(c => c.Departement).Where(d => d != null).Distinct().ToListAsync();
-        ViewBag.Managers = await _context.Collaborateurs
-            .Where(c => c.Actif && (c.Grade == "Manager" || (c.Poste ?? "").Contains("Manager")))
-            .OrderBy(c => c.Nom)
-            .ToListAsync();
-
-        return View(await collaborateurs.ToListAsync());
+        collaborateurs = collaborateurs.Where(c => c.ManagerId == manager.Id);
     }
+}
+else if (User.IsInRole("Collaborateur"))
+{
+    var collab = await _context.Collaborateurs
+        .FirstOrDefaultAsync(c => c.UserId == user.Id);
 
+    if (collab != null)
+    {
+        collaborateurs = collaborateurs.Where(c => c.Id == collab.Id);
+    }
+}
+    // FILTRES
+    if (!string.IsNullOrEmpty(departement))
+        collaborateurs = collaborateurs.Where(c => c.Departement == departement);
+
+    if (!string.IsNullOrEmpty(searchString))
+        collaborateurs = collaborateurs.Where(c =>
+            c.Nom.Contains(searchString) ||
+            c.Prenom.Contains(searchString) ||
+            c.Email.Contains(searchString));
+
+    // TRI
+    collaborateurs = sortOrder == "name_desc"
+        ? collaborateurs.OrderByDescending(c => c.Nom)
+        : collaborateurs.OrderBy(c => c.Nom);
+
+    //  DATA POUR VIEW
+    ViewBag.Departements = await _context.Collaborateurs
+        .Where(c => c.Departement != null)
+        .Select(c => c.Departement)
+        .Distinct()
+        .ToListAsync();
+
+    ViewBag.Managers = await _context.Collaborateurs
+        .Where(c => c.Actif && (c.Grade == "Manager" || (c.Poste ?? "").Contains("Manager")))
+        .OrderBy(c => c.Nom)
+        .ToListAsync();
+
+    return View(await collaborateurs.ToListAsync());
+}
+[Authorize]
+public async Task<IActionResult> Profil()
+{
+    var email = User.Identity.Name;
+
+    var collab = await _context.Collaborateurs
+        .FirstOrDefaultAsync(c => c.Email == email);
+
+    if (collab == null)
+        return NotFound();
+
+    return View("Details", collab);
+}
     // GET: Collaborateurs/ChoisirRemplacant/5 — prototype : transversal (autre département + compétences communes) + score au poste
     public async Task<IActionResult> ChoisirRemplacant(int id)
     {
@@ -174,42 +228,78 @@ public class CollaborateursController : Controller
             .ToList();
         return View();
     }
-
     [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create([Bind("Id,Nom,Prenom,Email,Departement,Grade,Poste,ManagerId,DateEmbauche,Actif")] Collaborateur collaborateur)
+[ValidateAntiForgeryToken]
+[Authorize(Roles = "RH")]
+public async Task<IActionResult> Create([Bind("Nom,Prenom,Departement,Grade,Poste,ManagerId,DateEmbauche,Actif")] Collaborateur collab)
+{
+    if (!ModelState.IsValid)
     {
-        if (ModelState.IsValid)
+        return View(collab);
+    }
+
+    // 🔹 1. Générer email unique (safe)
+    var baseEmail = $"{collab.Prenom}.{collab.Nom}".Trim().ToLower();
+
+    int count = await _context.Collaborateurs
+        .CountAsync(c => c.Email.ToLower().StartsWith(baseEmail));
+
+    string email = count > 0
+        ? $"{baseEmail}{count}@ey.tn"
+        : $"{baseEmail}@ey.tn";
+
+    collab.Email = email;
+
+    // 🔹 2. Créer User Identity
+    var user = new ApplicationUser
+    {
+        UserName = collab.Email,
+        Email = collab.Email
+    };
+
+    var tempPassword = "Temp123!"; 
+
+    var result = await _userManager.CreateAsync(user, tempPassword);
+
+    if (!result.Succeeded)
+    {
+        foreach (var error in result.Errors)
         {
-            _context.Add(collaborateur);
-            await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index));
+            ModelState.AddModelError("", error.Description);
         }
-        ViewBag.Managers = await _context.Collaborateurs
-            .Where(c => c.Actif && (c.Grade == "Manager" || (c.Poste ?? "").Contains("Manager")))
-            .OrderBy(c => c.Nom)
-            .ToListAsync();
-        return View(collaborateur);
+        return View(collab);
     }
 
-    // GET: Collaborateurs/Edit/5
-    public async Task<IActionResult> Edit(int? id)
+    // 🔹 3. Déterminer le rôle 
+    var role = collab.Grade == "Manager" ? "Manager" : "Collaborateur";
+    await _userManager.AddToRoleAsync(user, role);
+
+    // 🔹 4. Lier User au Collaborateur
+    collab.UserId = user.Id;
+
+    try
     {
-        if (id == null) return NotFound();
-        var collaborateur = await _context.Collaborateurs.FindAsync(id);
-        if (collaborateur == null) return NotFound();
-        ViewBag.Managers = await _context.Collaborateurs
-            .Where(c => c.Actif && c.Id != id && (c.Grade == "Manager" || (c.Poste ?? "").Contains("Manager")))
-            .OrderBy(c => c.Nom)
-            .ToListAsync();
-        return View(collaborateur);
+        // Sauvegarder Collaborateur
+        _context.Add(collab);
+        await _context.SaveChangesAsync();
     }
+    catch (Exception)
+    {
+        // ROLLBACK (très important)
+        await _userManager.DeleteAsync(user);
+
+        ModelState.AddModelError("", "Erreur lors de la création du collaborateur.");
+        return View(collab);
+    }
+
+    return RedirectToAction(nameof(Index));
+}
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(int id, [Bind("Id,Nom,Prenom,Email,Departement,Grade,Poste,ManagerId,DateEmbauche,Actif")] Collaborateur collaborateur)
-    {
-        if (id != collaborateur.Id) return NotFound();
+   public async Task<IActionResult> Edit(int id, [Bind("Id,Nom,Prenom,Departement,Grade,Poste,ManagerId,DateEmbauche,Actif")] Collaborateur collaborateur)
+{
+    if (id != collaborateur.Id) return NotFound();
         if (ModelState.IsValid)
         {
             try

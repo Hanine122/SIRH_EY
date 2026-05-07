@@ -6,7 +6,7 @@ namespace SIRH.EY.Models
     {
         public int Id { get; set; }
         [Required]
-        public string Poste { get; set; } = string.Empty; // ex: "Auditeur", "Consultant"
+        public string Poste { get; set; } = string.Empty; 
         [Required]
         public string Competence { get; set; } = string.Empty;
         [Range(1,5)]
