@@ -1,13 +1,32 @@
 @using SIRH.EY.Models
+@using SIRH.EY.Controllers
 @{
     ViewData["Title"] = "Matrice 9-Box";
-    var matrix = ViewBag.Matrix as Dictionary<NineBoxCategory, List<TalentEvaluation>> ?? new Dictionary<NineBoxCategory, List<TalentEvaluation>>();
+    var matrix = ViewBag.Matrix as Dictionary<NineBoxCategory, List<MatrixItemViewModel>> ?? new Dictionary<NineBoxCategory, List<MatrixItemViewModel>>();
     var departements = ViewBag.Departements as List<string> ?? new List<string>();
     var grades = ViewBag.Grades as string[] ?? Array.Empty<string>();
 }
 
 @section Styles {
     <link rel="stylesheet" href="~/css/ey-talent-management.css" asp-append-version="true" />
+    <style>
+        .offcanvas-backdrop.show {
+            opacity: 0.15 !important;
+            background-color: #000 !important;
+            backdrop-filter: blur(2px);
+        }
+        body.offcanvas-open {
+            overflow: auto !important;
+        }
+        .ey-collaborator-drawer-item {
+            border-left: 4px solid transparent;
+            transition: all 0.2s ease;
+        }
+        .ey-collaborator-drawer-item:hover {
+            border-left-color: #ffe600;
+            background-color: #f8f9fa;
+        }
+    </style>
 }
 
 <div class="ey-talent-container">
@@ -71,33 +90,33 @@
                 <!-- Row 1: High Performance -->
                 <div class="ey-nine-box-row">
                     @{
-                        var starEvals = matrix.GetValueOrDefault(NineBoxCategory.Star) ?? new List<TalentEvaluation>();
+                        var starEvals = matrix.GetValueOrDefault(NineBoxCategory.Star) ?? new List<MatrixItemViewModel>();
                         <div class="ey-nine-box-cell box-star">
-                            <div class="ey-box-header"><span class="ey-box-title">⭐ Star</span><span class="ey-box-count">@starEvals.Count</span></div>
+                            <div class="ey-box-header"><span class="ey-box-title">⭐ Talent stratégique</span><span class="ey-box-count">@starEvals.Count</span></div>
                             <p class="ey-box-desc">Leader exceptionnel</p>
                             <div class="ey-box-collaborateurs">
                                 @foreach (var eval in starEvals)
-                                {<div class="ey-box-avatar" onclick="location.href='/Talent/Evaluate?collaborateurId=@eval.CollaborateurId'">@(eval.Collaborateur?.Prenom?[0])@(eval.Collaborateur?.Nom?[0])</div>}
+                                {<div class="ey-box-avatar @(eval.HasManualEval ? "has-eval" : "")" onclick="openEvaluatePanel(@eval.Collaborateur.Id)" title="@eval.Collaborateur.Prenom @eval.Collaborateur.Nom">@(eval.Collaborateur?.Prenom?[0])@(eval.Collaborateur?.Nom?[0])</div>}
                             </div>
                         </div>
                         
-                        var futureEvals = matrix.GetValueOrDefault(NineBoxCategory.FutureLeader) ?? new List<TalentEvaluation>();
+                        var futureEvals = matrix.GetValueOrDefault(NineBoxCategory.FutureLeader) ?? new List<MatrixItemViewModel>();
                         <div class="ey-nine-box-cell box-future">
-                            <div class="ey-box-header"><span class="ey-box-title">🚀 Future Leader</span><span class="ey-box-count">@futureEvals.Count</span></div>
+                            <div class="ey-box-header"><span class="ey-box-title">🚀 Leader stratégique</span><span class="ey-box-count">@futureEvals.Count</span></div>
                             <p class="ey-box-desc">Leader potentiel</p>
                             <div class="ey-box-collaborateurs">
                                 @foreach (var eval in futureEvals)
-                                {<div class="ey-box-avatar" onclick="location.href='/Talent/Evaluate?collaborateurId=@eval.CollaborateurId'">@(eval.Collaborateur?.Prenom?[0])@(eval.Collaborateur?.Nom?[0])</div>}
+                                {<div class="ey-box-avatar @(eval.HasManualEval ? "has-eval" : "")" onclick="openEvaluatePanel(@eval.Collaborateur.Id)" title="@eval.Collaborateur.Prenom @eval.Collaborateur.Nom">@(eval.Collaborateur?.Prenom?[0])@(eval.Collaborateur?.Nom?[0])</div>}
                             </div>
                         </div>
                         
-                        var proEvals = matrix.GetValueOrDefault(NineBoxCategory.HighProfessional) ?? new List<TalentEvaluation>();
+                        var proEvals = matrix.GetValueOrDefault(NineBoxCategory.HighProfessional) ?? new List<MatrixItemViewModel>();
                         <div class="ey-nine-box-cell box-pro">
-                            <div class="ey-box-header"><span class="ey-box-title">💎 High Professional</span><span class="ey-box-count">@proEvals.Count</span></div>
-                            <p class="ey-box-desc">Expert</p>
+                            <div class="ey-box-header"><span class="ey-box-title">💎 Expert métier</span><span class="ey-box-count">@proEvals.Count</span></div>
+                            <p class="ey-box-desc">Expert technique</p>
                             <div class="ey-box-collaborateurs">
                                 @foreach (var eval in proEvals)
-                                {<div class="ey-box-avatar" onclick="location.href='/Talent/Evaluate?collaborateurId=@eval.CollaborateurId'">@(eval.Collaborateur?.Prenom?[0])@(eval.Collaborateur?.Nom?[0])</div>}
+                                {<div class="ey-box-avatar @(eval.HasManualEval ? "has-eval" : "")" onclick="openEvaluatePanel(@eval.Collaborateur.Id)" title="@eval.Collaborateur.Prenom @eval.Collaborateur.Nom">@(eval.Collaborateur?.Prenom?[0])@(eval.Collaborateur?.Nom?[0])</div>}
                             </div>
                         </div>
                     }
@@ -106,33 +125,33 @@
                 <!-- Row 2: Medium Performance -->
                 <div class="ey-nine-box-row">
                     @{
-                        var emergingEvals = matrix.GetValueOrDefault(NineBoxCategory.EmergingTalent) ?? new List<TalentEvaluation>();
+                        var emergingEvals = matrix.GetValueOrDefault(NineBoxCategory.EmergingTalent) ?? new List<MatrixItemViewModel>();
                         <div class="ey-nine-box-cell box-emerging">
-                            <div class="ey-box-header"><span class="ey-box-title">🌱 Emerging Talent</span><span class="ey-box-count">@emergingEvals.Count</span></div>
-                            <p class="ey-box-desc">Talent émergent</p>
+                            <div class="ey-box-header"><span class="ey-box-title">🌱 Potentiel émergent</span><span class="ey-box-count">@emergingEvals.Count</span></div>
+                            <p class="ey-box-desc">Fort potentiel</p>
                             <div class="ey-box-collaborateurs">
                                 @foreach (var eval in emergingEvals)
-                                {<div class="ey-box-avatar" onclick="location.href='/Talent/Evaluate?collaborateurId=@eval.CollaborateurId'">@(eval.Collaborateur?.Prenom?[0])@(eval.Collaborateur?.Nom?[0])</div>}
+                                {<div class="ey-box-avatar @(eval.HasManualEval ? "has-eval" : "")" onclick="openEvaluatePanel(@eval.Collaborateur.Id)" title="@eval.Collaborateur.Prenom @eval.Collaborateur.Nom">@(eval.Collaborateur?.Prenom?[0])@(eval.Collaborateur?.Nom?[0])</div>}
                             </div>
                         </div>
                         
-                        var solidEvals = matrix.GetValueOrDefault(NineBoxCategory.SolidProfessional) ?? new List<TalentEvaluation>();
+                        var solidEvals = matrix.GetValueOrDefault(NineBoxCategory.SolidProfessional) ?? new List<MatrixItemViewModel>();
                         <div class="ey-nine-box-cell box-solid">
-                            <div class="ey-box-header"><span class="ey-box-title">✅ Solid Professional</span><span class="ey-box-count">@solidEvals.Count</span></div>
-                            <p class="ey-box-desc">Professionnel solide</p>
+                            <div class="ey-box-header"><span class="ey-box-title">✅ Collaborateur clé</span><span class="ey-box-count">@solidEvals.Count</span></div>
+                            <p class="ey-box-desc">Performance constante</p>
                             <div class="ey-box-collaborateurs">
                                 @foreach (var eval in solidEvals)
-                                {<div class="ey-box-avatar" onclick="location.href='/Talent/Evaluate?collaborateurId=@eval.CollaborateurId'">@(eval.Collaborateur?.Prenom?[0])@(eval.Collaborateur?.Nom?[0])</div>}
+                                {<div class="ey-box-avatar @(eval.HasManualEval ? "has-eval" : "")" onclick="openEvaluatePanel(@eval.Collaborateur.Id)" title="@eval.Collaborateur.Prenom @eval.Collaborateur.Nom">@(eval.Collaborateur?.Prenom?[0])@(eval.Collaborateur?.Nom?[0])</div>}
                             </div>
                         </div>
                         
-                        var inplaceEvals = matrix.GetValueOrDefault(NineBoxCategory.InPlace) ?? new List<TalentEvaluation>();
+                        var inplaceEvals = matrix.GetValueOrDefault(NineBoxCategory.InPlace) ?? new List<MatrixItemViewModel>();
                         <div class="ey-nine-box-cell box-inplace">
-                            <div class="ey-box-header"><span class="ey-box-title">📍 In Place</span><span class="ey-box-count">@inplaceEvals.Count</span></div>
-                            <p class="ey-box-desc">En place</p>
+                            <div class="ey-box-header"><span class="ey-box-title">📍 Stable dans le poste</span><span class="ey-box-count">@inplaceEvals.Count</span></div>
+                            <p class="ey-box-desc">Fiable</p>
                             <div class="ey-box-collaborateurs">
                                 @foreach (var eval in inplaceEvals)
-                                {<div class="ey-box-avatar" onclick="location.href='/Talent/Evaluate?collaborateurId=@eval.CollaborateurId'">@(eval.Collaborateur?.Prenom?[0])@(eval.Collaborateur?.Nom?[0])</div>}
+                                {<div class="ey-box-avatar @(eval.HasManualEval ? "has-eval" : "")" onclick="openEvaluatePanel(@eval.Collaborateur.Id)" title="@eval.Collaborateur.Prenom @eval.Collaborateur.Nom">@(eval.Collaborateur?.Prenom?[0])@(eval.Collaborateur?.Nom?[0])</div>}
                             </div>
                         </div>
                     }
@@ -141,33 +160,33 @@
                 <!-- Row 3: Low Performance -->
                 <div class="ey-nine-box-row">
                     @{
-                        var risingEvals = matrix.GetValueOrDefault(NineBoxCategory.RisingStar) ?? new List<TalentEvaluation>();
+                        var risingEvals = matrix.GetValueOrDefault(NineBoxCategory.RisingStar) ?? new List<MatrixItemViewModel>();
                         <div class="ey-nine-box-cell box-rising">
-                            <div class="ey-box-header"><span class="ey-box-title">⭐ Rising Star</span><span class="ey-box-count">@risingEvals.Count</span></div>
-                            <p class="ey-box-desc">Étoile montante</p>
+                            <div class="ey-box-header"><span class="ey-box-title">⭐ Haut potentiel</span><span class="ey-box-count">@risingEvals.Count</span></div>
+                            <p class="ey-box-desc">En démarrage</p>
                             <div class="ey-box-collaborateurs">
                                 @foreach (var eval in risingEvals)
-                                {<div class="ey-box-avatar" onclick="location.href='/Talent/Evaluate?collaborateurId=@eval.CollaborateurId'">@(eval.Collaborateur?.Prenom?[0])@(eval.Collaborateur?.Nom?[0])</div>}
+                                {<div class="ey-box-avatar @(eval.HasManualEval ? "has-eval" : "")" onclick="openEvaluatePanel(@eval.Collaborateur.Id)" title="@eval.Collaborateur.Prenom @eval.Collaborateur.Nom">@(eval.Collaborateur?.Prenom?[0])@(eval.Collaborateur?.Nom?[0])</div>}
                             </div>
                         </div>
                         
-                        var devEvals = matrix.GetValueOrDefault(NineBoxCategory.NeedDevelopment) ?? new List<TalentEvaluation>();
+                        var devEvals = matrix.GetValueOrDefault(NineBoxCategory.NeedDevelopment) ?? new List<MatrixItemViewModel>();
                         <div class="ey-nine-box-cell box-development">
-                            <div class="ey-box-header"><span class="ey-box-title">📈 Needs Development</span><span class="ey-box-count">@devEvals.Count</span></div>
-                            <p class="ey-box-desc">Besoin développement</p>
+                            <div class="ey-box-header"><span class="ey-box-title">📈 Besoin d'accompagnement</span><span class="ey-box-count">@devEvals.Count</span></div>
+                            <p class="ey-box-desc">Besoin de suivi</p>
                             <div class="ey-box-collaborateurs">
                                 @foreach (var eval in devEvals)
-                                {<div class="ey-box-avatar" onclick="location.href='/Talent/Evaluate?collaborateurId=@eval.CollaborateurId'">@(eval.Collaborateur?.Prenom?[0])@(eval.Collaborateur?.Nom?[0])</div>}
+                                {<div class="ey-box-avatar @(eval.HasManualEval ? "has-eval" : "")" onclick="openEvaluatePanel(@eval.Collaborateur.Id)" title="@eval.Collaborateur.Prenom @eval.Collaborateur.Nom">@(eval.Collaborateur?.Prenom?[0])@(eval.Collaborateur?.Nom?[0])</div>}
                             </div>
                         </div>
                         
-                        var riskEvals = matrix.GetValueOrDefault(NineBoxCategory.Underperformer) ?? new List<TalentEvaluation>();
+                        var riskEvals = matrix.GetValueOrDefault(NineBoxCategory.Underperformer) ?? new List<MatrixItemViewModel>();
                         <div class="ey-nine-box-cell box-risk">
-                            <div class="ey-box-header"><span class="ey-box-title">⚠️ Underperformer</span><span class="ey-box-count">@riskEvals.Count</span></div>
-                            <p class="ey-box-desc">Sous-performeur</p>
+                            <div class="ey-box-header"><span class="ey-box-title">⚠️ Performance insuffisante</span><span class="ey-box-count">@riskEvals.Count</span></div>
+                            <p class="ey-box-desc">Action requise</p>
                             <div class="ey-box-collaborateurs">
                                 @foreach (var eval in riskEvals)
-                                {<div class="ey-box-avatar" onclick="location.href='/Talent/Evaluate?collaborateurId=@eval.CollaborateurId'">@(eval.Collaborateur?.Prenom?[0])@(eval.Collaborateur?.Nom?[0])</div>}
+                                {<div class="ey-box-avatar @(eval.HasManualEval ? "has-eval" : "")" onclick="openEvaluatePanel(@eval.Collaborateur.Id)" title="@eval.Collaborateur.Prenom @eval.Collaborateur.Nom">@(eval.Collaborateur?.Prenom?[0])@(eval.Collaborateur?.Nom?[0])</div>}
                             </div>
                         </div>
                     }
@@ -195,24 +214,96 @@
     <!-- Actions -->
     <div class="ey-talent-actions-bar">
         <a asp-action="Index" class="ey-btn-talent ey-btn-ghost">
-            <i class="fas fa-arrow-left"></i> Retour
+            <i class="fas fa-arrow-left"></i> Retour au tableau de bord
         </a>
-        <a asp-controller="Collaborateurs" asp-action="Index" class="ey-btn-talent ey-btn-primary">
-            <i class="fas fa-user-plus"></i> Évaluer un collaborateur
-        </a>
+        <button type="button" class="ey-btn-talent ey-btn-primary" data-bs-toggle="offcanvas" data-bs-target="#collaboratorsList">
+            <i class="fas fa-list"></i> Liste des collaborateurs
+        </button>
+    </div>
+</div>
+
+<!-- Offcanvas pour la liste des collaborateurs -->
+<div class="offcanvas offcanvas-end shadow-lg border-0" tabindex="-1" id="collaboratorsList" style="width: 420px; z-index: 1055;">
+    <div class="offcanvas-header bg-dark text-white border-bottom border-secondary">
+        <h5 class="offcanvas-title fw-bold"><i class="fas fa-users text-warning me-2"></i> Collaborateurs</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body p-0" style="background-color: #f4f4f4;">
+        <div class="list-group list-group-flush">
+            @foreach (var category in Enum.GetValues<NineBoxCategory>())
+            {
+                var evals = matrix.GetValueOrDefault(category) ?? new List<MatrixItemViewModel>();
+                foreach(var item in evals)
+                {
+                    var collab = item.Collaborateur;
+                    var avgScore = collab.Competences?.Any() == true ? Math.Round(collab.Competences.Average(c => c.NiveauActuel), 1) : 0;
+                    <button type="button" class="list-group-item list-group-item-action p-3 ey-collaborator-drawer-item border-bottom" onclick="openEvaluatePanel(@collab.Id)">
+                        <div class="d-flex align-items-center">
+                            <div class="ey-box-avatar me-3 shadow-sm" style="width: 48px; height: 48px; font-size: 1.1rem;">@(collab.Prenom?[0])@(collab.Nom?[0])</div>
+                            <div class="flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <h6 class="mb-0 fw-bold text-dark">@collab.Prenom @collab.Nom</h6>
+                                    <span class="badge bg-light text-dark border">@avgScore/5</span>
+                                </div>
+                                <div class="text-muted small mb-2 d-flex align-items-center">
+                                    <i class="fas fa-building me-1"></i> @collab.Departement &bull; @collab.Grade
+                                </div>
+                                <div class="ey-talent-card-category @category.GetColorClass() w-100 mt-1 px-2 py-1" style="font-size: 0.75rem; border-radius: 4px;">
+                                    @category.GetDisplayName()
+                                </div>
+                            </div>
+                        </div>
+                    </button>
+                }
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Modal Premium pour les détails du collaborateur -->
+<div class="modal fade" id="evaluationModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content shadow-lg border-0 rounded-4" id="evaluationPanelContent">
+            <!-- Chargé dynamiquement -->
+            <div class="p-5 text-center text-muted">
+                <div class="spinner-border text-warning mb-3" role="status"></div>
+                <p>Chargement des données RH...</p>
+            </div>
+        </div>
     </div>
 </div>
 
 @section Scripts {
     <script>
-        // Drag and drop simulation (click to move)
-        document.querySelectorAll('.ey-box-avatar').forEach(avatar => {
-            avatar.addEventListener('dblclick', function() {
-                const id = this.getAttribute('onclick').match(/collaborateurId=(\d+)/)?.[1];
-                if (id) {
-                    window.location.href = `/Talent/Evaluate?collaborateurId=${id}`;
-                }
-            });
+        var evalModal = null;
+
+        document.addEventListener('DOMContentLoaded', function () {
+            evalModal = new bootstrap.Modal(document.getElementById('evaluationModal'));
         });
+
+        function openEvaluatePanel(id) {
+            // Fermer la liste si elle est ouverte
+            var listOffcanvasEl = document.getElementById('collaboratorsList');
+            var listOffcanvas = bootstrap.Offcanvas.getInstance(listOffcanvasEl);
+            if (listOffcanvas) {
+                listOffcanvas.hide();
+            }
+
+            // Charger le panel AJAX
+            fetch('/Talent/GetCollaborateurDetails?id=' + id)
+                .then(response => response.text())
+                .then(html => {
+                    document.getElementById('evaluationPanelContent').innerHTML = html;
+                    evalModal.show();
+                })
+                .catch(error => {
+                    alert('Erreur lors du chargement des données.');
+                    console.error(error);
+                });
+        }
+
+        function closeEvaluatePanel() {
+            if(evalModal) evalModal.hide();
+        }
     </script>
 }

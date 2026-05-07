@@ -1,10 +1,11 @@
 @using SIRH.EY.Models
+@using SIRH.EY.Controllers
 @model IEnumerable<SIRH.EY.Models.OKR>
 @{
-    ViewData["Title"] = "Talent Management Dashboard";
-    var topTalents = ViewBag.TopTalents as List<TalentEvaluation> ?? new List<TalentEvaluation>();
-    var atRisk = ViewBag.AtRisk as List<TalentEvaluation> ?? new List<TalentEvaluation>();
-    var boxDistribution = ViewBag.BoxDistribution as dynamic ?? new List<dynamic>();
+    ViewData["Title"] = "Tableau de Bord Talent Management";
+    var topTalents = ViewBag.TopTalents as List<TopTalentViewModel> ?? new List<TopTalentViewModel>();
+    var atRisk = ViewBag.AtRisk as List<AtRiskViewModel> ?? new List<AtRiskViewModel>();
+    var boxDistribution = ViewBag.BoxDistribution as List<BoxDistViewModel> ?? new List<BoxDistViewModel>();
 }
 
 @section Styles {
@@ -40,7 +41,7 @@
                 <i class="fas fa-star"></i>
             </div>
             <div class="ey-talent-kpi-value">@topTalents.Count</div>
-            <div class="ey-talent-kpi-label">Top Talents</div>
+            <div class="ey-talent-kpi-label">Meilleurs Talents</div>
         </div>
         <div class="ey-talent-kpi-card">
             <div class="ey-talent-kpi-icon ey-kpi-red">
@@ -69,8 +70,8 @@
         <!-- Top Talents -->
         <div class="ey-talent-section ey-talent-large">
             <div class="ey-talent-section-header">
-                <h2><i class="fas fa-crown"></i> Top Talents</h2>
-                <span class="ey-talent-badge">Stars & Future Leaders</span>
+                <h2><i class="fas fa-crown"></i> Meilleurs Talents</h2>
+                <span class="ey-talent-badge">Talents stratégiques & Leaders</span>
             </div>
             <div class="ey-talent-cards-grid">
                 @foreach (var talent in topTalents)
@@ -92,7 +93,7 @@
                             </div>
                         </div>
                         <div class="ey-talent-card-category @talent.Category.GetColorClass()">
-                            @talent.Category.GetDisplayName()
+                            @talent.Badge
                         </div>
                     </div>
                 }
@@ -145,7 +146,7 @@
                             <p>@risk.Collaborateur?.Departement - @risk.Collaborateur?.Poste</p>
                         </div>
                         <div class="ey-talent-risk-actions">
-                            <a asp-action="Evaluate" asp-route-collaborateurId="@risk.CollaborateurId" 
+                            <a asp-action="Matrix9Box"
                                class="ey-btn-talent ey-btn-sm ey-btn-warning">
                                 Ré-évaluer
                             </a>
@@ -167,9 +168,9 @@
         new Chart(distributionCtx, {
             type: 'doughnut',
             data: {
-                labels: distributionData.map(d => d.Category),
+                labels: distributionData.map(d => d.category || d.Category),
                 datasets: [{
-                    data: distributionData.map(d => d.Count),
+                    data: distributionData.map(d => d.count || d.Count),
                     backgroundColor: [
                         '#ffd700', // Star
                         '#ff6b6b', // Future Leader

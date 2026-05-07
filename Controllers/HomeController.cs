@@ -5,15 +5,19 @@ using SIRH.EY.Data;
 using SIRH.EY.Services;
 using SIRH.EY.Models;
 
+using Microsoft.AspNetCore.Identity;
+
 namespace SIRH.EY.Controllers;
 
 public class HomeController : Controller
 {
     private readonly ApplicationDbContext _context;
+    private readonly UserManager<ApplicationUser> _userManager;
 
-    public HomeController(ApplicationDbContext context)
+    public HomeController(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
     {
         _context = context;
+        _userManager = userManager;
     }
 
 public async Task<IActionResult> Index()
@@ -28,13 +32,43 @@ public async Task<IActionResult> Index()
     ViewBag.NbFormationsSuivies = nbInscriptions;
     ViewBag.TauxCompletion = taux;
 
+    // Utilisateur connecté: forcer le parsing depuis l'email (User.Identity.Name)
+    string prenom = "Collaborateur";
+    if (User.Identity?.Name != null && User.Identity.Name.Contains("@"))
+    {
+        var parts = User.Identity.Name.Split('@')[0].Split('.');
+        if (parts.Length > 0)
+        {
+            var firstPart = parts[0];
+            prenom = char.ToUpper(firstPart[0]) + firstPart.Substring(1).ToLower();
+        }
+    }
+    else if (User.Identity?.Name != null)
+    {
+        prenom = User.Identity.Name;
+    }
+    ViewBag.PrenomConnecte = prenom;
+
     // Collaborateurs actifs récents (les 4 derniers)
     var collaborateurs = await _context.Collaborateurs
         .Where(c => c.Actif)
         .OrderByDescending(c => c.Id)
         .Take(4)
-        .Select(c => new { c.Prenom, c.Nom, c.Poste })
+        .Select(c => new { c.Prenom, c.Nom, c.Poste, c.Departement, c.Grade, DateEmbauche = (DateTime?)c.DateEmbauche })
+        .Cast<dynamic>()
         .ToListAsync();
+        
+    // Données de secours si la base est vide
+    if (!collaborateurs.Any())
+    {
+        collaborateurs = new List<dynamic>
+        {
+            new { Prenom = "Thomas", Nom = "Martin", Poste = "Consultant", Departement = "Advisory", Grade = "Senior", DateEmbauche = (DateTime?)DateTime.Now.AddDays(-15) },
+            new { Prenom = "Sophie", Nom = "Bernard", Poste = "Manager", Departement = "Audit", Grade = "Manager", DateEmbauche = (DateTime?)DateTime.Now.AddDays(-45) },
+            new { Prenom = "Lucas", Nom = "Dubois", Poste = "Analyste", Departement = "Consulting", Grade = "Junior", DateEmbauche = (DateTime?)DateTime.Now.AddDays(-5) },
+            new { Prenom = "Emma", Nom = "Roux", Poste = "Directrice", Departement = "Tax", Grade = "Director", DateEmbauche = (DateTime?)DateTime.Now.AddDays(-20) }
+        };
+    }
     ViewBag.CollaborateursRecents = collaborateurs;
 
     // Formations en cours (inscriptions non terminées)

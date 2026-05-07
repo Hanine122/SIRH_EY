@@ -45,10 +45,10 @@ body {
 }
 
 .ey-content {
-    width: min(100% - 40px, 1320px);
-    max-width: 1320px;
+    width: min(100% - 48px, 1600px);
+    max-width: 1600px;
     margin: 0 auto;
-    padding: 28px 0 44px;
+    padding: 32px 0 64px;
 }
 
 /* Sidebar */

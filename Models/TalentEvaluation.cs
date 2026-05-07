@@ -54,16 +54,16 @@ public static class NineBoxExtensions
     {
         return category switch
         {
-            NineBoxCategory.Star => "⭐ Star (Leader)",
-            NineBoxCategory.FutureLeader => "🚀 Future Leader",
-            NineBoxCategory.HighProfessional => "💎 High Professional",
-            NineBoxCategory.EmergingTalent => "🌱 Emerging Talent",
-            NineBoxCategory.SolidProfessional => "✅ Solid Professional",
-            NineBoxCategory.InPlace => "📍 In Place",
-            NineBoxCategory.RisingStar => "⭐ Rising Star",
-            NineBoxCategory.NeedDevelopment => "📈 Needs Development",
-            NineBoxCategory.Underperformer => "⚠️ Underperformer",
-            _ => "Unknown"
+            NineBoxCategory.Star => "⭐ Talent stratégique",
+            NineBoxCategory.FutureLeader => "🚀 Leader stratégique",
+            NineBoxCategory.HighProfessional => "💎 Expert métier",
+            NineBoxCategory.EmergingTalent => "🌱 Potentiel émergent",
+            NineBoxCategory.SolidProfessional => "✅ Collaborateur clé",
+            NineBoxCategory.InPlace => "📍 Stable dans le poste",
+            NineBoxCategory.RisingStar => "⭐ Haut potentiel",
+            NineBoxCategory.NeedDevelopment => "📈 Besoin d'accompagnement",
+            NineBoxCategory.Underperformer => "⚠️ Performance insuffisante",
+            _ => "Inconnu"
         };
     }
     

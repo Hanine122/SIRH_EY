@@ -61,21 +61,28 @@ public class ReportingController : Controller
         var evolutionData = new List<int> { 12, 15, 10, 8, 11, ecartsCritiques };
         ViewBag.EvolutionSkillGaps = evolutionData;
 
-        // Data pour Chart.js - Top compétences manquantes
+        // Data pour Chart.js - Top 5 compétences à développer (moyenne globale la plus faible)
         var topCompetencesManquantes = competences
-            .Where(c => c.NiveauActuel < c.NiveauCible)
             .GroupBy(c => c.Nom)
-            .Select(g => new { Nom = g.Key, Count = g.Count() })
-            .OrderByDescending(x => x.Count)
+            .Select(g => new { 
+                Nom = g.Key, 
+                Count = g.Count(c => c.NiveauActuel < 3),
+                AverageScore = g.Average(c => c.NiveauActuel)
+            })
+            .OrderBy(x => x.AverageScore)
             .Take(5)
             .ToList();
         ViewBag.TopCompetencesManquantes = topCompetencesManquantes;
 
-        // Data pour Chart.js - Répartition par département
+        // Data pour Chart.js - Répartition par département (Moyenne des compétences)
         var repartitionDept = await _context.Competences
             .Include(c => c.Collaborateur)
-            .GroupBy(c => c.Collaborateur.Departement)
-            .Select(g => new { Departement = g.Key ?? "Non assigné", Count = g.Count() })
+            .Where(c => c.Collaborateur != null)
+            .GroupBy(c => c.Collaborateur!.Departement)
+            .Select(g => new { 
+                Departement = g.Key ?? "Non assigné", 
+                AverageScore = Math.Round(g.Average(c => c.NiveauActuel), 1) 
+            })
             .ToListAsync();
         ViewBag.RepartitionParDepartement = repartitionDept;
 

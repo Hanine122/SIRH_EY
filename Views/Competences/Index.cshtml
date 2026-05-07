@@ -61,77 +61,81 @@
         var seuilRhPourcent = evaluation?.SeuilRh ?? (comp.NiveauCible * 20);
         var autoEvalPourcent = evaluation?.AutoEvaluationCollaborateur;
         var managerPourcent = evaluation?.EvaluationManager;
-        var cardState = comp.NiveauActuel >= comp.NiveauCible ? "is-ontrack" : (comp.NiveauCible - comp.NiveauActuel <= 1 ? "is-watch" : "is-critical");
-        <div class="col-md-6 col-lg-4">
-            <div class="ey-card ey-competence-card ey-interactive-card @cardState">
-                <div class="card-body">
-                    <h5 class="card-title">@comp.Nom</h5>
-                    <span class="badge bg-light text-dark mb-2 border">@(comp.CategorieCompetence?.Nom ?? "—")</span>
-                    <div class="mt-3">
-                        <div class="d-flex justify-content-between small">
-                            <span>Niveau Actuel</span><span>@comp.NiveauActuel/5</span>
-                        </div>
-                        <div class="progress mt-1 mb-3" style="height:6px">
-                            @{
-                                string couleur = comp.NiveauActuel >= comp.NiveauCible ? "bg-success" : (comp.NiveauCible - comp.NiveauActuel <= 1 ? "bg-warning" : "bg-danger");
-                            }
-                            <div class="progress-bar @couleur" style="width: @((comp.NiveauActuel/5.0)*100)%"></div>
-                        </div>
-                        <div class="d-flex justify-content-between small">
-                            <span>Niveau Cible</span><span>@comp.NiveauCible/5</span>
-                        </div>
-                        <div class="progress mt-1" style="height:6px">
-                            <div class="progress-bar bg-secondary" style="width: @((comp.NiveauCible/5.0)*100)%"></div>
+        var gap = comp.NiveauCible - comp.NiveauActuel;
+        
+        string rhBadgeClass = "bg-secondary";
+        string rhBadgeText = "En attente";
+        if (managerPourcent.HasValue) {
+            if (comp.NiveauActuel >= comp.NiveauCible) { rhBadgeClass = "bg-success"; rhBadgeText = "Conforme"; }
+            else if (gap == 1) { rhBadgeClass = "bg-warning text-dark"; rhBadgeText = "Progression"; }
+            else { rhBadgeClass = "bg-danger"; rhBadgeText = "Critique"; }
+        }
+        if (sousSeuil) { rhBadgeClass = "bg-danger"; rhBadgeText = "Niveau insuffisant"; }
+
+        <div class="col-md-6 col-xl-4">
+            <div class="ey-card ey-competence-card p-4 h-100 position-relative ey-card-hover border-0 shadow-sm bg-white" style="border-radius: 12px; transition: all 0.3s ease;">
+                <!-- Overlay highlight -->
+                <div class="position-absolute top-0 start-0 w-100 bg-warning" style="height: 4px; border-radius: 12px 12px 0 0;"></div>
+                
+                <div class="d-flex justify-content-between align-items-start mb-3 mt-1">
+                    <div>
+                        <h5 class="fw-bold mb-1 text-dark" style="letter-spacing: -0.5px;">@comp.Nom</h5>
+                        <div class="d-flex gap-2">
+                            <span class="badge border border-secondary text-secondary bg-transparent fw-normal" style="font-size: 0.7rem;">@(comp.CategorieCompetence?.Nom ?? "Hard Skill")</span>
                         </div>
                     </div>
-                    <div class="mt-2 text-muted small">
-                        <i class="far fa-calendar-alt"></i> @comp.DateEvaluation.ToString("dd/MM/yyyy")
+                    <span class="badge @rhBadgeClass rounded-pill px-3 py-2 shadow-sm" style="font-size: 0.75rem;">@rhBadgeText</span>
+                </div>
+
+                <div class="mt-4">
+                    <div class="d-flex justify-content-between small fw-bold mb-1">
+                        <span class="text-muted">Niveau Actuel</span>
+                        <span class="text-dark">@comp.NiveauActuel / 5</span>
                     </div>
-                    @if (comp.NiveauActuel < comp.NiveauCible)
-                    {
-                        <div class="alert alert-warning mt-2 py-1 small">
-                            <i class="fas fa-exclamation-triangle"></i> Gap : @(comp.NiveauCible - comp.NiveauActuel) niveau(x)
-                        </div>
-                    }
-                    @if (sousSeuil)
-                    {
-                        <div class="alert alert-danger mt-2 py-1 small">
-                            <i class="fas fa-times-circle"></i> Niveau insuffisant pour un @grade (requis : @seuilRequis/5)
-                        </div>
-                    }
-                    <div class="ey-meta-panel p-2 mt-3">
-                        <div class="small text-muted fw-semibold mb-2">Pilotage RH & évaluations</div>
-                        <div class="d-flex justify-content-between small mb-1">
-                            <span>Objectif RH</span><strong>@seuilRhPourcent%</strong>
-                        </div>
-                        <div class="d-flex justify-content-between small mb-1">
-                            <span>Auto-évaluation collaborateur</span>
-                            <strong>@(autoEvalPourcent.HasValue ? $"{autoEvalPourcent.Value}%" : "Non saisie")</strong>
-                        </div>
-                        <div class="d-flex justify-content-between small">
-                            <span>Validation manager</span>
-                            <strong>
-                                @if (managerPourcent.HasValue)
-                                {
-                                    <span class="ey-dot-live ok"></span><span>@managerPourcent.Value%</span>
-                                }
-                                else
-                                {
-                                    <span class="ey-dot-live pending"></span><span>En attente</span>
-                                }
-                            </strong>
-                        </div>
+                    <div class="progress mb-3 rounded-pill" style="height: 8px;">
+                        @{ string couleur = comp.NiveauActuel >= comp.NiveauCible ? "bg-success" : (gap <= 1 ? "bg-warning" : "bg-danger"); }
+                        <div class="progress-bar @couleur" style="width: @((comp.NiveauActuel/5.0)*100)%"></div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between small fw-bold mb-1">
+                        <span class="text-muted">Niveau Cible</span>
+                        <span class="text-dark">@comp.NiveauCible / 5</span>
+                    </div>
+                    <div class="progress rounded-pill mb-4" style="height: 6px;">
+                        <div class="progress-bar bg-light border border-secondary" style="width: @((comp.NiveauCible/5.0)*100)%"></div>
                     </div>
                 </div>
-                <div class="card-footer bg-transparent border-0 pt-0">
-                    <div class="d-grid gap-2">
-                        <a asp-action="AutoEvaluation" asp-route-id="@comp.Id" class="ey-btn-ghost w-100 text-center text-decoration-none">
-                            <i class="fas fa-user-edit"></i> Auto-évaluation
-                        </a>
-                        <a asp-action="ValidationManager" asp-route-id="@comp.Id" class="ey-btn-main w-100 text-center text-decoration-none">
-                            <i class="fas fa-user-check"></i> Validation manager
-                        </a>
+
+                <div class="ey-meta-panel p-3 bg-light rounded border border-light mt-auto">
+                    <div class="small text-muted fw-bold mb-3 border-bottom pb-2 text-uppercase" style="font-size: 0.7rem; letter-spacing: 0.5px;">Analytics RH</div>
+                    
+                    <div class="d-flex justify-content-between align-items-center small mb-2">
+                        <span class="text-muted"><i class="fas fa-bullseye me-2 text-warning"></i>Objectif RH</span>
+                        <strong class="text-dark">@seuilRhPourcent%</strong>
                     </div>
+                    <div class="d-flex justify-content-between align-items-center small mb-2">
+                        <span class="text-muted"><i class="fas fa-user-edit me-2 text-primary"></i>Auto-éval.</span>
+                        <strong class="text-dark">@(autoEvalPourcent.HasValue ? $"{autoEvalPourcent.Value}%" : "—")</strong>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center small">
+                        <span class="text-muted"><i class="fas fa-check-double me-2 text-success"></i>Manager</span>
+                        <strong>
+                            @if (managerPourcent.HasValue) {
+                                <span class="badge bg-success text-white rounded-pill px-2">@managerPourcent.Value%</span>
+                            } else {
+                                <span class="badge bg-secondary text-white rounded-pill px-2">En attente</span>
+                            }
+                        </strong>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2 mt-4">
+                    <a asp-action="AutoEvaluation" asp-route-id="@comp.Id" class="btn btn-outline-dark btn-sm flex-grow-1 rounded-pill fw-bold">
+                        Auto-éval
+                    </a>
+                    <a asp-action="ValidationManager" asp-route-id="@comp.Id" class="ey-btn-main btn-sm flex-grow-1 text-center text-decoration-none rounded-pill py-1">
+                        Manager
+                    </a>
                 </div>
             </div>
         </div>

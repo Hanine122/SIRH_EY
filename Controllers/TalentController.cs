@@ -24,26 +24,50 @@ public class TalentController : Controller
     {
         var user = await _userManager.GetUserAsync(User);
         
-        // Top Talents (Stars et Future Leaders)
-        var topTalents = await _context.TalentEvaluations
-            .Include(t => t.Collaborateur)
-            .Where(t => t.Actif && (t.Category == NineBoxCategory.Star || t.Category == NineBoxCategory.FutureLeader))
-            .OrderByDescending(t => t.PerformanceScore + t.PotentielScore)
-            .Take(8)
+        var collaborateurs = await _context.Collaborateurs
+            .Include(c => c.Competences)
+            .Include(c => c.Inscriptions)
+            .Where(c => c.Actif)
             .ToListAsync();
+
+        // Évaluation dynamique pour tous
+        var evalDynamique = collaborateurs.Select(c => new TalentEvalDynViewModel {
+            Collaborateur = c,
+            Perf = CalculatePerformanceScore(c),
+            Pot = CalculatePotentielScore(c),
+            Cat = Calculate9BoxCategory(CalculatePerformanceScore(c), CalculatePotentielScore(c)),
+            Moyenne = c.Competences?.Any() == true ? Math.Round(c.Competences.Average(comp => comp.NiveauActuel), 1) : 0
+        }).ToList();
+
+        // Meilleurs Talents (Stars et Future Leaders) -> Moyenne >= 4
+        var topTalents = evalDynamique
+            .Where(e => e.Moyenne >= 4)
+            .OrderByDescending(e => e.Moyenne)
+            .Take(8)
+            .Select(e => new TopTalentViewModel {
+                Collaborateur = e.Collaborateur,
+                ScoreGlobal = e.Moyenne,
+                PerformanceScore = e.Perf,
+                PotentielScore = e.Pot,
+                Category = e.Cat,
+                Badge = e.Moyenne >= 4.5 ? "Talent stratégique" : (e.Collaborateur?.Grade == "Manager" ? "Expert confirmé" : "Leader émergent")
+            })
+            .ToList();
         ViewBag.TopTalents = topTalents;
 
-        // Collaborateurs à risque (Underperformers)
-        var atRisk = await _context.TalentEvaluations
-            .Include(t => t.Collaborateur)
-            .Where(t => t.Actif && t.Category == NineBoxCategory.Underperformer)
-            .ToListAsync();
+        // Collaborateurs à risque (moyenne < 2)
+        var atRisk = evalDynamique
+            .Where(e => e.Moyenne > 0 && e.Moyenne < 2)
+            .Select(e => new AtRiskViewModel {
+                Collaborateur = e.Collaborateur,
+                Moyenne = e.Moyenne
+            })
+            .ToList();
         ViewBag.AtRisk = atRisk;
 
         // Succession Readiness
-        var readyForSuccession = await _context.Collaborateurs
-            .Where(c => c.Actif && c.Grade == "Senior")
-            .CountAsync();
+        var readyForSuccession = collaborateurs
+            .Count(c => c.Grade == "Senior" || c.Grade == "Manager");
         ViewBag.SuccessionReady = readyForSuccession;
 
         // Stats OKR
@@ -57,11 +81,10 @@ public class TalentController : Controller
         ViewBag.OKRSuccessRate = totalOKRs > 0 ? (int)((double)completedOKRs / totalOKRs * 100) : 0;
 
         // Distribution 9-Box pour chart
-        var boxDistribution = await _context.TalentEvaluations
-            .Where(t => t.Actif)
-            .GroupBy(t => t.Category)
-            .Select(g => new { Category = g.Key, Count = g.Count() })
-            .ToListAsync();
+        var boxDistribution = evalDynamique
+            .GroupBy(e => e.Cat)
+            .Select(g => new BoxDistViewModel { Category = g.Key.GetDisplayName(), Count = g.Count() })
+            .ToList();
         ViewBag.BoxDistribution = boxDistribution;
 
         return View();
@@ -72,24 +95,45 @@ public class TalentController : Controller
     // =========================
     public async Task<IActionResult> Matrix9Box(string? departement = null, string? grade = null)
     {
-        var query = _context.TalentEvaluations
-            .Include(t => t.Collaborateur)
-            .Where(t => t.Actif)
+        var query = _context.Collaborateurs
+            .Include(c => c.Competences)
+            .Include(c => c.Inscriptions)
+            .Where(c => c.Actif)
             .AsQueryable();
 
         if (!string.IsNullOrEmpty(departement))
-            query = query.Where(t => t.Collaborateur!.Departement == departement);
+            query = query.Where(c => c.Departement == departement);
         
         if (!string.IsNullOrEmpty(grade))
-            query = query.Where(t => t.Collaborateur!.Grade == grade);
+            query = query.Where(c => c.Grade == grade);
 
-        var evaluations = await query.ToListAsync();
+        var collaborateurs = await query.ToListAsync();
 
-        // Organiser par catégorie 9-box
-        var matrix = new Dictionary<NineBoxCategory, List<TalentEvaluation>>();
+        // Récupérer les évaluations manuelles existantes
+        var manualEvaluations = await _context.TalentEvaluations
+            .Where(t => t.Actif)
+            .ToListAsync();
+
+        var matrix = new Dictionary<NineBoxCategory, List<MatrixItemViewModel>>();
         foreach (var cat in Enum.GetValues<NineBoxCategory>())
         {
-            matrix[cat] = evaluations.Where(e => e.Category == cat).ToList();
+            matrix[cat] = new List<MatrixItemViewModel>();
+        }
+
+        foreach(var c in collaborateurs)
+        {
+            var manualEval = manualEvaluations.OrderByDescending(e => e.DateEvaluation).FirstOrDefault(e => e.CollaborateurId == c.Id);
+            
+            int perf = manualEval?.PerformanceScore ?? CalculatePerformanceScore(c);
+            int pot = manualEval?.PotentielScore ?? CalculatePotentielScore(c);
+            var category = manualEval?.Category ?? Calculate9BoxCategory(perf, pot);
+
+            matrix[category].Add(new MatrixItemViewModel {
+                Collaborateur = c,
+                Perf = perf,
+                Pot = pot,
+                HasManualEval = manualEval != null
+            });
         }
 
         ViewBag.Matrix = matrix;
@@ -97,35 +141,61 @@ public class TalentController : Controller
             .Select(c => c.Departement)
             .Distinct()
             .ToListAsync();
-        ViewBag.Grades = new[] { "Junior", "Senior", "Manager" };
+        ViewBag.Grades = new[] { "Junior", "Senior", "Manager", "Director" };
 
         return View();
     }
 
-    // GET: Talent/Evaluate/5
-    public async Task<IActionResult> Evaluate(int collaborateurId)
+    // API GET pour charger les détails collaborateur dans le panel AJAX
+    [HttpGet]
+    public async Task<IActionResult> GetCollaborateurDetails(int id)
     {
         var collaborateur = await _context.Collaborateurs
             .Include(c => c.Competences)
             .Include(c => c.Inscriptions)
-                .ThenInclude(i => i.Formation)
-            .FirstOrDefaultAsync(c => c.Id == collaborateurId);
+            .FirstOrDefaultAsync(c => c.Id == id);
 
         if (collaborateur == null) return NotFound();
 
-        // Calculer scores automatiques
         var autoPerformance = CalculatePerformanceScore(collaborateur);
         var autoPotentiel = CalculatePotentielScore(collaborateur);
+        var moyenne = collaborateur.Competences?.Any() == true ? Math.Round(collaborateur.Competences.Average(comp => comp.NiveauActuel), 1) : 0;
+        var recommendedCat = Calculate9BoxCategory(autoPerformance, autoPotentiel);
 
-        ViewBag.Collaborateur = collaborateur;
-        ViewBag.AutoPerformance = autoPerformance;
-        ViewBag.AutoPotentiel = autoPotentiel;
+        var topCompetences = collaborateur.Competences?
+            .OrderByDescending(c => c.NiveauActuel)
+            .Take(3)
+            .ToList() ?? new List<Competence>();
 
-        return View();
+        var competencesFaibles = collaborateur.Competences?
+            .OrderBy(c => c.NiveauActuel)
+            .Take(3)
+            .ToList() ?? new List<Competence>();
+
+        var totalCompetences = collaborateur.Competences?.Count ?? 0;
+        var competencesValidees = collaborateur.Competences?.Count(c => c.NiveauActuel >= c.NiveauCible) ?? 0;
+        var competencesCritiques = collaborateur.Competences?.Count(c => c.NiveauCible - c.NiveauActuel >= 2) ?? 0;
+        var derniereEval = collaborateur.Competences?.Max(c => (DateTime?)c.DateEvaluation);
+        var tauxCompletion = totalCompetences > 0 ? (competencesValidees * 100) / totalCompetences : 0;
+
+        return PartialView("_EvaluatePanel", new EvaluatePanelViewModel {
+            Collaborateur = collaborateur,
+            AutoPerformance = autoPerformance,
+            AutoPotentiel = autoPotentiel,
+            Moyenne = moyenne,
+            RecommendedCategory = recommendedCat.GetDisplayName(),
+            TopCompetences = topCompetences,
+            CompetencesADevelopper = competencesFaibles,
+            TotalCompetences = totalCompetences,
+            CompetencesValidees = competencesValidees,
+            CompetencesCritiques = competencesCritiques,
+            DerniereEvaluation = derniereEval,
+            TauxCompletion = tauxCompletion
+        });
     }
 
     [HttpPost]
-    public async Task<IActionResult> Evaluate(int collaborateurId, int performanceScore, int potentielScore, 
+    public async Task<IActionResult> EvaluateAjax(int collaborateurId, int performanceScore, int potentielScore, 
         string? commentairesPerformance, string? commentairesPotentiel)
     {
         var user = await _userManager.GetUserAsync(User);
@@ -145,8 +215,7 @@ public class TalentController : Controller
         _context.TalentEvaluations.Add(evaluation);
         await _context.SaveChangesAsync();
 
-        TempData["Success"] = "Évaluation talent enregistrée avec succès.";
-        return RedirectToAction(nameof(Matrix9Box));
+        return Json(new { success = true, message = "Évaluation enregistrée avec succès." });
     }
 
     // =========================
@@ -334,4 +403,61 @@ public class TalentController : Controller
             _ => NineBoxCategory.Underperformer
         };
     }
+}
+
+public class TalentEvalDynViewModel
+{
+    public Collaborateur Collaborateur { get; set; }
+    public int Perf { get; set; }
+    public int Pot { get; set; }
+    public NineBoxCategory Cat { get; set; }
+    public double Moyenne { get; set; }
+}
+
+public class TopTalentViewModel
+{
+    public Collaborateur Collaborateur { get; set; }
+    public double ScoreGlobal { get; set; }
+    public int PerformanceScore { get; set; }
+    public int PotentielScore { get; set; }
+    public NineBoxCategory Category { get; set; }
+    public string Badge { get; set; }
+}
+
+public class AtRiskViewModel
+{
+    public Collaborateur Collaborateur { get; set; }
+    public double Moyenne { get; set; }
+}
+
+public class BoxDistViewModel
+{
+    public string Category { get; set; }
+    public int Count { get; set; }
+}
+
+public class MatrixItemViewModel
+{
+    public Collaborateur Collaborateur { get; set; }
+    public int Perf { get; set; }
+    public int Pot { get; set; }
+    public bool HasManualEval { get; set; }
+}
+
+public class EvaluatePanelViewModel
+{
+    public Collaborateur Collaborateur { get; set; }
+    public int AutoPerformance { get; set; }
+    public int AutoPotentiel { get; set; }
+    public double Moyenne { get; set; }
+    public string RecommendedCategory { get; set; }
+    public List<Competence> TopCompetences { get; set; } = new();
+    public List<Competence> CompetencesADevelopper { get; set; } = new();
+    
+    // Nouveaux KPIs RH
+    public int TotalCompetences { get; set; }
+    public int CompetencesValidees { get; set; }
+    public int CompetencesCritiques { get; set; }
+    public DateTime? DerniereEvaluation { get; set; }
+    public int TauxCompletion { get; set; }
 }

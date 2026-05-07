@@ -1,0 +1,129 @@
+@using SIRH.EY.Models
+@using SIRH.EY.Controllers
+@model EvaluatePanelViewModel
+
+<div class="modal-header border-0 pb-0 pt-4 px-4">
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+<div class="modal-body pt-0 px-4 pb-4">
+    
+    <!-- HEADER COLLABORATEUR -->
+    <div class="d-flex align-items-center mb-4 pb-4 border-bottom">
+        <div class="ey-box-avatar shadow-sm bg-dark text-white rounded-circle d-flex align-items-center justify-content-center me-4" style="width: 80px; height: 80px; font-size: 2.2rem; font-weight: bold;">
+            @(Model.Collaborateur.Prenom?[0])@(Model.Collaborateur.Nom?[0])
+        </div>
+        <div class="flex-grow-1">
+            <h3 class="fw-bold mb-1" style="letter-spacing: -0.5px;">@Model.Collaborateur.Prenom @Model.Collaborateur.Nom</h3>
+            <p class="text-muted mb-2 fs-6"><i class="fas fa-briefcase me-2 text-secondary"></i>@Model.Collaborateur.Poste &bull; @Model.Collaborateur.Departement &bull; @Model.Collaborateur.Grade</p>
+            <div class="d-flex gap-2 mt-2">
+                <span class="ey-rh-badge badge bg-dark text-white px-3 py-2 rounded-pill shadow-sm"><i class="fas fa-star text-warning me-2"></i>@Model.RecommendedCategory</span>
+                <span class="ey-rh-badge badge border border-secondary text-dark px-3 py-2 rounded-pill">Score Global: @Model.Moyenne/5</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPIs RH -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="ey-kpi-card p-3 rounded shadow-sm bg-white border">
+                <div class="text-muted small fw-bold mb-2">COMPÉTENCES VALIDÉES</div>
+                <div class="d-flex align-items-end justify-content-between">
+                    <span class="fs-4 fw-bold text-success">@Model.CompetencesValidees / @Model.TotalCompetences</span>
+                    <span class="badge bg-success text-white rounded-pill">@Model.TauxCompletion%</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="ey-kpi-card p-3 rounded shadow-sm bg-white border">
+                <div class="text-muted small fw-bold mb-2">ÉCARTS CRITIQUES</div>
+                <div class="d-flex align-items-end justify-content-between">
+                    <span class="fs-4 fw-bold @(Model.CompetencesCritiques > 0 ? "text-danger" : "text-success")">@Model.CompetencesCritiques</span>
+                    @if(Model.CompetencesCritiques > 0) { <span class="badge bg-danger text-white rounded-pill">Action requise</span> }
+                    else { <span class="badge bg-success text-white rounded-pill">Conforme</span> }
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="ey-kpi-card p-3 rounded shadow-sm bg-white border">
+                <div class="text-muted small fw-bold mb-2">DERNIÈRE ÉVAL.</div>
+                <div class="d-flex align-items-end justify-content-between">
+                    <span class="fs-5 fw-bold text-dark">@(Model.DerniereEvaluation?.ToString("dd/MM/yyyy") ?? "Aucune")</span>
+                    <i class="far fa-calendar-check text-muted fs-4"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <!-- TOP COMPÉTENCES -->
+        <div class="col-md-6">
+            <h6 class="fw-bold mb-3 text-uppercase text-muted small"><i class="fas fa-arrow-up text-success me-2"></i> Top Compétences</h6>
+            @if (Model.TopCompetences.Any())
+            {
+                foreach (var comp in Model.TopCompetences)
+                {
+                    <div class="mb-3 p-3 border rounded shadow-sm bg-white ey-card-hover">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="fw-bold text-dark">@comp.Nom</span>
+                            <span class="badge bg-success text-white rounded-pill px-2">@comp.NiveauActuel/5</span>
+                        </div>
+                        <div class="progress mb-2 rounded-pill" style="height: 6px;">
+                            <div class="progress-bar bg-success" role="progressbar" style="width: @(comp.NiveauActuel * 20)%;"></div>
+                        </div>
+                        <span class="badge bg-light text-secondary border fw-normal" style="font-size: 0.7rem;">@(comp.CategorieCompetence?.Nom ?? "Hard Skill")</span>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="p-3 bg-light rounded text-muted text-center small border">Aucune compétence évaluée.</div>
+            }
+        </div>
+
+        <!-- À DÉVELOPPER -->
+        <div class="col-md-6">
+            <h6 class="fw-bold mb-3 text-uppercase text-muted small"><i class="fas fa-arrow-down text-danger me-2"></i> À Développer</h6>
+            @if (Model.CompetencesADevelopper.Any())
+            {
+                foreach (var comp in Model.CompetencesADevelopper)
+                {
+                    var isUrgent = comp.NiveauCible - comp.NiveauActuel >= 2;
+                    <div class="mb-3 p-3 border rounded shadow-sm bg-white border-start border-4 @(isUrgent ? "border-danger" : "border-warning") ey-card-hover">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="fw-bold text-dark">@comp.Nom</span>
+                            <div class="d-flex gap-2 align-items-center">
+                                @if(isUrgent) { <span class="badge bg-danger text-white rounded-pill px-2" style="font-size: 0.65rem;">Urgent</span> }
+                                <span class="badge bg-warning text-dark rounded-pill px-2">@comp.NiveauActuel/5</span>
+                            </div>
+                        </div>
+                        <div class="progress mb-2 rounded-pill" style="height: 6px;">
+                            <div class="progress-bar bg-warning" role="progressbar" style="width: @(comp.NiveauActuel * 20)%;"></div>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="badge bg-light text-secondary border fw-normal" style="font-size: 0.7rem;">@(comp.CategorieCompetence?.Nom ?? "Soft Skill")</span>
+                            <span class="small text-muted fw-bold">Cible: @comp.NiveauCible/5</span>
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="p-3 bg-light rounded text-muted text-center small border">Aucune donnée disponible.</div>
+            }
+        </div>
+    </div>
+
+    <!-- ACTIONS RH -->
+    <div class="d-flex gap-3 mt-2 pt-4 border-top">
+        <a href="/Competences/Index?collaborateurId=@Model.Collaborateur.Id" class="ey-btn-main flex-grow-1 text-center text-decoration-none py-2 rounded-pill shadow-sm">
+            <i class="fas fa-search me-2"></i> Explorer toutes les compétences
+        </a>
+        <button class="btn btn-outline-secondary flex-grow-1 py-2 rounded-pill fw-bold" onclick="alert('Historique non disponible dans la démo')">
+            <i class="fas fa-history me-2"></i> Voir historique
+        </button>
+        <button class="btn btn-outline-secondary flex-grow-1 py-2 rounded-pill fw-bold" onclick="alert('Plan non disponible dans la démo')">
+            <i class="fas fa-bullseye me-2"></i> Plan de développement
+        </button>
+    </div>
+
+</div>

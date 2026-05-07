@@ -662,3 +662,44 @@
 .ey-nine-box-cell {
     animation: fadeInUp 0.4s ease-out;
 }
+
+/* ========================================
+   PREMIUM RH STYLES (ADDED)
+   ======================================== */
+.ey-card-hover {
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+.ey-card-hover:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.08) !important;
+}
+
+.ey-rh-table {
+    font-size: 0.9rem;
+}
+.ey-rh-table th {
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.ey-rh-table tbody tr {
+    transition: background-color 0.2s ease;
+}
+.ey-rh-table tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+.ey-kpi-card {
+    transition: all 0.3s ease;
+}
+.ey-kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 15px rgba(0,0,0,0.05) !important;
+}
+
+.ey-rh-badge {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
