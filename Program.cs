@@ -58,6 +58,7 @@ builder.Services.AddScoped<IReferentielRhService, ReferentielRhService>();
 builder.Services.AddScoped<IPlanDeveloppementService, PlanDeveloppementService>();
 builder.Services.AddTransient<IEmailSender, EmailSender>();
 builder.Services.AddHttpClient<FlowiseService>();
+builder.Services.AddHttpClient();
 
 var app = builder.Build();
 

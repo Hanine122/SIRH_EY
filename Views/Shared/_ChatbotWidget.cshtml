@@ -1,0 +1,51 @@
+<div id="chatbot-widget-container" class="chatbot-widget-container">
+    <!-- Chatbot Launcher Button -->
+    <button id="chatbot-launcher" class="chatbot-launcher shadow-lg" aria-label="Ouvrir l'assistant IA">
+        <i class="fas fa-comment-dots chatbot-launcher-icon"></i>
+        <i class="fas fa-times chatbot-close-icon" style="display: none;"></i>
+    </button>
+
+    <!-- Chatbot Panel -->
+    <div id="chatbot-panel" class="chatbot-panel shadow-lg" style="display: none;">
+        <!-- Header -->
+        <div class="chatbot-header">
+            <div class="chatbot-header-info">
+                <div class="chatbot-avatar">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <div>
+                    <h5 class="chatbot-title mb-0">Assistant RH IA</h5>
+                    <small class="chatbot-status">En ligne</small>
+                </div>
+            </div>
+            <button id="chatbot-close-btn" class="chatbot-close-btn" aria-label="Fermer">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <!-- Messages Area -->
+        <div id="chatbot-messages" class="chatbot-messages">
+            <!-- Welcome Message -->
+            <div class="chat-message bot-message">
+                <div class="message-content">
+                    Bonjour, je suis votre assistant RH IA. Comment puis-je vous aider aujourd'hui ?
+                </div>
+            </div>
+            
+            <!-- Quick Prompts (Visible initially) -->
+            <div id="chatbot-quick-prompts" class="chatbot-quick-prompts">
+                <button class="quick-prompt-btn" data-prompt="Qui peut remplacer Smiai Nour ?">Qui peut remplacer Smiai Nour ?</button>
+                <button class="quick-prompt-btn" data-prompt="Quelles compétences me manquent ?">Quelles compétences me manquent ?</button>
+                <button class="quick-prompt-btn" data-prompt="Montre les formations recommandées">Montre les formations recommandées</button>
+            </div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="chatbot-input-area">
+            <input type="text" id="chatbot-input" class="chatbot-input form-control" placeholder="Posez votre question..." autocomplete="off" />
+            <button id="chatbot-send-btn" class="chatbot-send-btn" disabled>
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+</div>
