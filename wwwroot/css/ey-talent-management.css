@@ -1,0 +1,664 @@
+/* ========================================
+   EY TALENT MANAGEMENT - Modern HR
+   ======================================== */
+
+:root {
+    --talent-gold: #ffd700;
+    --talent-silver: #c0c0c0;
+    --talent-bronze: #cd7f32;
+    --talent-success: #10b981;
+    --talent-warning: #f59e0b;
+    --talent-danger: #ef4444;
+    --talent-info: #3b82f6;
+    
+    --box-star: #ffd700;
+    --box-future: #ff6b6b;
+    --box-pro: #4ecdc4;
+    --box-emerging: #45b7d1;
+    --box-solid: #96ceb4;
+    --box-inplace: #ffeaa7;
+    --box-rising: #dfe6e9;
+    --box-development: #fdcb6e;
+    --box-risk: #e17055;
+}
+
+/* ========================================
+   CONTAINER
+   ======================================== */
+.ey-talent-container {
+    padding: 1.5rem;
+    background: #f8fafc;
+    min-height: calc(100vh - 60px);
+}
+
+/* ========================================
+   HEADER
+   ======================================== */
+.ey-talent-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding: 1.25rem 1.5rem;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.ey-talent-title {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.ey-talent-icon {
+    width: 56px;
+    height: 56px;
+    background: linear-gradient(135deg, #ffe600 0%, #ffc400 100%);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #1a1a1a;
+    font-size: 1.5rem;
+    box-shadow: 0 4px 12px rgba(255, 230, 0, 0.3);
+}
+
+.ey-talent-h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin: 0;
+}
+
+.ey-talent-subtitle {
+    font-size: 0.875rem;
+    color: #64748b;
+    margin: 0.25rem 0 0;
+}
+
+.ey-talent-actions {
+    display: flex;
+    gap: 0.75rem;
+}
+
+/* ========================================
+   BUTTONS
+   ======================================== */
+.ey-btn-talent {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1.25rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.ey-btn-primary {
+    background: #ffe600;
+    color: #1a1a1a;
+}
+
+.ey-btn-primary:hover {
+    background: #e6cf00;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(255, 230, 0, 0.3);
+}
+
+.ey-btn-secondary {
+    background: white;
+    color: #1a1a1a;
+    border: 1px solid #e2e8f0;
+}
+
+.ey-btn-secondary:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+}
+
+.ey-btn-ghost {
+    background: transparent;
+    color: #64748b;
+}
+
+.ey-btn-warning {
+    background: #f59e0b;
+    color: white;
+}
+
+.ey-btn-sm {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.75rem;
+}
+
+/* ========================================
+   KPI GRID
+   ======================================== */
+.ey-talent-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.ey-talent-kpi-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    transition: all 0.2s;
+}
+
+.ey-talent-kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.ey-talent-kpi-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    color: white;
+}
+
+.ey-kpi-gold { background: linear-gradient(135deg, #ffd700, #ffb800); }
+.ey-kpi-red { background: linear-gradient(135deg, #ef4444, #dc2626); }
+.ey-kpi-blue { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+.ey-kpi-green { background: linear-gradient(135deg, #10b981, #059669); }
+
+.ey-talent-kpi-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #1a1a1a;
+}
+
+.ey-talent-kpi-label {
+    font-size: 0.75rem;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* ========================================
+   SECTIONS
+   ======================================== */
+.ey-talent-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.ey-talent-section {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.ey-talent-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid #f1f5f9;
+}
+
+.ey-talent-section-header h2 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #1a1a1a;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+}
+
+.ey-talent-badge {
+    padding: 0.375rem 0.75rem;
+    background: #f1f5f9;
+    color: #64748b;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: 20px;
+}
+
+.ey-badge-danger {
+    background: #fef2f2;
+    color: #ef4444;
+}
+
+/* ========================================
+   TALENT CARDS
+   ======================================== */
+.ey-talent-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+}
+
+.ey-talent-card {
+    background: #f8fafc;
+    border-radius: 10px;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    border: 2px solid transparent;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.ey-talent-card:hover {
+    border-color: #ffe600;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.ey-talent-card-avatar {
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, #ffe600, #ffc400);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    color: #1a1a1a;
+    font-size: 0.875rem;
+}
+
+.ey-talent-card-info h4 {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin: 0 0 0.25rem;
+}
+
+.ey-talent-card-info p {
+    font-size: 0.8125rem;
+    color: #64748b;
+    margin: 0;
+}
+
+.ey-talent-card-scores {
+    display: flex;
+    gap: 1rem;
+}
+
+.ey-talent-score {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.ey-talent-score-label {
+    font-size: 0.625rem;
+    color: #94a3b8;
+    text-transform: uppercase;
+}
+
+.ey-talent-score-value {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1a1a1a;
+}
+
+.ey-talent-card-category {
+    padding: 0.375rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-align: center;
+}
+
+/* Category Colors */
+.box-star { background: rgba(255, 215, 0, 0.2); color: #b8860b; border: 1px solid #ffd700; }
+.box-future { background: rgba(255, 107, 107, 0.2); color: #c92a2a; border: 1px solid #ff6b6b; }
+.box-pro { background: rgba(78, 205, 196, 0.2); color: #087f5b; border: 1px solid #4ecdc4; }
+.box-emerging { background: rgba(69, 183, 209, 0.2); color: #1864ab; border: 1px solid #45b7d1; }
+.box-solid { background: rgba(150, 206, 180, 0.2); color: #2b8a3e; border: 1px solid #96ceb4; }
+.box-inplace { background: rgba(255, 234, 167, 0.2); color: #e67700; border: 1px solid #ffeaa7; }
+.box-rising { background: rgba(223, 230, 233, 0.5); color: #495057; border: 1px solid #dfe6e9; }
+.box-development { background: rgba(253, 203, 110, 0.2); color: #d9480f; border: 1px solid #fdcb6e; }
+.box-risk { background: rgba(225, 112, 85, 0.2); color: #c92a2a; border: 1px solid #e17055; }
+
+/* ========================================
+   9-BOX MATRIX
+   ======================================== */
+.ey-nine-box-container {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.ey-nine-box-header {
+    display: flex;
+    margin-bottom: 1rem;
+}
+
+.ey-nine-box-corner {
+    width: 120px;
+}
+
+.ey-nine-box-labels-top {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    text-align: center;
+}
+
+.ey-nine-box-labels-top span {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #64748b;
+    padding: 0.5rem;
+    background: #f8fafc;
+    border-radius: 6px;
+}
+
+.ey-nine-box-grid {
+    display: flex;
+}
+
+.ey-nine-box-labels-left {
+    width: 120px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding-right: 0.5rem;
+}
+
+.ey-nine-box-labels-left span {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #64748b;
+    background: #f8fafc;
+    border-radius: 6px;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    transform: rotate(180deg);
+}
+
+.ey-nine-box-boxes {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.ey-nine-box-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    flex: 1;
+}
+
+.ey-nine-box-cell {
+    background: #f8fafc;
+    border-radius: 8px;
+    padding: 0.75rem;
+    min-height: 120px;
+    transition: all 0.2s;
+}
+
+.ey-nine-box-cell:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.ey-box-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.ey-box-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.ey-box-count {
+    width: 24px;
+    height: 24px;
+    background: #1a1a1a;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.ey-box-desc {
+    font-size: 0.6875rem;
+    color: #64748b;
+    margin: 0 0 0.5rem;
+    line-height: 1.4;
+}
+
+.ey-box-collaborateurs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+}
+
+.ey-box-avatar {
+    width: 28px;
+    height: 28px;
+    background: #ffe600;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.625rem;
+    font-weight: 700;
+    color: #1a1a1a;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.ey-box-avatar:hover {
+    transform: scale(1.2);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+/* ========================================
+   RISK SECTION
+   ======================================== */
+.ey-talent-risk {
+    border-left: 4px solid #ef4444;
+}
+
+.ey-talent-risk-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.ey-talent-risk-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    background: #fef2f2;
+    border-radius: 8px;
+    border: 1px solid #fecaca;
+}
+
+.ey-talent-risk-info h4 {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin: 0 0 0.25rem;
+}
+
+.ey-talent-risk-info p {
+    font-size: 0.75rem;
+    color: #64748b;
+    margin: 0;
+}
+
+/* ========================================
+   FILTERS
+   ======================================== */
+.ey-talent-filters {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.ey-filter-form {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.ey-filter-select {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    background: white;
+}
+
+/* ========================================
+   CHART CONTAINER
+   ======================================== */
+.ey-talent-chart-container {
+    height: 250px;
+    position: relative;
+}
+
+/* ========================================
+   OKR PROGRESS
+   ======================================== */
+.ey-talent-okr-stats {
+    display: flex;
+    gap: 1.5rem;
+}
+
+.ey-talent-stat {
+    font-size: 0.875rem;
+    color: #64748b;
+}
+
+.ey-talent-okr-progress {
+    margin-top: 1rem;
+}
+
+.ey-talent-progress-bar {
+    height: 8px;
+    background: #e2e8f0;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.ey-talent-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #10b981, #34d399);
+    border-radius: 4px;
+    transition: width 0.5s ease;
+}
+
+.ey-talent-progress-text {
+    display: block;
+    margin-top: 0.5rem;
+    font-size: 0.75rem;
+    color: #64748b;
+}
+
+/* ========================================
+   ACTIONS BAR
+   ======================================== */
+.ey-talent-actions-bar {
+    display: flex;
+    justify-content: space-between;
+    padding: 1rem 0;
+}
+
+/* ========================================
+   LEGEND
+   ======================================== */
+.ey-nine-box-legend {
+    display: flex;
+    gap: 1.5rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e2e8f0;
+    flex-wrap: wrap;
+}
+
+.ey-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    color: #64748b;
+}
+
+.ey-legend-color {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+}
+
+/* ========================================
+   RESPONSIVE
+   ======================================== */
+@media (max-width: 768px) {
+    .ey-talent-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .ey-talent-header {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .ey-nine-box-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .ey-nine-box-labels-left {
+        display: none;
+    }
+}
+
+/* ========================================
+   ANIMATIONS
+   ======================================== */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.ey-talent-kpi-card,
+.ey-talent-card,
+.ey-nine-box-cell {
+    animation: fadeInUp 0.4s ease-out;
+}

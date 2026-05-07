@@ -25,6 +25,11 @@ public DbSet<FormationCompetence> FormationCompetences { get; set; }
     public DbSet<Parametre> Parametres { get; set; }
     public DbSet<EvaluationCompetence> EvaluationsCompetences { get; set; }
     public DbSet<PlanDeveloppement> PlansDeveloppement { get; set; }
+    
+    // Talent Management
+    public DbSet<TalentEvaluation> TalentEvaluations { get; set; }
+    public DbSet<OKR> OKRs { get; set; }
+    public DbSet<KeyResult> KeyResults { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

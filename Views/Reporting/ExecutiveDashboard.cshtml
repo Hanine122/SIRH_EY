@@ -1,0 +1,446 @@
+@using System.Collections.Generic
+@using SIRH.EY.Models
+@{
+    ViewData["Title"] = "Executive Dashboard RH";
+    var heatmapCollaborateurs = ViewBag.HeatmapCollaborateurs as List<Collaborateur> ?? new List<Collaborateur>();
+    var heatmapCompetences = ViewBag.HeatmapCompetences as List<string> ?? new List<string>();
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/ey-analytics-dashboard.css" asp-append-version="true" />
+}
+
+<div class="ey-dashboard-container">
+    <!-- Header Analytics -->
+    <div class="ey-dashboard-header">
+        <div class="ey-dashboard-title">
+            <div class="ey-dashboard-icon">
+                <i class="fas fa-chart-line"></i>
+            </div>
+            <div>
+                <h1 class="ey-dashboard-h1">Executive Dashboard RH</h1>
+                <p class="ey-dashboard-subtitle">Strategic HR Analytics & Workforce Planning</p>
+            </div>
+        </div>
+        <div class="ey-dashboard-actions">
+            <button class="ey-btn-analytics ey-btn-secondary" onclick="window.print()">
+                <i class="fas fa-print"></i> Export PDF
+            </button>
+            <button class="ey-btn-analytics ey-btn-primary" onclick="refreshData()">
+                <i class="fas fa-sync-alt"></i> Actualiser
+            </button>
+        </div>
+    </div>
+
+    <!-- KPI Cards Row -->
+    <div class="ey-kpi-grid">
+        <!-- KPI 1 -->
+        <div class="ey-kpi-card">
+            <div class="ey-kpi-header">
+                <div class="ey-kpi-icon ey-kpi-blue">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="ey-kpi-trend ey-trend-up">
+                    <i class="fas fa-arrow-up"></i> +12%
+                </div>
+            </div>
+            <div class="ey-kpi-value">@ViewBag.CollaborateursActifs</div>
+            <div class="ey-kpi-label">Collaborateurs Actifs</div>
+            <div class="ey-kpi-sparkline" id="sparkline1"></div>
+        </div>
+
+        <!-- KPI 2 -->
+        <div class="ey-kpi-card">
+            <div class="ey-kpi-header">
+                <div class="ey-kpi-icon ey-kpi-green">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="ey-kpi-trend ey-trend-up">
+                    <i class="fas fa-arrow-up"></i> +5%
+                </div>
+            </div>
+            <div class="ey-kpi-value">@ViewBag.TauxCompetencesValidees%</div>
+            <div class="ey-kpi-label">Compétences Validées</div>
+            <div class="ey-kpi-sub">@ViewBag.TotalCompetences compétences trackées</div>
+        </div>
+
+        <!-- KPI 3 -->
+        <div class="ey-kpi-card">
+            <div class="ey-kpi-header">
+                <div class="ey-kpi-icon ey-kpi-yellow">
+                    <i class="fas fa-graduation-cap"></i>
+                </div>
+                <div class="ey-kpi-trend ey-trend-stable">
+                    <i class="fas fa-minus"></i> stable
+                </div>
+            </div>
+            <div class="ey-kpi-value">@ViewBag.TauxFormations%</div>
+            <div class="ey-kpi-label">Progression Formations</div>
+            <div class="ey-kpi-sub">@ViewBag.TotalInscriptions inscriptions</div>
+        </div>
+
+        <!-- KPI 4 -->
+        <div class="ey-kpi-card">
+            <div class="ey-kpi-header">
+                <div class="ey-kpi-icon ey-kpi-red">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="ey-kpi-trend ey-trend-down">
+                    <i class="fas fa-arrow-down"></i> -2
+                </div>
+            </div>
+            <div class="ey-kpi-value">@ViewBag.PostesCritiques</div>
+            <div class="ey-kpi-label">Postes Critiques</div>
+            <div class="ey-kpi-sub">@ViewBag.RemplacantsDisponibles remplaçants potentiels</div>
+        </div>
+
+        <!-- KPI 5 -->
+        <div class="ey-kpi-card">
+            <div class="ey-kpi-header">
+                <div class="ey-kpi-icon ey-kpi-purple">
+                    <i class="fas fa-user-friends"></i>
+                </div>
+                <div class="ey-kpi-trend ey-trend-up">
+                    <i class="fas fa-arrow-up"></i> +3
+                </div>
+            </div>
+            <div class="ey-kpi-value">@ViewBag.RemplacantsDisponibles</div>
+            <div class="ey-kpi-label">Remplaçants Disponibles</div>
+            <div class="ey-kpi-sub">Seniors prêts pour succession</div>
+        </div>
+
+        <!-- KPI 6 -->
+        <div class="ey-kpi-card">
+            <div class="ey-kpi-header">
+                <div class="ey-kpi-icon ey-kpi-orange">
+                    <i class="fas fa-chart-bar"></i>
+                </div>
+                <div class="ey-kpi-trend ey-trend-down">
+                    <i class="fas fa-arrow-down"></i> -8%
+                </div>
+            </div>
+            <div class="ey-kpi-value">@ViewBag.TauxEcartsCritiques%</div>
+            <div class="ey-kpi-label">Écarts Critiques</div>
+            <div class="ey-kpi-sub">Skill gaps à combler</div>
+        </div>
+    </div>
+
+    <!-- Charts Row 1 -->
+    <div class="ey-charts-row">
+        <!-- Chart: Evolution Skill Gaps -->
+        <div class="ey-chart-card ey-chart-large">
+            <div class="ey-chart-header">
+                <h3 class="ey-chart-title">
+                    <i class="fas fa-chart-line"></i>
+                    Évolution des Skill Gaps
+                </h3>
+                <div class="ey-chart-filters">
+                    <button class="ey-filter-btn active">6 mois</button>
+                    <button class="ey-filter-btn">1 an</button>
+                </div>
+            </div>
+            <div class="ey-chart-body">
+                <canvas id="skillGapChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Chart: Progression Formations -->
+        <div class="ey-chart-card ey-chart-medium">
+            <div class="ey-chart-header">
+                <h3 class="ey-chart-title">
+                    <i class="fas fa-graduation-cap"></i>
+                    Progression Formations
+                </h3>
+            </div>
+            <div class="ey-chart-body">
+                <canvas id="formationChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row 2 -->
+    <div class="ey-charts-row">
+        <!-- Chart: Top Compétences Manquantes -->
+        <div class="ey-chart-card ey-chart-medium">
+            <div class="ey-chart-header">
+                <h3 class="ey-chart-title">
+                    <i class="fas fa-exclamation-circle"></i>
+                    Top 5 Compétences à Développer
+                </h3>
+            </div>
+            <div class="ey-chart-body">
+                <canvas id="topCompetencesChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Chart: Répartition par Département -->
+        <div class="ey-chart-card ey-chart-medium">
+            <div class="ey-chart-header">
+                <h3 class="ey-chart-title">
+                    <i class="fas fa-building"></i>
+                    Répartition par Département
+                </h3>
+            </div>
+            <div class="ey-chart-body">
+                <canvas id="deptChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Chart: Progression Mensuelle -->
+        <div class="ey-chart-card ey-chart-small">
+            <div class="ey-chart-header">
+                <h3 class="ey-chart-title">
+                    <i class="fas fa-users"></i>
+                    Croissance RH
+                </h3>
+            </div>
+            <div class="ey-chart-body">
+                <canvas id="croissanceChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Heatmap Section -->
+    <div class="ey-heatmap-section">
+        <div class="ey-heatmap-header">
+            <h2 class="ey-heatmap-title">
+                <i class="fas fa-th"></i>
+                Matrice de Compétences - Heatmap Power BI
+            </h2>
+            <div class="ey-heatmap-legend">
+                <div class="ey-legend-item">
+                    <div class="ey-legend-color ey-level-high"></div>
+                    <span>Niveau élevé (4-5)</span>
+                </div>
+                <div class="ey-legend-item">
+                    <div class="ey-legend-color ey-level-medium"></div>
+                    <span>Niveau moyen (3)</span>
+                </div>
+                <div class="ey-legend-item">
+                    <div class="ey-legend-color ey-level-low"></div>
+                    <span>Niveau faible (1-2)</span>
+                </div>
+                <div class="ey-legend-item">
+                    <div class="ey-legend-color ey-level-missing"></div>
+                    <span>Non évalué</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="ey-heatmap-container">
+            <div class="ey-heatmap-wrapper">
+                <table class="ey-heatmap-table">
+                    <thead>
+                        <tr>
+                            <th class="ey-heatmap-corner">Collaborateur</th>
+                            @foreach (var comp in heatmapCompetences)
+                            {
+                                <th class="ey-heatmap-col-header" title="@comp">@comp</th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var collab in heatmapCollaborateurs)
+                        {
+                            <tr>
+                                <td class="ey-heatmap-row-header">
+                                    <div class="ey-collab-cell">
+                                        <div class="ey-collab-avatar">@(collab.Prenom?[0])@(collab.Nom?[0])</div>
+                                        <div class="ey-collab-info">
+                                            <div class="ey-collab-name">@collab.Prenom @collab.Nom</div>
+                                            <div class="ey-collab-dept">@collab.Departement</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                @foreach (var compName in heatmapCompetences)
+                                {
+                                    var competence = collab.Competences != null ? collab.Competences.FirstOrDefault(c => c.Nom == compName) : null;
+                                    var niveau = competence != null ? competence.NiveauActuel : 0;
+                                    string classe;
+                                    if (niveau >= 4) { classe = "ey-level-high"; }
+                                    else if (niveau == 3) { classe = "ey-level-medium"; }
+                                    else if (niveau >= 1) { classe = "ey-level-low"; }
+                                    else { classe = "ey-level-missing"; }
+                                    <td class="ey-heatmap-cell @classe" data-niveau="@niveau">
+                                        @(niveau > 0 ? niveau.ToString() : "-")
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Chart 1: Evolution Skill Gaps
+        const skillGapCtx = document.getElementById('skillGapChart').getContext('2d');
+        new Chart(skillGapCtx, {
+            type: 'line',
+            data: {
+                labels: ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin'],
+                datasets: [{
+                    label: 'Écarts critiques',
+                    data: @Html.Raw(Json.Serialize(ViewBag.EvolutionSkillGaps)),
+                    borderColor: '#ffe600',
+                    backgroundColor: 'rgba(255, 230, 0, 0.1)',
+                    borderWidth: 3,
+                    tension: 0.4,
+                    fill: true,
+                    pointBackgroundColor: '#ffe600',
+                    pointBorderColor: '#1a1a1a',
+                    pointBorderWidth: 2,
+                    pointRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(0,0,0,0.05)' },
+                        ticks: { font: { family: 'Inter' } }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { font: { family: 'Inter' } }
+                    }
+                }
+            }
+        });
+
+        // Chart 2: Progression Formations (Doughnut)
+        const formationCtx = document.getElementById('formationChart').getContext('2d');
+        new Chart(formationCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Terminées', 'En cours', 'Non démarrées'],
+                datasets: [{
+                    data: [@ViewBag.TotalInscriptions, 12, 8],
+                    backgroundColor: ['#ffe600', '#1a1a1a', '#e0e0e0'],
+                    borderWidth: 0,
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '70%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { usePointStyle: true, padding: 20 }
+                    }
+                }
+            }
+        });
+
+        // Chart 3: Top Compétences Manquantes (Bar)
+        const topCompCtx = document.getElementById('topCompetencesChart').getContext('2d');
+        const topCompData = @Html.Raw(Json.Serialize(ViewBag.TopCompetencesManquantes));
+        new Chart(topCompCtx, {
+            type: 'bar',
+            data: {
+                labels: topCompData.map(x => x.Nom),
+                datasets: [{
+                    label: 'Nombre de collaborateurs',
+                    data: topCompData.map(x => x.Count),
+                    backgroundColor: '#1a1a1a',
+                    hoverBackgroundColor: '#ffe600',
+                    borderRadius: 6,
+                    barThickness: 30
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { grid: { color: 'rgba(0,0,0,0.05)' } },
+                    y: { grid: { display: false } }
+                }
+            }
+        });
+
+        // Chart 4: Répartition par Département (Polar Area)
+        const deptCtx = document.getElementById('deptChart').getContext('2d');
+        const deptData = @Html.Raw(Json.Serialize(ViewBag.RepartitionParDepartement));
+        new Chart(deptCtx, {
+            type: 'polarArea',
+            data: {
+                labels: deptData.map(x => x.Departement),
+                datasets: [{
+                    data: deptData.map(x => x.Count),
+                    backgroundColor: [
+                        'rgba(255, 230, 0, 0.8)',
+                        'rgba(26, 26, 26, 0.8)',
+                        'rgba(108, 117, 125, 0.8)',
+                        'rgba(255, 193, 7, 0.8)',
+                        'rgba(220, 53, 69, 0.8)',
+                        'rgba(40, 167, 69, 0.8)'
+                    ],
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: { boxWidth: 15, padding: 15 }
+                    }
+                },
+                scales: {
+                    r: {
+                        ticks: { display: false },
+                        grid: { color: 'rgba(0,0,0,0.05)' }
+                    }
+                }
+            }
+        });
+
+        // Chart 5: Progression Mensuelle (Line Area)
+        const croissanceCtx = document.getElementById('croissanceChart').getContext('2d');
+        new Chart(croissanceCtx, {
+            type: 'line',
+            data: {
+                labels: ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin'],
+                datasets: [{
+                    label: 'Collaborateurs',
+                    data: @Html.Raw(Json.Serialize(ViewBag.ProgressionMensuelle)),
+                    borderColor: '#1a1a1a',
+                    backgroundColor: 'rgba(26, 26, 26, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#ffe600'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { display: false },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+
+        function refreshData() {
+            location.reload();
+        }
+    </script>
+}

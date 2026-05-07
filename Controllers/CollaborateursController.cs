@@ -7,6 +7,7 @@ using SIRH.EY.Data;
 using SIRH.EY.Models;
 
 using SIRH.EY.Services;
+using Microsoft.AspNetCore.Identity;
 
 using System;
 
@@ -31,24 +32,30 @@ public class RecommendationRequest
 
 
 public class CollaborateursController : Controller
-
 {
-
     private readonly ApplicationDbContext _context;
-
     private readonly FlowiseService _flowiseService;
+    private readonly UserManager<ApplicationUser> _userManager;
 
-
-
-    public CollaborateursController(ApplicationDbContext context, FlowiseService flowiseService)
-
+    public CollaborateursController(
+        ApplicationDbContext context,
+        FlowiseService flowiseService,
+        UserManager<ApplicationUser> userManager)
     {
-
         _context = context;
-
         _flowiseService = flowiseService;
-
+        _userManager = userManager;
     }
+
+    // public CollaborateursController(ApplicationDbContext context, FlowiseService flowiseService)
+
+    // {
+
+    //     _context = context;
+
+    //     _flowiseService = flowiseService;
+
+    // }
 
 [HttpPost]
 
@@ -106,61 +113,97 @@ public async Task<IActionResult> AskIA([FromBody] RecommendationRequest request)
 
     // GET: Collaborateurs
 
-    public async Task<IActionResult> Index(string searchString = null, string sortOrder = null, string departement = null)
+   public async Task<IActionResult> Index(
+    string searchString = null,
+    string sortOrder = null,
+    string departement = null)
+{
+    ViewBag.Search = searchString;
+    ViewBag.CurrentSort = sortOrder;
+    ViewBag.NameSortParam = sortOrder == "name_asc"
+        ? "name_desc"
+        : "name_asc";
 
+    ViewBag.DepartementFilter = departement;
+
+    var user = await _userManager.GetUserAsync(User);
+
+    IQueryable<Collaborateur> collaborateurs =
+        _context.Collaborateurs;
+
+    // =========================
+    // ROLE : COLLABORATEUR
+    // =========================
+    if (User.IsInRole("Collaborateur"))
     {
+        var collab = await _context.Collaborateurs
+            .FirstOrDefaultAsync(c => c.UserId == user.Id);
 
-        ViewBag.Search = searchString;
-
-        ViewBag.CurrentSort = sortOrder;
-
-        ViewBag.NameSortParam = sortOrder == "name_asc" ? "name_desc" : "name_asc";
-
-        ViewBag.DepartementFilter = departement;
-
-
-
-        var collaborateurs = from c in _context.Collaborateurs select c;
-
-
-
-        if (!string.IsNullOrEmpty(departement))
-
-            collaborateurs = collaborateurs.Where(c => c.Departement == departement);
-
-
-
-        if (!string.IsNullOrEmpty(searchString))
-
-            collaborateurs = collaborateurs.Where(c => c.Nom.Contains(searchString) || c.Prenom.Contains(searchString) || c.Email.Contains(searchString));
-
-
-
-        if (sortOrder == "name_desc")
-
-            collaborateurs = collaborateurs.OrderByDescending(c => c.Nom);
-
-        else
-
-            collaborateurs = collaborateurs.OrderBy(c => c.Nom);
-
-
-
-        ViewBag.Departements = await _context.Collaborateurs.Select(c => c.Departement).Where(d => d != null).Distinct().ToListAsync();
-
-        ViewBag.Managers = await _context.Collaborateurs
-
-            .Where(c => c.Actif && (c.Grade == "Manager" || (c.Poste ?? "").Contains("Manager")))
-
-            .OrderBy(c => c.Nom)
-
-            .ToListAsync();
-
-
-
-        return View(await collaborateurs.ToListAsync());
-
+        if (collab != null)
+        {
+            collaborateurs = collaborateurs
+                .Where(c => c.Id == collab.Id);
+        }
     }
+
+    // =========================
+    // ROLE : MANAGER
+    // =========================
+    else if (User.IsInRole("Manager"))
+    {
+        var manager = await _context.Collaborateurs
+            .FirstOrDefaultAsync(c => c.UserId == user.Id);
+
+        if (manager != null)
+        {
+            collaborateurs = collaborateurs
+                .Where(c => c.ManagerId == manager.Id);
+        }
+    }
+
+    // =========================
+    // FILTRES
+    // =========================
+    if (!string.IsNullOrEmpty(departement))
+    {
+        collaborateurs = collaborateurs
+            .Where(c => c.Departement == departement);
+    }
+
+    if (!string.IsNullOrEmpty(searchString))
+    {
+        collaborateurs = collaborateurs.Where(c =>
+            c.Nom.Contains(searchString) ||
+            c.Prenom.Contains(searchString) ||
+            c.Email.Contains(searchString));
+    }
+
+    // =========================
+    // TRI
+    // =========================
+    collaborateurs = sortOrder == "name_desc"
+        ? collaborateurs.OrderByDescending(c => c.Nom)
+        : collaborateurs.OrderBy(c => c.Nom);
+
+    // =========================
+    // VIEWBAGS
+    // =========================
+    ViewBag.Departements = await _context.Collaborateurs
+        .Select(c => c.Departement)
+        .Where(d => d != null)
+        .Distinct()
+        .ToListAsync();
+
+    ViewBag.Managers = await _context.Collaborateurs
+        .Where(c =>
+            c.Actif &&
+            (c.Grade == "Manager" ||
+            (c.Poste ?? "").Contains("Manager")))
+        .OrderBy(c => c.Nom)
+        .ToListAsync();
+
+    return View(await collaborateurs.ToListAsync());
+}
 
 
 

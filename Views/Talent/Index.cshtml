@@ -1,0 +1,197 @@
+@using SIRH.EY.Models
+@model IEnumerable<SIRH.EY.Models.OKR>
+@{
+    ViewData["Title"] = "Talent Management Dashboard";
+    var topTalents = ViewBag.TopTalents as List<TalentEvaluation> ?? new List<TalentEvaluation>();
+    var atRisk = ViewBag.AtRisk as List<TalentEvaluation> ?? new List<TalentEvaluation>();
+    var boxDistribution = ViewBag.BoxDistribution as dynamic ?? new List<dynamic>();
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/ey-talent-management.css" asp-append-version="true" />
+}
+
+<div class="ey-talent-container">
+    <!-- Header -->
+    <div class="ey-talent-header">
+        <div class="ey-talent-title">
+            <div class="ey-talent-icon">
+                <i class="fas fa-gem"></i>
+            </div>
+            <div>
+                <h1 class="ey-talent-h1">Talent Management</h1>
+                <p class="ey-talent-subtitle">Pilotage des talents et succession planning</p>
+            </div>
+        </div>
+        <div class="ey-talent-actions">
+            <a asp-action="Matrix9Box" class="ey-btn-talent ey-btn-secondary">
+                <i class="fas fa-th"></i> Matrice 9-Box
+            </a>
+            <a asp-action="MyOKRs" class="ey-btn-talent ey-btn-primary">
+                <i class="fas fa-bullseye"></i> Mes OKRs
+            </a>
+        </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="ey-talent-kpi-grid">
+        <div class="ey-talent-kpi-card">
+            <div class="ey-talent-kpi-icon ey-kpi-gold">
+                <i class="fas fa-star"></i>
+            </div>
+            <div class="ey-talent-kpi-value">@topTalents.Count</div>
+            <div class="ey-talent-kpi-label">Top Talents</div>
+        </div>
+        <div class="ey-talent-kpi-card">
+            <div class="ey-talent-kpi-icon ey-kpi-red">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="ey-talent-kpi-value">@atRisk.Count</div>
+            <div class="ey-talent-kpi-label">À Risque</div>
+        </div>
+        <div class="ey-talent-kpi-card">
+            <div class="ey-talent-kpi-icon ey-kpi-blue">
+                <i class="fas fa-user-tie"></i>
+            </div>
+            <div class="ey-talent-kpi-value">@ViewBag.SuccessionReady</div>
+            <div class="ey-talent-kpi-label">Succession Ready</div>
+        </div>
+        <div class="ey-talent-kpi-card">
+            <div class="ey-talent-kpi-icon ey-kpi-green">
+                <i class="fas fa-bullseye"></i>
+            </div>
+            <div class="ey-talent-kpi-value">@ViewBag.OKRSuccessRate%</div>
+            <div class="ey-talent-kpi-label">OKR Success Rate</div>
+        </div>
+    </div>
+
+    <div class="ey-talent-row">
+        <!-- Top Talents -->
+        <div class="ey-talent-section ey-talent-large">
+            <div class="ey-talent-section-header">
+                <h2><i class="fas fa-crown"></i> Top Talents</h2>
+                <span class="ey-talent-badge">Stars & Future Leaders</span>
+            </div>
+            <div class="ey-talent-cards-grid">
+                @foreach (var talent in topTalents)
+                {
+                    <div class="ey-talent-card">
+                        <div class="ey-talent-card-avatar">@(talent.Collaborateur?.Prenom?[0])@(talent.Collaborateur?.Nom?[0])</div>
+                        <div class="ey-talent-card-info">
+                            <h4>@talent.Collaborateur?.Prenom @talent.Collaborateur?.Nom</h4>
+                            <p>@talent.Collaborateur?.Poste</p>
+                        </div>
+                        <div class="ey-talent-card-scores">
+                            <div class="ey-talent-score">
+                                <span class="ey-talent-score-label">Perf</span>
+                                <span class="ey-talent-score-value">@talent.PerformanceScore/5</span>
+                            </div>
+                            <div class="ey-talent-score">
+                                <span class="ey-talent-score-label">Pot</span>
+                                <span class="ey-talent-score-value">@talent.PotentielScore/5</span>
+                            </div>
+                        </div>
+                        <div class="ey-talent-card-category @talent.Category.GetColorClass()">
+                            @talent.Category.GetDisplayName()
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Distribution 9-Box -->
+        <div class="ey-talent-section ey-talent-small">
+            <div class="ey-talent-section-header">
+                <h2><i class="fas fa-chart-pie"></i> Distribution 9-Box</h2>
+            </div>
+            <div class="ey-talent-chart-container">
+                <canvas id="boxDistributionChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- OKR Summary -->
+    <div class="ey-talent-section">
+        <div class="ey-talent-section-header">
+            <h2><i class="fas fa-bullseye"></i> OKRs Overview</h2>
+            <div class="ey-talent-okr-stats">
+                <span class="ey-talent-stat"><i class="fas fa-check-circle text-success"></i> @ViewBag.CompletedOKRs Complétés</span>
+                <span class="ey-talent-stat"><i class="fas fa-exclamation-circle text-warning"></i> @ViewBag.AtRiskOKRs At Risk</span>
+                <span class="ey-talent-stat"><i class="fas fa-list"></i> @ViewBag.TotalOKRs Total</span>
+            </div>
+        </div>
+        <div class="ey-talent-okr-progress">
+            <div class="ey-talent-progress-bar">
+                <div class="ey-talent-progress-fill" style="width: @ViewBag.OKRSuccessRate%"></div>
+            </div>
+            <span class="ey-talent-progress-text">@ViewBag.OKRSuccessRate% de réussite globale</span>
+        </div>
+    </div>
+
+    <!-- At Risk Section -->
+    @if (atRisk.Any())
+    {
+        <div class="ey-talent-section ey-talent-risk">
+            <div class="ey-talent-section-header">
+                <h2><i class="fas fa-exclamation-triangle"></i> Collaborateurs à Risque</h2>
+                <span class="ey-talent-badge ey-badge-danger">Action requise</span>
+            </div>
+            <div class="ey-talent-risk-list">
+                @foreach (var risk in atRisk)
+                {
+                    <div class="ey-talent-risk-item">
+                        <div class="ey-talent-risk-info">
+                            <h4>@risk.Collaborateur?.Prenom @risk.Collaborateur?.Nom</h4>
+                            <p>@risk.Collaborateur?.Departement - @risk.Collaborateur?.Poste</p>
+                        </div>
+                        <div class="ey-talent-risk-actions">
+                            <a asp-action="Evaluate" asp-route-collaborateurId="@risk.CollaborateurId" 
+                               class="ey-btn-talent ey-btn-sm ey-btn-warning">
+                                Ré-évaluer
+                            </a>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Distribution Chart
+        const distributionCtx = document.getElementById('boxDistributionChart').getContext('2d');
+        const distributionData = @Html.Raw(Json.Serialize(boxDistribution));
+        
+        new Chart(distributionCtx, {
+            type: 'doughnut',
+            data: {
+                labels: distributionData.map(d => d.Category),
+                datasets: [{
+                    data: distributionData.map(d => d.Count),
+                    backgroundColor: [
+                        '#ffd700', // Star
+                        '#ff6b6b', // Future Leader
+                        '#4ecdc4', // High Professional
+                        '#45b7d1', // Emerging
+                        '#96ceb4', // Solid
+                        '#ffeaa7', // In Place
+                        '#dfe6e9', // Rising
+                        '#fdcb6e', // Development
+                        '#e17055'  // Risk
+                    ],
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+    </script>
+}
