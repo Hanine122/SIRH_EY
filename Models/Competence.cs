@@ -9,7 +9,8 @@ public class Competence
     [Required]
     public string Nom { get; set; } = string.Empty;   
 
-    public string? Categorie { get; set; }      
+    public int? CategorieCompetenceId { get; set; }
+    public CategorieCompetence? CategorieCompetence { get; set; }      
           
 
     [Range(1,5)]

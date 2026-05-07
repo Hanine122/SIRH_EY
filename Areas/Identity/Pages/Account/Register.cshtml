@@ -1,75 +1,71 @@
 ﻿@page
 @model RegisterModel
 @{
-    ViewData["Title"] = "Register";
+    ViewData["Title"] = "Créer un compte";
 }
 
-<h1>@ViewData["Title"]</h1>
+@section Styles {
+    <link rel="stylesheet" href="~/css/auth-ey.css" asp-append-version="true" />
+}
 
-<div class="row">
-    <div class="col-md-4">
+<div class="auth-ey-wrapper">
+    <div class="auth-ey-card">
+        <div class="auth-ey-logo">
+            <img src="~/images/ey-logo.png" alt="EY Logo" />
+            <h1 class="auth-ey-title">Créer un compte</h1>
+            <p class="auth-ey-subtitle">Rejoignez le Portail RH EY</p>
+        </div>
+
         <form id="registerForm" asp-route-returnUrl="@Model.ReturnUrl" method="post">
-            <h2>Create a new account.</h2>
-            <hr />
             <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
-            <div class="form-floating mb-3">
-                <input asp-for="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="name@example.com" />
-                <label asp-for="Input.Email">Email</label>
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label asp-for="Input.Prenom" class="auth-ey-label">Prénom</label>
+                    <input asp-for="Input.Prenom" class="form-control auth-ey-input" placeholder="Prénom" />
+                    <span asp-validation-for="Input.Prenom" class="text-danger"></span>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label asp-for="Input.Nom" class="auth-ey-label">Nom</label>
+                    <input asp-for="Input.Nom" class="form-control auth-ey-input" placeholder="Nom" />
+                    <span asp-validation-for="Input.Nom" class="text-danger"></span>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label asp-for="Input.Email" class="auth-ey-label">Email EY</label>
+                <input asp-for="Input.Email" class="form-control auth-ey-input" autocomplete="username" aria-required="true" placeholder="prenom.nom@ey.com" />
                 <span asp-validation-for="Input.Email" class="text-danger"></span>
             </div>
-            <div class="form-floating mb-3">
-                <input asp-for="Input.Password" class="form-control" autocomplete="new-password" aria-required="true" placeholder="password" />
-                <label asp-for="Input.Password">Password</label>
+            
+            <div class="mb-3">
+                <label asp-for="Input.Password" class="auth-ey-label">Mot de passe</label>
+                <input asp-for="Input.Password" class="form-control auth-ey-input" autocomplete="new-password" aria-required="true" placeholder="••••••••" />
                 <span asp-validation-for="Input.Password" class="text-danger"></span>
             </div>
-            <div class="form-floating mb-3">
-                <input asp-for="Input.ConfirmPassword" class="form-control" autocomplete="new-password" aria-required="true" placeholder="password" />
-                <label asp-for="Input.ConfirmPassword">Confirm Password</label>
+            
+            <div class="mb-4">
+                <label asp-for="Input.ConfirmPassword" class="auth-ey-label">Confirmer le mot de passe</label>
+                <input asp-for="Input.ConfirmPassword" class="form-control auth-ey-input" autocomplete="new-password" aria-required="true" placeholder="••••••••" />
                 <span asp-validation-for="Input.ConfirmPassword" class="text-danger"></span>
             </div>
-            <div class="form-floating mb-3">
-    <input asp-for="Input.Nom" class="form-control" />
-    <label asp-for="Input.Nom"></label>
-    <span asp-validation-for="Input.Nom" class="text-danger"></span>
-</div>
+            
+            <button id="registerSubmit" type="submit" class="btn-ey-auth">
+                <i class="fas fa-user-plus me-2"></i>Créer mon compte
+            </button>
 
-<div class="form-floating mb-3">
-    <input asp-for="Input.Prenom" class="form-control" />
-    <label asp-for="Input.Prenom"></label>
-    <span asp-validation-for="Input.Prenom" class="text-danger"></span>
-</div>
-            <button id="registerSubmit" type="submit" class="w-100 btn btn-lg btn-primary">Register</button>
+            <div class="auth-ey-divider">
+                <span>ou</span>
+            </div>
+
+            <div class="auth-ey-footer">
+                <p>
+                    <a asp-page="./Login" class="auth-ey-link">
+                        <i class="fas fa-sign-in-alt me-1"></i>J'ai déjà un compte
+                    </a>
+                </p>
+            </div>
         </form>
-    </div>
-    <div class="col-md-6 col-md-offset-2">
-        <section>
-            <h3>Use another service to register.</h3>
-            <hr />
-            @{
-                if ((Model.ExternalLogins?.Count ?? 0) == 0)
-                {
-                    <div>
-                        <p>
-                            There are no external authentication services configured. See this <a href="https://go.microsoft.com/fwlink/?LinkID=532715">article
-                            about setting up this ASP.NET application to support logging in via external services</a>.
-                        </p>
-                    </div>
-                }
-                else
-                {
-                    <form id="external-account" asp-page="./ExternalLogin" asp-route-returnUrl="@Model.ReturnUrl" method="post" class="form-horizontal">
-                        <div>
-                            <p>
-                                @foreach (var provider in Model.ExternalLogins!)
-                                {
-                                    <button type="submit" class="btn btn-primary" name="provider" value="@provider.Name" title="Log in using your @provider.DisplayName account">@provider.DisplayName</button>
-                                }
-                            </p>
-                        </div>
-                    </form>
-                }
-            }
-        </section>
     </div>
 </div>
 

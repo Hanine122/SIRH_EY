@@ -18,8 +18,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/ey-modern-overrides.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-<link rel="stylesheet" href="~/css/ey-modern-overrides.css" asp-append-version="true" />
+    @await RenderSectionAsync("Styles", required: false)
 </head>
 <body>
     @{
@@ -57,8 +56,14 @@
             </div>
 
             <div class="ey-sidebar-footer">
-                <a class="nav-link" href="#"><i class="fas fa-cog"></i><span class="nav-link-label">Paramètres</span></a>
-                <a class="nav-link" href="#"><i class="fas fa-sign-out-alt"></i><span class="nav-link-label">Déconnexion</span></a>
+                <a class="nav-link @(currentController == "Home" && currentAction == "Settings" ? "active" : "")" asp-controller="Home" asp-action="Settings">
+                    <i class="fas fa-cog"></i><span class="nav-link-label">Paramètres</span>
+                </a>
+                <form asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })" method="post" id="logoutForm" class="d-inline">
+                    <a class="nav-link" href="javascript:void(0)" onclick="document.getElementById('logoutForm').submit();">
+                        <i class="fas fa-sign-out-alt"></i><span class="nav-link-label">Déconnexion</span>
+                    </a>
+                </form>
             </div>
         </aside>
 
@@ -73,18 +78,10 @@
                     <span class="ey-icon-btn"><i class="far fa-question-circle"></i></span>
                     <span class="ey-icon-btn"><i class="fas fa-cog"></i></span>
                     <div class="text-end lh-sm d-none d-md-block">
-    <div class="fw-semibold small mb-0">
-        @User.Identity.Name
-    </div>
-
-    <div class="text-muted" style="font-size:10px;letter-spacing:.04em;">
-        @role.ToUpper()
-    </div>
-</div>
-
-<div class="ey-user-avatar">
-    @(User.Identity.Name != null ? User.Identity.Name.Substring(0, 2).ToUpper() : "U")
-</div>
+                        <div class="fw-semibold small mb-0">@User.Identity.Name</div>
+                        <div class="text-muted" style="font-size:10px;letter-spacing:.04em;">@role.ToUpper()</div>
+                    </div>
+                    <div class="ey-user-avatar">@(User.Identity.Name != null ? User.Identity.Name.Substring(0, 2).ToUpper() : "U")</div>
                 </div>
             </div>
 

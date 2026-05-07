@@ -17,6 +17,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 public DbSet<FormationCompetence> FormationCompetences { get; set; }
 
     public DbSet<Competence> Competences { get; set; }
+    public DbSet<CategorieCompetence> CategoriesCompetences { get; set; }
     public DbSet<Formation> Formations { get; set; }
     public DbSet<Inscription> Inscriptions { get; set; }
     public DbSet<CompetenceRequiseParPoste> CompetencesRequisesParPoste { get; set; }

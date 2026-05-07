@@ -2,65 +2,145 @@
 @{
     ViewData["Title"] = "Nouveau collaborateur";
     var managers = ViewBag.Managers as List<SIRH.EY.Models.Collaborateur> ?? new List<SIRH.EY.Models.Collaborateur>();
+    var departements = ViewBag.Departements as IReadOnlyList<string> ?? Array.Empty<string>();
+    var postes = ViewBag.Postes as IReadOnlyList<string> ?? Array.Empty<string>();
 }
 
-<div class="ey-card p-3">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h5 class="mb-0"><i class="fas fa-user-plus me-1"></i> Ajouter un collaborateur</h5>
-        <a asp-action="Index" class="btn btn-outline-secondary btn-sm">Retour</a>
+@section Styles {
+    <link rel="stylesheet" href="~/css/ey-forms-premium.css" asp-append-version="true" />
+}
+
+<div class="ey-premium-card">
+    <!-- Header Premium -->
+    <div class="ey-card-header-premium">
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <div class="ey-header-icon">
+                    <i class="fas fa-user-plus"></i>
+                </div>
+                <h1 class="ey-header-title">Ajouter un collaborateur</h1>
+                <p class="ey-header-subtitle">Créez un nouveau profil collaborateur dans le référentiel RH EY</p>
+            </div>
+            <a asp-action="Index" class="ey-back-link">
+                <i class="fas fa-arrow-left"></i> Retour
+            </a>
+        </div>
     </div>
-    <form asp-action="Create" method="post">
-        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-        <div class="row g-3">
-            <div class="col-md-6">
-                <label asp-for="Nom"></label>
-                <input asp-for="Nom" class="form-control" />
-            </div>
-            <div class="col-md-6">
-                <label asp-for="Prenom"></label>
-                <input asp-for="Prenom" class="form-control" />
-            </div>
-            <div class="col-md-6">
-                <label asp-for="Departement"></label>
-                <input asp-for="Departement" class="form-control" />
-            </div>
-            <div class="col-md-6">
-                <label asp-for="Poste"></label>
-                <input asp-for="Poste" class="form-control" />
-            </div>
-            <div class="col-md-6">
-                <label asp-for="Grade" class="form-label"></label>
-                <select asp-for="Grade" class="form-select">
-                    <option value="">Sélectionnez un grade</option>
-                    <option value="Junior">Junior</option>
-                    <option value="Senior">Senior</option>
-                    <option value="Manager">Manager</option>
-                </select>
-            </div>
-            <div class="col-md-6">
-                <label class="form-label">Manager</label>
-                <select asp-for="ManagerId" class="form-select">
-                    <option value="">Aucun manager</option>
-                    @foreach (var manager in managers)
-                    {
-                        <option value="@manager.Id">@manager.Prenom @manager.Nom</option>
-                    }
-                </select>
-            </div>
-            <div class="col-md-6">
-                <label asp-for="DateEmbauche"></label>
-                <input asp-for="DateEmbauche" class="form-control" type="date" />
-            </div>
-            <div class="col-md-6">
-                <div class="form-check mt-4">
-                    <input asp-for="Actif" class="form-check-input" />
-                    <label asp-for="Actif" class="form-check-label"></label>
+
+    <!-- Form Body -->
+    <div class="ey-form-body">
+        <form asp-action="Create" method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+            <!-- Section: Informations Personnelles -->
+            <div class="ey-form-section">
+                <div class="ey-section-title">Informations personnelles</div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="ey-input-group">
+                            <label asp-for="Nom" class="ey-label"></label>
+                            <input asp-for="Nom" class="ey-input" placeholder="Nom de famille" />
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="ey-input-group">
+                            <label asp-for="Prenom" class="ey-label"></label>
+                            <input asp-for="Prenom" class="ey-input" placeholder="Prénom" />
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="mt-4 d-flex gap-2">
-            <button type="submit" class="btn btn-primary">Créer</button>
-            <a asp-action="Index" class="btn btn-secondary">Annuler</a>
-        </div>
-    </form>
+
+            <!-- Section: Informations RH -->
+            <div class="ey-form-section">
+                <div class="ey-section-title">Informations RH</div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="ey-input-group">
+                            <label asp-for="Departement" class="ey-label">Département</label>
+                            <select asp-for="Departement" class="ey-input js-departement-select" data-poste-target="#Poste">
+                                <option value="">Sélectionnez un département</option>
+                                @foreach (var departement in departements)
+                                {
+                                    <option value="@departement">@departement</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="ey-input-group">
+                            <label asp-for="Poste" class="ey-label">Poste</label>
+                            <select asp-for="Poste" class="ey-input js-poste-select">
+                                <option value="">Sélectionnez d'abord un département</option>
+                                @foreach (var poste in postes)
+                                {
+                                    <option value="@poste">@poste</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="ey-input-group">
+                            <label asp-for="Grade" class="ey-label">Grade</label>
+                            <select asp-for="Grade" class="ey-input">
+                                <option value="">Sélectionnez un grade</option>
+                                <option value="Junior">Junior</option>
+                                <option value="Senior">Senior</option>
+                                <option value="Manager">Manager</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="ey-input-group">
+                            <label class="ey-label">Manager</label>
+                            <select asp-for="ManagerId" class="ey-input">
+                                <option value="">Aucun manager</option>
+                                @foreach (var manager in managers)
+                                {
+                                    <option value="@manager.Id">@manager.Prenom @manager.Nom</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section: Statut -->
+            <div class="ey-form-section">
+                <div class="ey-section-title">Statut</div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="ey-input-group">
+                            <label asp-for="DateEmbauche" class="ey-label">Date d'embauche</label>
+                            <input asp-for="DateEmbauche" class="ey-input" type="date" />
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="ey-input-group ey-mt-4">
+                            <label class="ey-checkbox-modern">
+                                <input asp-for="Actif" type="checkbox" checked />
+                                <span class="ey-checkbox-label">Collaborateur actif</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="ey-actions-bar">
+                <a asp-action="Index" class="ey-btn-premium ey-btn-ghost">
+                    <i class="fas fa-times"></i> Annuler
+                </a>
+                <div class="ey-actions-right">
+                    <button type="submit" class="ey-btn-premium ey-btn-primary">
+                        <i class="fas fa-check"></i> Créer le collaborateur
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
 </div>
+
+@section Scripts {
+    <script src="~/js/rh-dynamic-forms.js" asp-append-version="true"></script>
+}

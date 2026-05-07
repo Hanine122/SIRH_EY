@@ -66,7 +66,7 @@
             <div class="ey-card ey-competence-card ey-interactive-card @cardState">
                 <div class="card-body">
                     <h5 class="card-title">@comp.Nom</h5>
-                    <span class="badge bg-light text-dark mb-2 border">@comp.Categorie</span>
+                    <span class="badge bg-light text-dark mb-2 border">@(comp.CategorieCompetence?.Nom ?? "—")</span>
                     <div class="mt-3">
                         <div class="d-flex justify-content-between small">
                             <span>Niveau Actuel</span><span>@comp.NiveauActuel/5</span>

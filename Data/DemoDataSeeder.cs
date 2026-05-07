@@ -82,58 +82,66 @@ if (oldFormations.Any())
 
         await context.SaveChangesAsync();
 
-        // ========== 4. Compétences des collaborateurs ==========
+        // ========== 4. Catégories de compétences ==========
+        var categoriesData = new[] { "Soft skills", "Leadership", "RH", "Management", "Data", "Audit", "Risk", "Outils", "Méthodes", "Fiscalité" };
+        var categories = categoriesData.Select(nom => new CategorieCompetence { Nom = nom }).ToList();
+        context.CategoriesCompetences.AddRange(categories);
+        await context.SaveChangesAsync();
+        var catByName = categories.ToDictionary(c => c.Nom, c => c.Id);
+
+        // ========== 5. Compétences des collaborateurs ==========
         var now = DateTime.Today;
+        int CatId(string nom) => catByName.GetValueOrDefault(nom);
         var comps = new List<Competence>
         {
             // Hanine (RH)
-            new() { CollaborateurId = byEmail["hanine.hammami@ey.com"].Id, Nom = "Communication", Categorie = "Soft skills", NiveauActuel = 4, NiveauCible = 5, DateEvaluation = now.AddDays(-12) },
-            new() { CollaborateurId = byEmail["hanine.hammami@ey.com"].Id, Nom = "Leadership", Categorie = "Leadership", NiveauActuel = 4, NiveauCible = 5, DateEvaluation = now.AddDays(-20) },
-            new() { CollaborateurId = byEmail["hanine.hammami@ey.com"].Id, Nom = "Gestion des talents", Categorie = "RH", NiveauActuel = 4, NiveauCible = 4, DateEvaluation = now.AddDays(-9) },
-            new() { CollaborateurId = byEmail["hanine.hammami@ey.com"].Id, Nom = "Conduite du changement", Categorie = "Management", NiveauActuel = 3, NiveauCible = 4, DateEvaluation = now.AddDays(-8) },
+            new() { CollaborateurId = byEmail["hanine.hammami@ey.com"].Id, Nom = "Communication", CategorieCompetenceId = CatId("Soft skills"), NiveauActuel = 4, NiveauCible = 5, DateEvaluation = now.AddDays(-12) },
+            new() { CollaborateurId = byEmail["hanine.hammami@ey.com"].Id, Nom = "Leadership", CategorieCompetenceId = CatId("Leadership"), NiveauActuel = 4, NiveauCible = 5, DateEvaluation = now.AddDays(-20) },
+            new() { CollaborateurId = byEmail["hanine.hammami@ey.com"].Id, Nom = "Gestion des talents", CategorieCompetenceId = CatId("RH"), NiveauActuel = 4, NiveauCible = 4, DateEvaluation = now.AddDays(-9) },
+            new() { CollaborateurId = byEmail["hanine.hammami@ey.com"].Id, Nom = "Conduite du changement", CategorieCompetenceId = CatId("Management"), NiveauActuel = 3, NiveauCible = 4, DateEvaluation = now.AddDays(-8) },
 
             // Smiai (Data)
-            new() { CollaborateurId = byEmail["smiai.nour@ey.com"].Id, Nom = "Power BI", Categorie = "Data", NiveauActuel = 4, NiveauCible = 4, DateEvaluation = now.AddDays(-7) },
-            new() { CollaborateurId = byEmail["smiai.nour@ey.com"].Id, Nom = "SQL", Categorie = "Data", NiveauActuel = 3, NiveauCible = 4, DateEvaluation = now.AddDays(-10) },
-            new() { CollaborateurId = byEmail["smiai.nour@ey.com"].Id, Nom = "Modélisation de données", Categorie = "Data", NiveauActuel = 3, NiveauCible = 4, DateEvaluation = now.AddDays(-14) },
-            new() { CollaborateurId = byEmail["smiai.nour@ey.com"].Id, Nom = "Data storytelling", Categorie = "Soft skills", NiveauActuel = 2, NiveauCible = 3, DateEvaluation = now.AddDays(-6) },
+            new() { CollaborateurId = byEmail["smiai.nour@ey.com"].Id, Nom = "Power BI", CategorieCompetenceId = CatId("Data"), NiveauActuel = 4, NiveauCible = 4, DateEvaluation = now.AddDays(-7) },
+            new() { CollaborateurId = byEmail["smiai.nour@ey.com"].Id, Nom = "SQL", CategorieCompetenceId = CatId("Data"), NiveauActuel = 3, NiveauCible = 4, DateEvaluation = now.AddDays(-10) },
+            new() { CollaborateurId = byEmail["smiai.nour@ey.com"].Id, Nom = "Modélisation de données", CategorieCompetenceId = CatId("Data"), NiveauActuel = 3, NiveauCible = 4, DateEvaluation = now.AddDays(-14) },
+            new() { CollaborateurId = byEmail["smiai.nour@ey.com"].Id, Nom = "Data storytelling", CategorieCompetenceId = CatId("Soft skills"), NiveauActuel = 2, NiveauCible = 3, DateEvaluation = now.AddDays(-6) },
 
             // Mariem (Audit)
-            new() { CollaborateurId = byEmail["mariem.safri@ey.com"].Id, Nom = "Audit & contrôle interne", Categorie = "Audit", NiveauActuel = 4, NiveauCible = 4, DateEvaluation = now.AddDays(-11) },
-            new() { CollaborateurId = byEmail["mariem.safri@ey.com"].Id, Nom = "IFRS / normes comptables", Categorie = "Audit", NiveauActuel = 3, NiveauCible = 4, DateEvaluation = now.AddDays(-18) },
-            new() { CollaborateurId = byEmail["mariem.safri@ey.com"].Id, Nom = "Communication", Categorie = "Soft skills", NiveauActuel = 3, NiveauCible = 4, DateEvaluation = now.AddDays(-9) },
-            new() { CollaborateurId = byEmail["mariem.safri@ey.com"].Id, Nom = "Gestion des risques", Categorie = "Risk", NiveauActuel = 3, NiveauCible = 3, DateEvaluation = now.AddDays(-15) },
+            new() { CollaborateurId = byEmail["mariem.safri@ey.com"].Id, Nom = "Audit & contrôle interne", CategorieCompetenceId = CatId("Audit"), NiveauActuel = 4, NiveauCible = 4, DateEvaluation = now.AddDays(-11) },
+            new() { CollaborateurId = byEmail["mariem.safri@ey.com"].Id, Nom = "IFRS / normes comptables", CategorieCompetenceId = CatId("Audit"), NiveauActuel = 3, NiveauCible = 4, DateEvaluation = now.AddDays(-18) },
+            new() { CollaborateurId = byEmail["mariem.safri@ey.com"].Id, Nom = "Communication", CategorieCompetenceId = CatId("Soft skills"), NiveauActuel = 3, NiveauCible = 4, DateEvaluation = now.AddDays(-9) },
+            new() { CollaborateurId = byEmail["mariem.safri@ey.com"].Id, Nom = "Gestion des risques", CategorieCompetenceId = CatId("Risk"), NiveauActuel = 3, NiveauCible = 3, DateEvaluation = now.AddDays(-15) },
 
             // Raed (Consulting)
-            new() { CollaborateurId = byEmail["raed.amri@ey.com"].Id, Nom = "Communication", Categorie = "Soft skills", NiveauActuel = 2, NiveauCible = 4, DateEvaluation = now.AddDays(-5) },
-            new() { CollaborateurId = byEmail["raed.amri@ey.com"].Id, Nom = "Excel avancé", Categorie = "Outils", NiveauActuel = 3, NiveauCible = 4, DateEvaluation = now.AddDays(-16) },
-            new() { CollaborateurId = byEmail["raed.amri@ey.com"].Id, Nom = "Gestion de projet", Categorie = "Management", NiveauActuel = 2, NiveauCible = 3, DateEvaluation = now.AddDays(-12) },
-            new() { CollaborateurId = byEmail["raed.amri@ey.com"].Id, Nom = "Analyse & résolution de problèmes", Categorie = "Méthodes", NiveauActuel = 3, NiveauCible = 4, DateEvaluation = now.AddDays(-7) },
+            new() { CollaborateurId = byEmail["raed.amri@ey.com"].Id, Nom = "Communication", CategorieCompetenceId = CatId("Soft skills"), NiveauActuel = 2, NiveauCible = 4, DateEvaluation = now.AddDays(-5) },
+            new() { CollaborateurId = byEmail["raed.amri@ey.com"].Id, Nom = "Excel avancé", CategorieCompetenceId = CatId("Outils"), NiveauActuel = 3, NiveauCible = 4, DateEvaluation = now.AddDays(-16) },
+            new() { CollaborateurId = byEmail["raed.amri@ey.com"].Id, Nom = "Gestion de projet", CategorieCompetenceId = CatId("Management"), NiveauActuel = 2, NiveauCible = 3, DateEvaluation = now.AddDays(-12) },
+            new() { CollaborateurId = byEmail["raed.amri@ey.com"].Id, Nom = "Analyse & résolution de problèmes", CategorieCompetenceId = CatId("Méthodes"), NiveauActuel = 3, NiveauCible = 4, DateEvaluation = now.AddDays(-7) },
 
             // Ayoub (Tax)
-            new() { CollaborateurId = byEmail["ayoub.gombra@ey.com"].Id, Nom = "Communication", Categorie = "Soft skills", NiveauActuel = 2, NiveauCible = 4, DateEvaluation = now.AddDays(-6) },
-            new() { CollaborateurId = byEmail["ayoub.gombra@ey.com"].Id, Nom = "Excel avancé", Categorie = "Outils", NiveauActuel = 2, NiveauCible = 4, DateEvaluation = now.AddDays(-10) },
-            new() { CollaborateurId = byEmail["ayoub.gombra@ey.com"].Id, Nom = "Fiscalité (bases)", Categorie = "Fiscalité", NiveauActuel = 2, NiveauCible = 3, DateEvaluation = now.AddDays(-20) },
-            new() { CollaborateurId = byEmail["ayoub.gombra@ey.com"].Id, Nom = "Tax compliance", Categorie = "Fiscalité", NiveauActuel = 2, NiveauCible = 3, DateEvaluation = now.AddDays(-15) },
+            new() { CollaborateurId = byEmail["ayoub.gombra@ey.com"].Id, Nom = "Communication", CategorieCompetenceId = CatId("Soft skills"), NiveauActuel = 2, NiveauCible = 4, DateEvaluation = now.AddDays(-6) },
+            new() { CollaborateurId = byEmail["ayoub.gombra@ey.com"].Id, Nom = "Excel avancé", CategorieCompetenceId = CatId("Outils"), NiveauActuel = 2, NiveauCible = 4, DateEvaluation = now.AddDays(-10) },
+            new() { CollaborateurId = byEmail["ayoub.gombra@ey.com"].Id, Nom = "Fiscalité (bases)", CategorieCompetenceId = CatId("Fiscalité"), NiveauActuel = 2, NiveauCible = 3, DateEvaluation = now.AddDays(-20) },
+            new() { CollaborateurId = byEmail["ayoub.gombra@ey.com"].Id, Nom = "Tax compliance", CategorieCompetenceId = CatId("Fiscalité"), NiveauActuel = 2, NiveauCible = 3, DateEvaluation = now.AddDays(-15) },
 
             // CIbtissem (Audit Manager)
-            new() { CollaborateurId = byEmail["ibtissem.bessrour@ey.com"].Id, Nom = "Leadership", Categorie = "Leadership", NiveauActuel = 4, NiveauCible = 4, DateEvaluation = now.AddDays(-22) },
-            new() { CollaborateurId = byEmail["ibtissem.bessrour@ey.com"].Id, Nom = "Gestion de projet", Categorie = "Management", NiveauActuel = 4, NiveauCible = 4, DateEvaluation = now.AddDays(-14) },
-            new() { CollaborateurId = byEmail["ibtissem.bessrour@ey.com"].Id, Nom = "Stakeholder management", Categorie = "Management", NiveauActuel = 4, NiveauCible = 4, DateEvaluation = now.AddDays(-10) },
-            new() { CollaborateurId = byEmail["ibtissem.bessrour@ey.com"].Id, Nom = "Quality review (audit)", Categorie = "Audit", NiveauActuel = 4, NiveauCible = 4, DateEvaluation = now.AddDays(-16) },
+            new() { CollaborateurId = byEmail["ibtissem.bessrour@ey.com"].Id, Nom = "Leadership", CategorieCompetenceId = CatId("Leadership"), NiveauActuel = 4, NiveauCible = 4, DateEvaluation = now.AddDays(-22) },
+            new() { CollaborateurId = byEmail["ibtissem.bessrour@ey.com"].Id, Nom = "Gestion de projet", CategorieCompetenceId = CatId("Management"), NiveauActuel = 4, NiveauCible = 4, DateEvaluation = now.AddDays(-14) },
+            new() { CollaborateurId = byEmail["ibtissem.bessrour@ey.com"].Id, Nom = "Stakeholder management", CategorieCompetenceId = CatId("Management"), NiveauActuel = 4, NiveauCible = 4, DateEvaluation = now.AddDays(-10) },
+            new() { CollaborateurId = byEmail["ibtissem.bessrour@ey.com"].Id, Nom = "Quality review (audit)", CategorieCompetenceId = CatId("Audit"), NiveauActuel = 4, NiveauCible = 4, DateEvaluation = now.AddDays(-16) },
 
             // Sofien (Advisory)
-            new() { CollaborateurId = byEmail["sofien.klaou@ey.com"].Id, Nom = "Change management", Categorie = "Management", NiveauActuel = 3, NiveauCible = 4, DateEvaluation = now.AddDays(-9) },
-            new() { CollaborateurId = byEmail["sofien.klaou@ey.com"].Id, Nom = "Gestion de projet", Categorie = "Management", NiveauActuel = 3, NiveauCible = 4, DateEvaluation = now.AddDays(-13) },
-            new() { CollaborateurId = byEmail["sofien.klaou@ey.com"].Id, Nom = "Communication", Categorie = "Soft skills", NiveauActuel = 3, NiveauCible = 4, DateEvaluation = now.AddDays(-8) },
-            new() { CollaborateurId = byEmail["sofien.klaou@ey.com"].Id, Nom = "Analyse & résolution de problèmes", Categorie = "Méthodes", NiveauActuel = 4, NiveauCible = 4, DateEvaluation = now.AddDays(-19) },
+            new() { CollaborateurId = byEmail["sofien.klaou@ey.com"].Id, Nom = "Change management", CategorieCompetenceId = CatId("Management"), NiveauActuel = 3, NiveauCible = 4, DateEvaluation = now.AddDays(-9) },
+            new() { CollaborateurId = byEmail["sofien.klaou@ey.com"].Id, Nom = "Gestion de projet", CategorieCompetenceId = CatId("Management"), NiveauActuel = 3, NiveauCible = 4, DateEvaluation = now.AddDays(-13) },
+            new() { CollaborateurId = byEmail["sofien.klaou@ey.com"].Id, Nom = "Communication", CategorieCompetenceId = CatId("Soft skills"), NiveauActuel = 3, NiveauCible = 4, DateEvaluation = now.AddDays(-8) },
+            new() { CollaborateurId = byEmail["sofien.klaou@ey.com"].Id, Nom = "Analyse & résolution de problèmes", CategorieCompetenceId = CatId("Méthodes"), NiveauActuel = 4, NiveauCible = 4, DateEvaluation = now.AddDays(-19) },
 
            
         };
         context.Competences.AddRange(comps);
         await context.SaveChangesAsync();
 
-        // ========== 5. Inscriptions (parcours formation) ==========
+        // ========== 6. Inscriptions (parcours formation) ==========
         var fByCompetence = await context.Formations.ToDictionaryAsync(f => f.CompetenceVisee ?? f.Titre);
         var raedId = byEmail["raed.amri@ey.com"].Id;
         var mariemId = byEmail["mariem.safri@ey.com"].Id;
@@ -150,7 +158,7 @@ if (oldFormations.Any())
         context.Inscriptions.AddRange(inscriptions);
         await context.SaveChangesAsync();
 
-        // ========== 6. Évaluations ==========
+        // ========== 7. Évaluations ==========
         var compList = await context.Competences
             .Include(c => c.Collaborateur)
             .ToListAsync();
@@ -197,7 +205,7 @@ if (oldFormations.Any())
         };
         context.EvaluationsCompetences.AddRange(evals);
 
-        // ========== 7. Marqueur de version ==========
+        // ========== 8. Marqueur de version ==========
         context.Parametres.Add(new Parametre
         {
             Code = seedVersion,

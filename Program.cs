@@ -54,7 +54,10 @@ builder.Services.ConfigureApplicationCookie(options =>
 // Services
 builder.Services.AddMemoryCache();
 builder.Services.AddScoped<IParametreService, ParametreService>();
+builder.Services.AddScoped<IReferentielRhService, ReferentielRhService>();
+builder.Services.AddScoped<IPlanDeveloppementService, PlanDeveloppementService>();
 builder.Services.AddTransient<IEmailSender, EmailSender>();
+builder.Services.AddHttpClient<FlowiseService>();
 
 var app = builder.Build();
 

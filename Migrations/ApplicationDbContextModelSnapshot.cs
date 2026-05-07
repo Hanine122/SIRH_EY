@@ -226,6 +226,23 @@ namespace SIRH.EY.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
+            modelBuilder.Entity("SIRH.EY.Models.CategorieCompetence", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Nom")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("CategoriesCompetences");
+                });
+
             modelBuilder.Entity("SIRH.EY.Models.Collaborateur", b =>
                 {
                     b.Property<int>("Id")
@@ -283,8 +300,8 @@ namespace SIRH.EY.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("Categorie")
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<int?>("CategorieCompetenceId")
+                        .HasColumnType("int");
 
                     b.Property<int>("CollaborateurId")
                         .HasColumnType("int");
@@ -303,6 +320,8 @@ namespace SIRH.EY.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CategorieCompetenceId");
 
                     b.HasIndex("CollaborateurId");
 
@@ -610,11 +629,17 @@ namespace SIRH.EY.Migrations
 
             modelBuilder.Entity("SIRH.EY.Models.Competence", b =>
                 {
+                    b.HasOne("SIRH.EY.Models.CategorieCompetence", "CategorieCompetence")
+                        .WithMany("Competences")
+                        .HasForeignKey("CategorieCompetenceId");
+
                     b.HasOne("SIRH.EY.Models.Collaborateur", "Collaborateur")
                         .WithMany("Competences")
                         .HasForeignKey("CollaborateurId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("CategorieCompetence");
 
                     b.Navigation("Collaborateur");
                 });
@@ -692,6 +717,11 @@ namespace SIRH.EY.Migrations
                     b.Navigation("Collaborateur");
 
                     b.Navigation("Formation");
+                });
+
+            modelBuilder.Entity("SIRH.EY.Models.CategorieCompetence", b =>
+                {
+                    b.Navigation("Competences");
                 });
 
             modelBuilder.Entity("SIRH.EY.Models.Collaborateur", b =>

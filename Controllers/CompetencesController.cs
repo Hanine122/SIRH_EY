@@ -1,4 +1,5 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using SIRH.EY.Data;
 using SIRH.EY.Models;
@@ -9,10 +10,17 @@ namespace SIRH.EY.Controllers;
 public class CompetencesController : Controller
 {
     private readonly ApplicationDbContext _context;
+    private readonly IReferentielRhService _referentielRhService;
+    private readonly IPlanDeveloppementService _planDeveloppementService;
 
-    public CompetencesController(ApplicationDbContext context)
+    public CompetencesController(
+        ApplicationDbContext context,
+        IReferentielRhService referentielRhService,
+        IPlanDeveloppementService planDeveloppementService)
     {
         _context = context;
+        _referentielRhService = referentielRhService;
+        _planDeveloppementService = planDeveloppementService;
     }
 
     // GET: Competences?collaborateurId=xx
@@ -21,7 +29,7 @@ public async Task<IActionResult> Index(int? collaborateurId, string categorie)
 {
     if (collaborateurId == null)
     {
-        ViewBag.Message = "Veuillez sélectionner un collaborateur.";
+        ViewBag.Message = "Veuillez sÃ©lectionner un collaborateur.";
         return View(new List<Competence>());
     }
 
@@ -32,7 +40,7 @@ public async Task<IActionResult> Index(int? collaborateurId, string categorie)
     ViewBag.CollaborateurId = collaborateurId;
     ViewBag.GradeCollaborateur = collaborateur.Grade;
 
-    // ===== Récupérer les compétences requises pour le poste =====
+    // ===== RÃ©cupÃ©rer les compÃ©tences requises pour le poste =====
     // Assurez-vous que la table CompetencesRequisesParPoste existe (migration faite)
     var competencesRequisesPoste = await _context.CompetencesRequisesParPoste
         .Where(cr => cr.Poste == collaborateur.Poste)
@@ -42,14 +50,15 @@ public async Task<IActionResult> Index(int? collaborateurId, string categorie)
 
     var competences = _context.Competences
         .Include(c => c.EvaluationCompetence)
+        .Include(c => c.CategorieCompetence)
         .Where(c => c.CollaborateurId == collaborateurId);
     if (!string.IsNullOrEmpty(categorie))
     {
-        competences = competences.Where(c => c.Categorie == categorie);
+        competences = competences.Where(c => c.CategorieCompetence != null && c.CategorieCompetence.Nom == categorie);
     }
     var liste = await competences.ToListAsync();
 
-    var categories = await _context.Competences.Select(c => c.Categorie).Distinct().ToListAsync();
+    var categories = await _context.CategoriesCompetences.Select(c => c.Nom).ToListAsync();
     ViewBag.Categories = categories;
     ViewBag.CategorieCourante = categorie;
 
@@ -64,7 +73,7 @@ ViewBag.PlanDeveloppement = plans;
 
 public async Task<IActionResult> MatriceEquipe(int? collaborateurId)
 {
-    // Si un collaborateur est passé, on prend son département
+    // Si un collaborateur est passÃ©, on prend son dÃ©partement
     var departement = "";
     if (collaborateurId.HasValue)
     {
@@ -133,7 +142,7 @@ public async Task<IActionResult> MatriceEquipe(int? collaborateurId)
             CompetenceNom = competence.Nom,
             CollaborateurNom = $"{competence.Collaborateur?.Prenom} {competence.Collaborateur?.Nom}".Trim(),
             Poste = competence.Collaborateur?.Poste,
-            Categorie = competence.Categorie,
+            Categorie = competence.CategorieCompetence?.Nom,
             SeuilRh = seuilRh,
             AutoEvaluationCollaborateur = evaluation?.AutoEvaluationCollaborateur ?? Math.Clamp(competence.NiveauActuel * 20, 0, 100),
             EvaluationManager = evaluation?.EvaluationManager,
@@ -162,7 +171,7 @@ public async Task<IActionResult> MatriceEquipe(int? collaborateurId)
             vm.CompetenceNom = competence.Nom;
             vm.CollaborateurNom = collaborateur == null ? "" : $"{collaborateur.Prenom} {collaborateur.Nom}";
             vm.Poste = collaborateur?.Poste;
-            vm.Categorie = competence.Categorie;
+            vm.Categorie = competence.CategorieCompetence?.Nom;
             return View(vm);
         }
 
@@ -189,7 +198,7 @@ public async Task<IActionResult> MatriceEquipe(int? collaborateurId)
         competence.DateEvaluation = DateTime.Now;
 
         await _context.SaveChangesAsync();
-        TempData["Success"] = "Auto-évaluation enregistrée. Le manager pourra maintenant la valider ou l'ajuster.";
+        TempData["Success"] = "Auto-Ã©valuation enregistrÃ©e. Le manager pourra maintenant la valider ou l'ajuster.";
         return RedirectToAction(nameof(Index), new { collaborateurId = competence.CollaborateurId });
     }
 
@@ -205,7 +214,7 @@ public async Task<IActionResult> MatriceEquipe(int? collaborateurId)
         var evaluation = competence.EvaluationCompetence;
         if (evaluation == null)
         {
-            TempData["Error"] = "Le collaborateur doit d'abord renseigner son auto-évaluation.";
+            TempData["Error"] = "Le collaborateur doit d'abord renseigner son auto-Ã©valuation.";
             return RedirectToAction(nameof(Index), new { collaborateurId = competence.CollaborateurId });
         }
 
@@ -216,7 +225,7 @@ public async Task<IActionResult> MatriceEquipe(int? collaborateurId)
             CompetenceNom = competence.Nom,
             CollaborateurNom = $"{competence.Collaborateur?.Prenom} {competence.Collaborateur?.Nom}".Trim(),
             Poste = competence.Collaborateur?.Poste,
-            Categorie = competence.Categorie,
+            Categorie = competence.CategorieCompetence?.Nom,
             SeuilRh = evaluation.SeuilRh,
             AutoEvaluationCollaborateur = evaluation.AutoEvaluationCollaborateur,
             EvaluationManager = evaluation.EvaluationManager ?? evaluation.AutoEvaluationCollaborateur,
@@ -239,7 +248,7 @@ public async Task<IActionResult> MatriceEquipe(int? collaborateurId)
         if (competence == null) return NotFound();
         if (competence.EvaluationCompetence == null)
         {
-            TempData["Error"] = "Aucune auto-évaluation à valider.";
+            TempData["Error"] = "Aucune auto-Ã©valuation Ã  valider.";
             return RedirectToAction(nameof(Index), new { collaborateurId = competence.CollaborateurId });
         }
 
@@ -259,8 +268,8 @@ public async Task<IActionResult> MatriceEquipe(int? collaborateurId)
 
         await _context.SaveChangesAsync();
         TempData["Success"] = vm.ValidationManager
-            ? "Évaluation manager validée et enregistrée."
-            : "Correction manager enregistrée (validation non finalisée).";
+            ? "Ã‰valuation manager validÃ©e et enregistrÃ©e."
+            : "Correction manager enregistrÃ©e (validation non finalisÃ©e).";
         return RedirectToAction(nameof(Index), new { collaborateurId = competence.CollaborateurId });
     }
 
@@ -279,67 +288,27 @@ public async Task<IActionResult> PlanifierExamen(int inscriptionId, DateTime dat
     if (inscription == null) return NotFound();
     inscription.DateExamen = dateExamen;
     await _context.SaveChangesAsync();
-    TempData["Success"] = "Examen planifié.";
+    TempData["Success"] = "Examen planifiÃ©.";
     return RedirectToAction(nameof(Index), new { collaborateurId = inscription.CollaborateurId });
 }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> GenererPlanDeveloppement(int collaborateurId)
+    public async Task<IActionResult> GenererPlanDeveloppement(int collaborateurId, string? returnUrl = null)
     {
         var collaborateur = await _context.Collaborateurs.FindAsync(collaborateurId);
         if (collaborateur == null) return NotFound();
 
-        var competencesEnEcart = await _context.Competences
-            .Where(c => c.CollaborateurId == collaborateurId && c.NiveauActuel < c.NiveauCible)
-            .ToListAsync();
+        var result = await _planDeveloppementService.GenererPourCollaborateurAsync(collaborateurId);
+        TempData["Success"] = result.Message;
+        return RedirectAfterPlanGeneration(collaborateurId, returnUrl);
+    }
 
-        if (!competencesEnEcart.Any())
-        {
-            TempData["Success"] = "Aucun ecart de competence a traiter : le profil est aligne avec ses objectifs.";
-            return RedirectToAction(nameof(Index), new { collaborateurId });
-        }
+    private IActionResult RedirectAfterPlanGeneration(int collaborateurId, string? returnUrl)
+    {
+        if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+            return LocalRedirect(returnUrl);
 
-        var formations = await _context.Formations.ToListAsync();
-        var plansExistants = await _context.PlansDeveloppement
-            .Where(p => p.CollaborateurId == collaborateurId)
-            .Select(p => p.FormationId)
-            .ToListAsync();
-
-        var nouveauxPlans = new List<PlanDeveloppement>();
-        foreach (var competence in competencesEnEcart)
-        {
-            var formation = formations
-                .Where(f => !plansExistants.Contains(f.Id) && !nouveauxPlans.Any(p => p.FormationId == f.Id))
-                .FirstOrDefault(f =>
-                    !string.IsNullOrWhiteSpace(f.CompetenceVisee) &&
-                    f.CompetenceVisee.Trim().Equals(competence.Nom.Trim(), StringComparison.OrdinalIgnoreCase));
-
-            formation ??= formations
-                .Where(f => !plansExistants.Contains(f.Id) && !nouveauxPlans.Any(p => p.FormationId == f.Id))
-                .FirstOrDefault(f => (f.Titre ?? "").Contains(competence.Nom, StringComparison.OrdinalIgnoreCase));
-
-            if (formation == null) continue;
-
-            nouveauxPlans.Add(new PlanDeveloppement
-            {
-                CollaborateurId = collaborateurId,
-                FormationId = formation.Id,
-                Statut = "A faire",
-                Commentaire = $"Recommande pour combler l'ecart sur {competence.Nom} ({competence.NiveauActuel}/{competence.NiveauCible})."
-            });
-        }
-
-        if (!nouveauxPlans.Any())
-        {
-            TempData["Success"] = "Aucune nouvelle formation correspondante trouvee pour les ecarts actuels.";
-            return RedirectToAction(nameof(Index), new { collaborateurId });
-        }
-
-        _context.PlansDeveloppement.AddRange(nouveauxPlans);
-        await _context.SaveChangesAsync();
-
-        TempData["Success"] = $"{nouveauxPlans.Count} recommandation(s) ajoutee(s) au plan de developpement.";
         return RedirectToAction(nameof(Index), new { collaborateurId });
     }
 
@@ -349,58 +318,93 @@ public async Task<IActionResult> PlanifierExamen(int inscriptionId, DateTime dat
         if (id == null) return NotFound();
         var competence = await _context.Competences
             .Include(c => c.Collaborateur)
+            .Include(c => c.CategorieCompetence)
             .FirstOrDefaultAsync(m => m.Id == id);
         if (competence == null) return NotFound();
         return View(competence);
     }
 
     // GET: Competences/Create
-    public IActionResult Create(int? collaborateurId)
+    public async Task<IActionResult> Create(int? collaborateurId)
     {
         if (collaborateurId == null)
         {
             return RedirectToAction("Index", "Collaborateurs");
         }
         ViewBag.CollaborateurId = collaborateurId;
+        await PrepareCreateViewDataAsync(collaborateurId.Value);
         return View();
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetCompetencesParGrade(string? grade)
+    {
+        var competences = await _referentielRhService.GetCompetencesDisponiblesParGradeAsync(grade);
+        return Json(competences.Select(c => new
+        {
+            nom = c.Competence,
+            poste = c.Poste,
+            niveauRequis = c.NiveauRequis
+        }));
     }
 
     // POST: Competences/Create
     [HttpPost]
 [ValidateAntiForgeryToken]
-public async Task<IActionResult> Create([Bind("Id,Nom,Categorie,NiveauActuel,DateEvaluation,CollaborateurId")] Competence competence)
+public async Task<IActionResult> Create([Bind("Id,Nom,CategorieCompetenceId,NiveauActuel,DateEvaluation,CollaborateurId")] Competence competence, List<string> selectedCompetences, string? selectedGrade)
 {
+    var collaborateur = await _context.Collaborateurs.FindAsync(competence.CollaborateurId);
+    var grade = !string.IsNullOrWhiteSpace(selectedGrade) ? selectedGrade : collaborateur?.Grade;
+    var niveauCible = CompetenceRules.GetNiveauCibleParGrade(grade ?? "Junior");
+    var nomsCompetences = selectedCompetences
+        .Where(c => !string.IsNullOrWhiteSpace(c))
+        .Select(c => c.Trim())
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .ToList();
+
+    if (!nomsCompetences.Any() && !string.IsNullOrWhiteSpace(competence.Nom))
+        nomsCompetences.Add(competence.Nom.Trim());
+
+    if (!nomsCompetences.Any())
+        ModelState.AddModelError(nameof(competence.Nom), "Selectionnez au moins une competence.");
+
     if (ModelState.IsValid)
     {
-        var collaborateur = await _context.Collaborateurs.FindAsync(competence.CollaborateurId);
-        if (collaborateur != null && !string.IsNullOrEmpty(collaborateur.Grade))
+        foreach (var nom in nomsCompetences)
         {
-            competence.NiveauCible = CompetenceRules.GetNiveauCibleParGrade(collaborateur.Grade);
+            _context.Competences.Add(new Competence
+            {
+                Nom = nom,
+                CategorieCompetenceId = competence.CategorieCompetenceId,
+                NiveauActuel = competence.NiveauActuel,
+                NiveauCible = niveauCible,
+                DateEvaluation = competence.DateEvaluation,
+                CollaborateurId = competence.CollaborateurId
+            });
         }
-        else
-        {
-            competence.NiveauCible = 3; // valeur par défaut
-        }
-        _context.Add(competence);
         await _context.SaveChangesAsync();
         return RedirectToAction(nameof(Index), new { collaborateurId = competence.CollaborateurId });
     }
+    await PrepareCreateViewDataAsync(competence.CollaborateurId, grade);
     return View(competence);
 }
     // GET: Competences/Edit/5
     public async Task<IActionResult> Edit(int? id)
     {
         if (id == null) return NotFound();
-        var competence = await _context.Competences.FindAsync(id);
+        var competence = await _context.Competences
+            .Include(c => c.CategorieCompetence)
+            .FirstOrDefaultAsync(c => c.Id == id);
         if (competence == null) return NotFound();
         ViewBag.CollaborateurId = competence.CollaborateurId;
+        ViewBag.Categories = new SelectList(await _context.CategoriesCompetences.ToListAsync(), "Id", "Nom", competence.CategorieCompetenceId);
         return View(competence);
     }
 
     // POST: Competences/Edit/5
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(int id, [Bind("Id,Nom,Categorie,NiveauActuel,NiveauCible,DateEvaluation,CollaborateurId")] Competence competence)
+    public async Task<IActionResult> Edit(int id, [Bind("Id,Nom,CategorieCompetenceId,NiveauActuel,NiveauCible,DateEvaluation,CollaborateurId")] Competence competence)
     {
         if (id != competence.Id) return NotFound();
         if (ModelState.IsValid)
@@ -418,6 +422,7 @@ public async Task<IActionResult> Create([Bind("Id,Nom,Categorie,NiveauActuel,Dat
             return RedirectToAction(nameof(Index), new { collaborateurId = competence.CollaborateurId });
         }
         ViewBag.CollaborateurId = competence.CollaborateurId;
+        ViewBag.Categories = new SelectList(await _context.CategoriesCompetences.ToListAsync(), "Id", "Nom", competence.CategorieCompetenceId);
         return View(competence);
     }
 
@@ -427,6 +432,7 @@ public async Task<IActionResult> Create([Bind("Id,Nom,Categorie,NiveauActuel,Dat
         if (id == null) return NotFound();
         var competence = await _context.Competences
             .Include(c => c.Collaborateur)
+            .Include(c => c.CategorieCompetence)
             .FirstOrDefaultAsync(m => m.Id == id);
         if (competence == null) return NotFound();
         return View(competence);
@@ -458,5 +464,30 @@ public async Task<IActionResult> Create([Bind("Id,Nom,Categorie,NiveauActuel,Dat
         }
 
         return Math.Clamp(competence.NiveauCible * 20, 0, 100);
+    }
+
+    private async Task PrepareCreateViewDataAsync(int collaborateurId, string? gradeOverride = null)
+    {
+        var collaborateur = await _context.Collaborateurs
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Id == collaborateurId);
+        var grade = gradeOverride ?? collaborateur?.Grade ?? "";
+
+        ViewBag.CollaborateurGrade = grade;
+        
+        // Créer les catégories par défaut si elles n'existent pas
+        if (!await _context.CategoriesCompetences.AnyAsync())
+        {
+            var defaultCategories = new[] { "Audit", "Data", "Leadership", "Management", "Métier", "Outils", "Risk", "Soft skills", "RH", "Fiscalité", "Méthodes" };
+            foreach (var cat in defaultCategories)
+            {
+                _context.CategoriesCompetences.Add(new CategorieCompetence { Nom = cat });
+            }
+            await _context.SaveChangesAsync();
+        }
+        
+        var categories = await _context.CategoriesCompetences.ToListAsync();
+        ViewBag.Categories = new SelectList(categories, "Id", "Nom");
+        ViewBag.CompetencesDisponibles = await _referentielRhService.GetCompetencesDisponiblesParGradeAsync(grade);
     }
 }

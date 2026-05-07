@@ -2,6 +2,8 @@
 @{
     ViewData["Title"] = "Modifier collaborateur";
     var managers = ViewBag.Managers as List<SIRH.EY.Models.Collaborateur> ?? new List<SIRH.EY.Models.Collaborateur>();
+    var departements = ViewBag.Departements as IReadOnlyList<string> ?? new[] { Model.Departement }.Where(d => !string.IsNullOrWhiteSpace(d)).Cast<string>().ToList();
+    var postes = ViewBag.Postes as IReadOnlyList<string> ?? new[] { Model.Poste }.Where(p => !string.IsNullOrWhiteSpace(p)).Cast<string>().ToList();
 }
 
 <div class="ey-card p-3">
@@ -27,12 +29,24 @@
                 <input asp-for="Email" class="form-control" />
             </div>
             <div class="col-md-6">
-                <label asp-for="Departement"></label>
-                <input asp-for="Departement" class="form-control" />
+                <label asp-for="Departement" class="form-label"></label>
+                <select asp-for="Departement" class="form-select js-departement-select" data-poste-target="#Poste">
+                    <option value="">Selectionnez un departement</option>
+                    @foreach (var departement in departements)
+                    {
+                        <option value="@departement">@departement</option>
+                    }
+                </select>
             </div>
             <div class="col-md-6">
-                <label asp-for="Poste"></label>
-                <input asp-for="Poste" class="form-control" />
+                <label asp-for="Poste" class="form-label"></label>
+                <select asp-for="Poste" class="form-select js-poste-select">
+                    <option value="">Selectionnez d'abord un departement</option>
+                    @foreach (var poste in postes)
+                    {
+                        <option value="@poste">@poste</option>
+                    }
+                </select>
             </div>
             <div class="col-md-6">
                 <label asp-for="Grade" class="form-label"></label>
@@ -70,3 +84,7 @@
         </div>
     </form>
 </div>
+
+@section Scripts {
+    <script src="~/js/rh-dynamic-forms.js" asp-append-version="true"></script>
+}

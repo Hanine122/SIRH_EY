@@ -285,7 +285,7 @@ public async Task<IActionResult> TerminerFormation(int inscriptionId)
             competence = new Competence
             {
                 Nom = formation.CompetenceVisee,
-                Categorie = "À définir",
+                CategorieCompetenceId = null,
                 NiveauActuel = 1,
                 NiveauCible = niveauCible,
                 DateEvaluation = DateTime.Now,

@@ -1,5 +1,14 @@
+using System.ComponentModel.DataAnnotations;
+
+namespace SIRH.EY.Models;
+
 public class CategorieCompetence
 {
     public int Id { get; set; }
-    public string Nom { get; set; } // "Technique", "Transversale", "Métier"
+
+    [Required]
+    public string Nom { get; set; } = string.Empty;
+
+    // Navigation
+    public ICollection<Competence>? Competences { get; set; }
 }

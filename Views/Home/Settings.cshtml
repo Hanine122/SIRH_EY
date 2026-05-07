@@ -1,0 +1,99 @@
+@{
+    ViewData["Title"] = "Paramètres";
+}
+
+<div class="ey-form-shell p-4">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+        <div>
+            <div class="ey-page-kicker">Configuration</div>
+            <h1 class="h3 mb-1">Paramètres</h1>
+            <p class="text-muted mb-0">Gérez vos préférences et paramètres de compte</p>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Profil -->
+        <div class="col-md-6">
+            <div class="ey-card p-4">
+                <h5 class="mb-3"><i class="fas fa-user-circle me-2 text-warning"></i>Profil utilisateur</h5>
+                <div class="mb-3">
+                    <label class="form-label fw-medium">Nom complet</label>
+                    <input type="text" class="form-control" value="@User.Identity?.Name" readonly />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-medium">Email</label>
+                    <input type="email" class="form-control" value="@User.Identity?.Name" readonly />
+                </div>
+                <a class="btn btn-outline-dark btn-sm" asp-area="Identity" asp-page="/Account/Manage/Index">
+                    <i class="fas fa-edit me-1"></i>Modifier le profil
+                </a>
+            </div>
+        </div>
+
+        <!-- Sécurité -->
+        <div class="col-md-6">
+            <div class="ey-card p-4">
+                <h5 class="mb-3"><i class="fas fa-shield-alt me-2 text-warning"></i>Sécurité</h5>
+                <div class="d-flex align-items-center justify-content-between mb-3 p-3 bg-light rounded">
+                    <div>
+                        <div class="fw-medium">Mot de passe</div>
+                        <small class="text-muted">Dernière modification il y a 30 jours</small>
+                    </div>
+                    <a class="btn btn-outline-dark btn-sm" asp-area="Identity" asp-page="/Account/Manage/ChangePassword">
+                        <i class="fas fa-key me-1"></i>Modifier
+                    </a>
+                </div>
+                <div class="d-flex align-items-center justify-content-between p-3 bg-light rounded">
+                    <div>
+                        <div class="fw-medium">Authentification à deux facteurs</div>
+                        <small class="text-muted">Non activée</small>
+                    </div>
+                    <a class="btn btn-outline-dark btn-sm" asp-area="Identity" asp-page="/Account/Manage/TwoFactorAuthentication">
+                        <i class="fas fa-lock me-1"></i>Configurer
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Préférences -->
+        <div class="col-md-6">
+            <div class="ey-card p-4">
+                <h5 class="mb-3"><i class="fas fa-palette me-2 text-warning"></i>Préférences</h5>
+                <div class="mb-3">
+                    <label class="form-label fw-medium">Langue</label>
+                    <select class="form-select">
+                        <option value="fr" selected>Français</option>
+                        <option value="en">English</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-medium">Thème</label>
+                    <select class="form-select">
+                        <option value="light" selected>Clair</option>
+                        <option value="dark">Sombre</option>
+                    </select>
+                </div>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="notifEmail" checked>
+                    <label class="form-check-label" for="notifEmail">Recevoir les notifications par email</label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Informations -->
+        <div class="col-md-6">
+            <div class="ey-card p-4">
+                <h5 class="mb-3"><i class="fas fa-info-circle me-2 text-warning"></i>À propos</h5>
+                <p class="text-muted mb-3">
+                    SIRH EY - Système Intégré de Ressources Humaines<br />
+                    Version 1.0.0
+                </p>
+                <div class="small text-muted">
+                    <p class="mb-1"><i class="fas fa-building me-2"></i>EY Tunisia</p>
+                    <p class="mb-1"><i class="fas fa-envelope me-2"></i>support@ey.tn</p>
+                    <p class="mb-0"><i class="fas fa-phone me-2"></i>+216 71 123 456</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
