@@ -1,0 +1,30 @@
+@model SIRH.EY.Models.InsightsAI.RhInsightsViewModel
+
+<div class="tic-module-heading">
+    <div>
+        <div class="tic-mini-label">Skill intelligence</div>
+        <h2>Competences critiques et rares</h2>
+        <p>Lecture visuelle des tensions, raretes et couvertures de competences.</p>
+    </div>
+</div>
+
+<div class="row g-3">
+@foreach (var heat in Model.SkillHeatmaps)
+{
+    var status = heat.Status == "Critical" ? "critical" : heat.Status == "Warning" ? "warning" : "healthy";
+    var fill = heat.Status == "Critical" ? "tic-fill-critical" : heat.Status == "Warning" ? "tic-fill-warning" : "tic-fill-healthy";
+    <div class="col-md-6 col-xl-3">
+        <button type="button" class="tic-heat-card tic-heat-@status tic-open-detail text-start" data-detail-title="@heat.Competence" data-detail-body="@heat.Insight">
+            <span class="d-flex justify-content-between gap-2 mb-2">
+                <span><span class="fw-bold d-block">@heat.Competence</span><span class="small tic-soft-text">@heat.Category</span></span>
+                <span class="badge bg-light text-dark border">@heat.Couverture.ToString("0")%</span>
+            </span>
+            <span class="tic-progress-track mb-2 d-block"><span class="tic-progress-fill @fill d-block" style="width:@Math.Max(4, Math.Min(100, heat.Couverture))%"></span></span>
+            <span class="d-flex justify-content-between small tic-soft-text">
+                <span>@heat.NbCollaborateursMaitrisant/@heat.NbCollaborateursRequis requis</span>
+                <span>@heat.Insight</span>
+            </span>
+        </button>
+    </div>
+}
+</div>

@@ -1,0 +1,127 @@
+@model SIRH.EY.Models.InsightsAI.RhInsightsViewModel
+@{
+    var simulator = Model.PromotionSimulator;
+    var result = simulator.DefaultResult;
+    var readiness = result?.ReadinessPercentage ?? 0;
+}
+
+<div class="tic-module-heading">
+    <div>
+        <div class="tic-mini-label">Scenario simulator</div>
+        <h2>Préparation à la promotion</h2>
+        <p>Simuler la readiness d'un collaborateur vers un poste ou grade cible.</p>
+    </div>
+</div>
+
+<div class="tic-section-card promotion-simulator p-4">
+    <div class="row g-4 promotion-control">
+        <div class="col-xl-4">
+            <div class="row g-3">
+                <div class="col-12">
+                    <label class="form-label fw-semibold">Collaborateur</label>
+                    <input type="search" class="form-control mb-2" id="promotion-collab-search" placeholder="Rechercher un collaborateur..." autocomplete="off" />
+                    <select class="form-select" id="promotion-collab-select">
+                        @foreach (var collaborateur in simulator.Collaborateurs)
+                        {
+                            <option value="@collaborateur.Id" data-search="@($"{collaborateur.NomComplet} {collaborateur.Poste} {collaborateur.Grade} {collaborateur.Departement}".ToLowerInvariant())">
+                                @collaborateur.NomComplet - @collaborateur.Poste (@collaborateur.Grade)
+                            </option>
+                        }
+                    </select>
+                </div>
+                <div class="col-12">
+                    <label class="form-label fw-semibold">Role cible / grade / poste</label>
+                    <select class="form-select" id="promotion-target-select">
+                        @foreach (var target in simulator.TargetPositions)
+                        {
+                            <option value="@target.Key">@target.Label</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-12">
+                    <button type="button" class="btn btn-dark w-100" id="promotion-run-btn">
+                        <i class="fas fa-play me-2"></i>Simuler la readiness
+                    </button>
+                </div>
+            </div>
+            <div class="promotion-summary-card mt-3" id="promotion-summary">
+                <div class="tic-mini-label text-white-50 mb-2">Executive AI summary</div>
+                <div>@(result?.ExecutiveSummary ?? "Selectionnez un collaborateur pour generer une analyse executive.")</div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 text-center">
+            <div class="promotion-gauge mx-auto" id="promotion-gauge" style="--readiness:@readiness%;">
+                <div class="promotion-gauge-inner">
+                    <div class="promotion-gauge-value" id="promotion-readiness-value">@readiness.ToString("0")%</div>
+                    <div class="small tic-soft-text">Readiness</div>
+                </div>
+            </div>
+            <div class="fw-bold mt-3" id="promotion-person">@result?.CollaborateurNom</div>
+            <div class="small tic-soft-text" id="promotion-role">@result?.CurrentRole -> @result?.TargetRole</div>
+        </div>
+
+        <div class="col-xl-5">
+            <div class="row g-3 mb-3">
+                <div class="col-md-4"><div class="promotion-kpi"><div class="tic-mini-label">Compatibility</div><div class="tic-kpi-value fs-3 mb-1" id="promotion-compatibility">@((result?.CompatibilityScore ?? 0).ToString("0"))%</div><div class="small tic-soft-text">Matching</div></div></div>
+                <div class="col-md-4"><div class="promotion-kpi"><div class="tic-mini-label">Potential</div><div class="tic-kpi-value fs-3 mb-1" id="promotion-potential">@((result?.PromotionPotential ?? 0).ToString("0"))%</div><div class="small tic-soft-text">Signal</div></div></div>
+                <div class="col-md-4"><div class="promotion-kpi"><div class="tic-mini-label">Time</div><div class="tic-kpi-value fs-3 mb-1" id="promotion-time">@((result?.EstimatedMonthsMin ?? 0))-@((result?.EstimatedMonthsMax ?? 0))m</div><div class="small tic-soft-text">Avant readiness</div></div></div>
+            </div>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="promotion-kpi">
+                        <div class="tic-mini-label mb-2">Transversal skills</div>
+                        <div id="promotion-transversal">
+                            @foreach (var skill in result?.TransversalSkills ?? new List<string>()) { <span class="badge bg-light text-dark border me-1 mb-1">@skill</span> }
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="promotion-kpi">
+                        <div class="tic-mini-label mb-2">Leadership indicators</div>
+                        <div id="promotion-leadership">
+                            @foreach (var indicator in result?.LeadershipIndicators ?? new List<string>()) { <span class="badge bg-light text-dark border me-1 mb-1">@indicator</span> }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mt-1 promotion-control">
+        <div class="col-xl-7">
+            <div class="promotion-kpi">
+                <div class="tic-mini-label">Missing competencies matrix</div>
+                <h6 class="fw-bold mb-3">Ecarts critiques avant promotion</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm promotion-matrix-table mb-0">
+                        <thead><tr><th>Competence</th><th class="text-center">Actuel</th><th class="text-center">Requis</th><th class="text-center">Gap</th><th>Priorite</th></tr></thead>
+                        <tbody id="promotion-gap-matrix">
+                        @foreach (var gap in result?.MissingCompetencies ?? new List<SIRH.EY.Models.InsightsAI.PromotionCompetencyGapViewModel>())
+                        {
+                            var badge = gap.Severity == "High" ? "bg-danger" : gap.Severity == "Medium" ? "bg-warning text-dark" : gap.Severity == "Low" ? "bg-info text-dark" : "bg-success";
+                            <tr><td class="fw-semibold">@gap.Competence</td><td class="text-center">@gap.CurrentLevel/5</td><td class="text-center">@gap.RequiredLevel/5</td><td class="text-center">@gap.Gap</td><td><span class="badge @badge">@gap.PriorityLabel</span></td></tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-5">
+            <div class="promotion-kpi h-100">
+                <div class="tic-mini-label">Recommended formations</div>
+                <h6 class="fw-bold mb-3">Upskilling cible</h6>
+                <div id="promotion-formations">
+                    @foreach (var formation in result?.RecommendedFormations ?? new List<SIRH.EY.Models.InsightsAI.PromotionFormationRecommendationViewModel>())
+                    {
+                        <div class="tic-recommendation mb-2">
+                            <div class="fw-bold">@formation.FormationTitre</div>
+                            <div class="small tic-soft-text">@formation.TargetCompetence | +@formation.ReadinessGain% readiness | @formation.EstimatedWeeks semaine(s)</div>
+                            <div class="small">@formation.ProgressionImpact</div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

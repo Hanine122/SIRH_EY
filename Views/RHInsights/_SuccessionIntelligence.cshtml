@@ -1,0 +1,70 @@
+@model SIRH.EY.Models.InsightsAI.RhInsightsViewModel
+
+<div class="tic-module-heading">
+    <div>
+        <div class="tic-mini-label">Succession intelligence</div>
+        <h2>Continuity Alerts & Matching</h2>
+        <p>Ouvrir une alerte pour lancer l'analyse de remplacement dans le panneau lateral.</p>
+    </div>
+    <span class="badge bg-light text-dark border">Matching API conserve</span>
+</div>
+
+<div class="row g-4">
+    <div class="col-xl-5">
+        <div class="tic-section-card p-3 h-100">
+            <div class="tic-section-header px-1">
+                <div>
+                    <div class="tic-mini-label">Critical roles</div>
+                    <h5>Postes vacants & passations</h5>
+                </div>
+                <span class="badge bg-dark">@Model.AlertesContinuite.Count</span>
+            </div>
+            @if (Model.AlertesContinuite.Any())
+            {
+                @foreach (var alerte in Model.AlertesContinuite)
+                {
+                    var cardClass = alerte.Statut == SIRH.EY.Models.StatutCollaborateur.Vacant ? "vacant" : "passation";
+                    <button type="button" class="rh-alert-card @cardClass text-start w-100" data-id="@alerte.Id">
+                        <span class="d-flex justify-content-between align-items-start mb-2">
+                            <span>
+                                <span class="fw-semibold d-block">@alerte.Prenom @alerte.Nom</span>
+                                <span class="small text-muted">@alerte.Poste</span>
+                            </span>
+                            @if (alerte.Statut == SIRH.EY.Models.StatutCollaborateur.Vacant)
+                            {
+                                <span class="rh-badge-vacant">Vacant</span>
+                            }
+                            else
+                            {
+                                <span class="rh-badge-passation">En passation</span>
+                            }
+                        </span>
+                        <span class="small text-muted"><i class="fas fa-building me-1"></i>@alerte.Departement</span>
+                    </button>
+                }
+            }
+            else
+            {
+                <div class="tic-recommendation">
+                    <div class="fw-bold mb-1"><i class="fas fa-check-circle text-success me-2"></i>Aucune rupture immediate</div>
+                    <div class="small tic-soft-text">Continuez a monitorer les roles critiques et utilisez les simulateurs.</div>
+                </div>
+            }
+        </div>
+    </div>
+    <div class="col-xl-7">
+        <div class="tic-section-card p-4 h-100">
+            <div class="tic-mini-label">Succession playbook</div>
+            <h5 class="fw-bold mb-3">Progressive disclosure</h5>
+            <div class="row g-3">
+                <div class="col-md-4"><div class="tic-playbook-step"><strong>1</strong><span>Detecter le role critique</span></div></div>
+                <div class="col-md-4"><div class="tic-playbook-step"><strong>2</strong><span>Comparer les successeurs</span></div></div>
+                <div class="col-md-4"><div class="tic-playbook-step"><strong>3</strong><span>Activer formation / mobilite</span></div></div>
+            </div>
+            <div class="tic-executive-strip mt-3">
+                <i class="fas fa-lightbulb text-warning me-2"></i>
+                Le panneau lateral garde le contexte et evite une navigation hors dashboard.
+            </div>
+        </div>
+    </div>
+</div>

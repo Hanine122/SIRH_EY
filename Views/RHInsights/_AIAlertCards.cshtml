@@ -1,0 +1,22 @@
+@model IEnumerable<SIRH.EY.Models.InsightsAI.SmartAlertViewModel>
+
+@foreach (var alert in Model)
+{
+    var severity = string.IsNullOrWhiteSpace(alert.Severity) ? "Medium" : alert.Severity;
+    var severityClass = severity.Equals("High", StringComparison.OrdinalIgnoreCase) ? "tic-severity-high" : severity.Equals("Low", StringComparison.OrdinalIgnoreCase) ? "tic-severity-low" : "tic-severity-medium";
+    <button type="button" class="tic-alert-item tic-open-detail text-start" data-detail-title="@alert.Title" data-detail-body="@alert.Recommendation">
+        <span class="d-flex justify-content-between gap-2 mb-2">
+            <span>
+                <span class="fw-bold d-block"><i class="fas fa-magic text-warning me-2"></i>@alert.Title</span>
+                <span class="small tic-soft-text">@alert.Description</span>
+            </span>
+            <span class="tic-severity @severityClass">@severity</span>
+        </span>
+        <span class="d-flex flex-wrap gap-2 mb-2">
+            <span class="tic-ai-badge">@alert.AiBadge</span>
+            <span class="badge bg-light text-dark border">@alert.ConfidenceScore% confiance</span>
+            <span class="badge bg-light text-dark border">@alert.AlertType</span>
+        </span>
+        <span class="tic-recommendation small d-block"><i class="fas fa-lightbulb me-2"></i>@alert.Recommendation</span>
+    </button>
+}

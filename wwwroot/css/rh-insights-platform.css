@@ -16,7 +16,7 @@
     background: radial-gradient(circle at 86% 4%, rgba(255, 230, 0, 0.22), transparent 26%), linear-gradient(180deg, #f7f9fc 0%, #eef2f7 100%);
     color: var(--tic-ink);
 }
-
+/* 
 .tic-sidebar {
     position: sticky;
     top: 18px;
@@ -27,6 +27,38 @@
     background: rgba(16, 24, 32, 0.88);
     box-shadow: 0 22px 60px rgba(16, 24, 32, 0.22);
     backdrop-filter: blur(18px);
+} */
+
+.modules-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-top: 2rem;
+}
+
+.module-card {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 24px;
+    padding: 2rem;
+    backdrop-filter: blur(16px);
+    transition: all .3s ease;
+    text-decoration: none;
+    color: white;
+    position: relative;
+    overflow: hidden;
+}
+
+.module-card:hover {
+    transform: translateY(-6px);
+    box-shadow:
+        0 10px 40px rgba(255,215,0,0.12),
+        0 0 20px rgba(255,255,255,0.06);
+}
+
+.tic-content-full {
+    width: 100%;
+    padding: 2rem;
 }
 
 .tic-brand {

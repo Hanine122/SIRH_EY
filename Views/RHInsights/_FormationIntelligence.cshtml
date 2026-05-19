@@ -1,0 +1,31 @@
+@model SIRH.EY.Models.InsightsAI.RhInsightsViewModel
+
+<div class="tic-module-heading">
+    <div>
+        <div class="tic-mini-label">Formation intelligence</div>
+        <h2>Parcours recommandes</h2>
+        <p>Prioriser les plans de formation selon l'impact readiness et les competences ciblees.</p>
+    </div>
+</div>
+
+<div class="row g-3">
+@foreach (var formation in Model.FormationInsights)
+{
+    <div class="col-md-6 col-xl-3">
+        <button type="button" class="tic-formation-card tic-open-detail text-start" data-detail-title="@formation.FormationTitre" data-detail-body="@formation.ExpectedImpact">
+            <span class="d-flex justify-content-between gap-2 mb-2">
+                <span class="fw-bold">@formation.FormationTitre</span>
+                <span class="badge bg-danger">@formation.UrgencyScore%</span>
+            </span>
+            <span class="small tic-soft-text d-block mb-2">@formation.Cible | @formation.NbCollaborateursImpactes collaborateurs</span>
+            <span class="small fw-semibold d-block mb-2">@formation.ExpectedImpact</span>
+            <span class="d-flex justify-content-between small mb-1"><span>Readiness gain</span><strong>+@formation.ReadinessGain%</strong></span>
+            <span class="tic-progress-track mb-3 d-block"><span class="tic-progress-fill tic-fill-healthy d-block" style="width:@Math.Min(100, formation.ReadinessGain * 5)%"></span></span>
+            @foreach (var comp in formation.TargetedCompetencies)
+            {
+                <span class="badge bg-light text-dark border me-1 mb-1">@comp</span>
+            }
+        </button>
+    </div>
+}
+</div>

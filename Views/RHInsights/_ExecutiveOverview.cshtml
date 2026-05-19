@@ -1,0 +1,64 @@
+@model SIRH.EY.Models.InsightsAI.RhInsightsViewModel
+
+<div class="tic-module-heading">
+    <div>
+        <div class="tic-mini-label">Level 1 insights</div>
+        <h2>Executive Overview</h2>
+        <p>Ce qui demande une decision RH maintenant.</p>
+    </div>
+    <button type="button" class="btn btn-dark tic-nav-shortcut" data-tic-jump="ai"><i class="fas fa-brain me-2"></i>AI Priority Center</button>
+</div>
+
+@await Html.PartialAsync("_KpiCards", Model.KpiCards)
+
+<div class="row g-4 mt-1">
+    <div class="col-xl-5">
+        <div class="tic-section-card p-4 h-100">
+            <div class="tic-section-header">
+                <div>
+                    <div class="tic-mini-label">Centre de priorités</div>
+                    <h5>Principales recommandations</h5>
+                </div>
+                <span class="badge bg-dark">@Model.SmartAlerts.Count signals</span>
+            </div>
+            @await Html.PartialAsync("_AIAlertCards", Model.SmartAlerts.Take(3))
+        </div>
+    </div>
+    <div class="col-xl-7">
+        <div class="tic-section-card p-4 h-100">
+            <div class="tic-section-header">
+                <div>
+                    <div class="tic-mini-label">Santé du personnel</div>
+                    <h5>Carte d'attention immédiate</h5>
+                </div>
+                <span class="badge bg-light text-dark border">Analyse des dirigeants</span>
+            </div>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <button class="tic-insight-tile tic-nav-shortcut" data-tic-jump="succession">
+                        <span class="tic-tile-metric">@Model.AlertesContinuite.Count</span>
+                        <span class="tic-tile-title">Alertes de continuité</span>
+                        <span class="tic-soft-text small">Vacant / en passation</span>
+                    </button>
+                </div>
+                <div class="col-md-4">
+                    <button class="tic-insight-tile tic-nav-shortcut" data-tic-jump="workforce">
+                        <span class="tic-tile-metric">@((Model.WorkforceImpactSimulator.DefaultResult?.StrategicDependencyScore ?? 0).ToString("0"))%</span>
+                        <span class="tic-tile-title">Score de dépendance</span>
+                        <span class="tic-soft-text small">Scenario workforce</span>
+                    </button>
+                </div>
+                <div class="col-md-4">
+                    <button class="tic-insight-tile tic-nav-shortcut" data-tic-jump="promotion">
+                        <span class="tic-tile-metric">@((Model.PromotionSimulator.DefaultResult?.ReadinessPercentage ?? 0).ToString("0"))%</span>
+                        <span class="tic-tile-title">Préparation à la promotion</span>
+                        <span class="tic-soft-text small">Premier scenario</span>
+                    </button>
+                </div>
+            </div>
+            <div class="tic-executive-strip mt-3">
+                <span><i class="fas fa-bolt text-warning me-2"></i>@(Model.SmartAlerts.FirstOrDefault()?.Recommendation ?? "Prioriser les roles critiques et les competences rares.")</span>
+            </div>
+        </div>
+    </div>
+</div>

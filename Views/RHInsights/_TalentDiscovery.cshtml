@@ -1,0 +1,36 @@
+@model SIRH.EY.Models.InsightsAI.RhInsightsViewModel
+
+<div class="tic-module-heading">
+    <div>
+        <div class="tic-mini-label">Talent discovery</div>
+        <h2>Hidden Talents</h2>
+        <p>Identifier les profils polyvalents, futurs leaders et apprenants rapides.</p>
+    </div>
+</div>
+
+<div class="row g-3">
+@foreach (var talent in Model.HiddenTalents)
+{
+    var score = Math.Max(0, Math.Min(100, talent.ReadinessScore));
+    <div class="col-md-6 col-xl-4">
+        <button type="button" class="tic-talent-card tic-open-detail text-start" data-detail-title="@talent.NomComplet" data-detail-body="@talent.Signal">
+            <span class="d-flex justify-content-between gap-3">
+                <span>
+                    <span class="badge bg-light text-dark border mb-2">@talent.TalentType</span>
+                    <span class="fw-bold d-block">@talent.NomComplet</span>
+                    <span class="small tic-soft-text">@talent.PosteActuel | @talent.Departement</span>
+                </span>
+                <span class="tic-score-ring" style="--score:@score%;"><span>@score.ToString("0")%</span></span>
+            </span>
+            <span class="small fw-semibold mt-3 d-block">@talent.Signal</span>
+            <span class="small tic-soft-text mb-2 d-block">Potentiel : @talent.EvolutionPotentielle | @talent.FormationCount formation(s)</span>
+            <span>
+                @foreach (var comp in talent.CompetencesCles)
+                {
+                    <span class="badge bg-light text-dark border me-1 mb-1">@comp</span>
+                }
+            </span>
+        </button>
+    </div>
+}
+</div>

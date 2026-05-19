@@ -56,6 +56,8 @@ builder.Services.AddMemoryCache();
 builder.Services.AddScoped<IParametreService, ParametreService>();
 builder.Services.AddScoped<IReferentielRhService, ReferentielRhService>();
 builder.Services.AddScoped<IPlanDeveloppementService, PlanDeveloppementService>();
+builder.Services.AddScoped<IPromotionReadinessService, PromotionReadinessService>();
+builder.Services.AddScoped<IWorkforceImpactService, WorkforceImpactService>();
 builder.Services.AddTransient<IEmailSender, EmailSender>();
 builder.Services.AddHttpClient<FlowiseService>();
 builder.Services.AddHttpClient();

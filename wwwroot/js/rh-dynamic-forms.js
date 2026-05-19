@@ -95,24 +95,53 @@
 
     function initDepartementPostes() {
         document.querySelectorAll(".js-departement-select").forEach(select => {
-            select.addEventListener("change", async () => {
-                const targetSelector = select.dataset.posteTarget || "#Poste";
-                const posteSelect = document.querySelector(targetSelector);
-                if (!posteSelect) return;
+            const targetSelector = select.dataset.posteTarget || "#Poste";
+            const posteSelect = document.querySelector(targetSelector);
+            if (!posteSelect) return;
 
-                posteSelect.innerHTML = "";
-                posteSelect.appendChild(option("", "Chargement..."));
+            const initialPosteValue = posteSelect.value;
+            let isFirstLoad = true;
+
+            const updatePosteState = async () => {
+                if (!select.value) {
+                    posteSelect.innerHTML = "";
+                    posteSelect.appendChild(option("", "Sélectionnez un département d'abord"));
+                    posteSelect.disabled = true;
+                    isFirstLoad = false;
+                    return;
+                }
+
+                posteSelect.disabled = false;
+                if (!isFirstLoad) {
+                    posteSelect.innerHTML = "";
+                    posteSelect.appendChild(option("", "Chargement..."));
+                }
 
                 try {
                     const postes = await getJson(endpoints.postesParDepartement, { departement: select.value });
                     posteSelect.innerHTML = "";
-                    posteSelect.appendChild(option("", postes.length ? "Selectionnez un poste" : "Aucun poste disponible"));
-                    postes.forEach(poste => posteSelect.appendChild(option(poste.value, poste.label)));
+                    posteSelect.appendChild(option("", postes.length ? "Sélectionnez un poste" : "Aucun poste disponible"));
+                    postes.forEach(poste => {
+                        const opt = option(poste.value, poste.label);
+                        if (isFirstLoad && initialPosteValue === poste.value) {
+                            opt.selected = true;
+                        }
+                        posteSelect.appendChild(opt);
+                    });
                 } catch {
                     posteSelect.innerHTML = "";
-                    posteSelect.appendChild(option("", "Erreur de chargement"));
+                    posteSelect.appendChild(option("", "Erreur lors du chargement des postes"));
                 }
+                
+                isFirstLoad = false;
+            };
+
+            select.addEventListener("change", () => {
+                isFirstLoad = false;
+                updatePosteState();
             });
+            
+            updatePosteState();
         });
     }
 

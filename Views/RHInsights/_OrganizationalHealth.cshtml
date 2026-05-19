@@ -1,0 +1,33 @@
+@model SIRH.EY.Models.InsightsAI.RhInsightsViewModel
+
+<div class="tic-module-heading">
+    <div>
+        <div class="tic-mini-label">Organizational health</div>
+        <h2>Health Signals</h2>
+        <p>Vue compacte des dependances, readiness et tensions operationnelles.</p>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-xl-4">
+        <div class="tic-section-card p-4 h-100">
+            <div class="tic-mini-label">Continuity</div>
+            <div class="tic-health-score">@Model.AlertesContinuite.Count</div>
+            <p class="tic-soft-text mb-0">postes vacants ou en passation demandent une lecture succession.</p>
+        </div>
+    </div>
+    <div class="col-xl-4">
+        <div class="tic-section-card p-4 h-100">
+            <div class="tic-mini-label">Workforce risk</div>
+            <div class="tic-health-score">@((Model.WorkforceImpactSimulator.DefaultResult?.StrategicDependencyScore ?? 0).ToString("0"))%</div>
+            <p class="tic-soft-text mb-0">score de dependance du scenario workforce actif.</p>
+        </div>
+    </div>
+    <div class="col-xl-4">
+        <div class="tic-section-card p-4 h-100">
+            <div class="tic-mini-label">Readiness</div>
+            <div class="tic-health-score">@((Model.PromotionSimulator.DefaultResult?.ReadinessPercentage ?? 0).ToString("0"))%</div>
+            <p class="tic-soft-text mb-0">readiness estimee du premier scenario promotion.</p>
+        </div>
+    </div>
+</div>

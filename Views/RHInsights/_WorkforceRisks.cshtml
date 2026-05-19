@@ -1,0 +1,78 @@
+@model SIRH.EY.Models.InsightsAI.RhInsightsViewModel
+@{
+    var workforce = Model.WorkforceImpactSimulator;
+    var impact = workforce.DefaultResult;
+}
+
+<div class="tic-module-heading">
+    <div>
+        <div class="tic-mini-label">Simulateur de scénario</div>
+        <h2>Risques liés au personnel</h2>
+        <p>Simuler l'impact organisationnel si un manager ou role critique part.</p>
+    </div>
+</div>
+
+<div class="tic-section-card workforce-impact-simulator p-4">
+    <div class="row g-4">
+        <div class="col-xl-3">
+            <label class="form-label fw-semibold">Collaborateur / role critique</label>
+            <input type="search" class="form-control mb-2" id="impact-collab-search" placeholder="Rechercher un manager, expert, role..." autocomplete="off" />
+            <select class="form-select" id="impact-collab-select">
+                @foreach (var collaborateur in workforce.Collaborateurs)
+                {
+                    <option value="@collaborateur.Id" data-search="@($"{collaborateur.NomComplet} {collaborateur.Poste} {collaborateur.Grade} {collaborateur.Departement}".ToLowerInvariant())">
+                        @collaborateur.NomComplet - @collaborateur.Poste (@collaborateur.Departement)
+                    </option>
+                }
+            </select>
+            <button type="button" class="btn btn-dark w-100 mt-3" id="impact-run-btn"><i class="fas fa-random me-2"></i>Simuler l'impact</button>
+            <div class="risk-panel-dark mt-3">
+                <div class="tic-mini-label text-white-50 mb-2">Aperçu du scénario exécutif</div>
+                <div id="impact-executive-insight">@(impact?.ExecutiveInsight ?? "Selectionnez un role critique pour simuler l'impact organisationnel.")</div>
+            </div>
+        </div>
+        <div class="col-xl-9">
+            <div class="row g-3 mb-3">
+                <div class="col-md-3"><div class="impact-severity"><div class="tic-mini-label">Risque de continuité</div><div class="tic-kpi-value fs-3 mb-2" id="impact-continuity">@((impact?.ContinuityRisk ?? 0).ToString("0"))%</div><div class="impact-meter"><div class="impact-meter-fill" id="impact-continuity-bar" style="width:@(impact?.ContinuityRisk ?? 0)%"></div></div></div></div>
+                <div class="col-md-3"><div class="impact-severity"><div class="tic-mini-label">Impact opérationnel</div><div class="tic-kpi-value fs-3 mb-2" id="impact-operational">@((impact?.OperationalImpact ?? 0).ToString("0"))%</div><div class="impact-meter"><div class="impact-meter-fill" id="impact-operational-bar" style="width:@(impact?.OperationalImpact ?? 0)%"></div></div></div></div>
+                <div class="col-md-3"><div class="impact-severity"><div class="tic-mini-label">Fragilité du département</div><div class="tic-kpi-value fs-3 mb-2" id="impact-fragility">@((impact?.DepartmentFragility ?? 0).ToString("0"))%</div><div class="impact-meter"><div class="impact-meter-fill" id="impact-fragility-bar" style="width:@(impact?.DepartmentFragility ?? 0)%"></div></div></div></div>
+                <div class="col-md-3"><div class="impact-severity"><div class="tic-mini-label">Score de dépendance</div><div class="tic-kpi-value fs-3 mb-2" id="impact-dependency">@((impact?.StrategicDependencyScore ?? 0).ToString("0"))%</div><span class="badge bg-warning text-dark" id="impact-risk-level">@(impact?.RiskLevel ?? "Elevated")</span></div></div>
+            </div>
+            <div class="row g-3">
+                <div class="col-lg-5">
+                    <div class="dependency-map h-100">
+                        <div class="tic-mini-label">Exposition du département</div>
+                        <h6 class="fw-bold mb-3" id="impact-role">@impact?.CollaborateurNom - @impact?.Role</h6>
+                        <div id="impact-departments">
+                            @foreach (var dept in impact?.DepartmentExposure ?? new List<SIRH.EY.Models.InsightsAI.WorkforceDepartmentExposureViewModel>())
+                            {
+                                <div class="mb-3"><div class="d-flex justify-content-between small fw-semibold"><span>@dept.Department</span><span>@dept.ExposureScore.ToString("0")%</span></div><div class="impact-meter my-1"><div class="impact-meter-fill" style="width:@dept.ExposureScore%"></div></div><div class="small tic-soft-text">@dept.ImpactedCollaborators collaborateur(s) impactes | @dept.Signal</div></div>
+                            }
+                        </div>
+                        <div class="tic-mini-label mt-3 mb-2">Compétences perdues</div>
+                        <div id="impact-skills-lost">@foreach (var skill in impact?.CompetenciesLost ?? new List<string>()) { <span class="badge bg-light text-dark border me-1 mb-1">@skill</span> }</div>
+                    </div>
+                </div>
+                <div class="col-lg-7">
+                    <div class="dependency-map h-100">
+                        <div class="tic-mini-label">Analyse du successeur</div>
+                        <h6 class="fw-bold mb-3">Successeurs et alternatives</h6>
+                        <div class="row g-2" id="impact-successors">
+                            @foreach (var successor in (impact?.ImmediateSuccessors ?? new List<SIRH.EY.Models.InsightsAI.WorkforceSuccessorViewModel>()).Concat(impact?.PartialSuccessors ?? new List<SIRH.EY.Models.InsightsAI.WorkforceSuccessorViewModel>()).Take(4))
+                            {
+                                <div class="col-md-6"><div class="successor-card"><div class="d-flex justify-content-between"><div><div class="fw-bold">@successor.NomComplet</div><div class="small tic-soft-text">@successor.Poste | @successor.Departement</div></div><span class="badge bg-dark">@successor.ReadinessScore.ToString("0")%</span></div><div class="small mt-2">@successor.SuccessorType | @successor.SharedCompetencies competences communes</div></div></div>
+                            }
+                        </div>
+                        <div class="tic-mini-label mt-4 mb-2">Actions RH recommandées</div>
+                        <div id="impact-actions">
+                            @foreach (var action in impact?.RecommendedActions ?? new List<SIRH.EY.Models.InsightsAI.WorkforceActionRecommendationViewModel>())
+                            {
+                                <div class="tic-recommendation mb-2"><div class="d-flex justify-content-between gap-2"><strong>@action.Title</strong><span class="badge bg-light text-dark border">@action.Priority</span></div><div class="small">@action.Description</div></div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,25 @@
+@model IEnumerable<SIRH.EY.Models.InsightsAI.ExecutiveKpiCardViewModel>
+
+<div class="row g-3">
+@foreach (var kpi in Model.Take(6))
+{
+    var tone = string.IsNullOrWhiteSpace(kpi.Tone) ? "neutral" : kpi.Tone.ToLowerInvariant();
+    var trendPositive = kpi.Trend.StartsWith("+");
+    <div class="col-12 col-sm-6 col-xl-2">
+        <button type="button" class="tic-kpi-card tone-@tone tic-open-detail" data-detail-title="@kpi.Title" data-detail-body="@kpi.Insight">
+            <span class="d-flex justify-content-between align-items-start gap-3">
+                <span class="tic-kpi-title">@kpi.Title</span>
+                <span class="tic-kpi-icon @kpi.ColorClass"><i class="@kpi.IconClass"></i></span>
+            </span>
+            <span class="tic-kpi-value js-kpi-counter" data-counter="@kpi.NumericValue" data-suffix="@kpi.ValueSuffix">@kpi.Value</span>
+            <span class="small fw-semibold mb-2 d-block">
+                <span class="@(trendPositive ? "text-success" : "text-danger")">
+                    <i class="fas @(trendPositive ? "fa-arrow-up" : "fa-arrow-down") me-1"></i>@kpi.Trend
+                </span>
+                <span class="tic-soft-text">vs mois dernier</span>
+            </span>
+            <span class="small tic-kpi-insight d-block">@kpi.Subtitle</span>
+        </button>
+    </div>
+}
+</div>

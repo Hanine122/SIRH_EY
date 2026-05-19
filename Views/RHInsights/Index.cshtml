@@ -1,0 +1,118 @@
+@model SIRH.EY.Models.InsightsAI.RhInsightsViewModel
+@{
+    ViewData["Title"] = "RH Insights - Talent Intelligence Center";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/ey-forms-premium.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/rh-insights-platform.css" asp-append-version="true" />
+}
+
+<div class="tic-content-full">
+    
+
+       <div class="modules-grid">
+
+    @* <a class="module-card" asp-controller="RhInsights" asp-action="ExecutiveOverview">
+        <h3>Executive Overview</h3>
+        <p>Global workforce KPIs</p>
+    </a> *@
+
+    @* <a class="module-card" asp-controller="RhInsights" asp-action="Succession">
+        <h3>Succession Intelligence</h3>
+        <p>Replacement and continuity analysis</p>
+    </a> *@
+@* 
+    <a class="module-card" asp-controller="RhInsights" asp-action="PromotionReadiness">
+        <h3>Préparation à la promotion</h3>
+        <p>AI promotion simulator</p>
+    </a> *@
+
+</div>
+
+    <main class="tic-main">
+        <header class="tic-topbar">
+            @* <div>
+                <div class="tic-mini-label">Centre de commandement exécutif</div>
+                <h1>Centre d'intelligence des talents</h1>
+                <p>Pilotage modulaire des successions, risques, promotions, competences et plans RH.</p>
+            </div> *@
+            <div class="tic-topbar-actions">
+                <span class="tic-ai-pill"><i class="fas fa-brain me-2"></i>IA active</span>
+                <span class="tic-chip">@Model.AlertesContinuite.Count alerte(s)</span>
+                <span class="tic-chip">@Model.SmartAlerts.Count recommandation(s)</span>
+            </div>
+        </header>
+
+        <section class="tic-module active" data-tic-module-panel="overview">
+            @await Html.PartialAsync("_ExecutiveOverview", Model)
+        </section>
+
+        <section class="tic-module" data-tic-module-panel="succession">
+            @await Html.PartialAsync("_SuccessionIntelligence", Model)
+        </section>
+
+        <section class="tic-module" data-tic-module-panel="promotion">
+            @await Html.PartialAsync("_PromotionReadiness", Model)
+        </section>
+
+        <section class="tic-module" data-tic-module-panel="workforce">
+            @await Html.PartialAsync("_WorkforceRisks", Model)
+        </section>
+
+        <section class="tic-module" data-tic-module-panel="talent">
+            @await Html.PartialAsync("_TalentDiscovery", Model)
+        </section>
+
+        <section class="tic-module" data-tic-module-panel="skills">
+            @await Html.PartialAsync("_SkillIntelligence", Model)
+        </section>
+
+        <section class="tic-module" data-tic-module-panel="formations">
+            @await Html.PartialAsync("_FormationIntelligence", Model)
+        </section>
+
+        <section class="tic-module" data-tic-module-panel="health">
+            @await Html.PartialAsync("_OrganizationalHealth", Model)
+        </section>
+
+        <section class="tic-module" data-tic-module-panel="ai">
+            @await Html.PartialAsync("_AIRecommendations", Model)
+        </section>
+    </main>
+</div>
+
+<aside class="tic-detail-drawer" id="tic-detail-drawer" aria-hidden="true">
+    <div class="tic-drawer-backdrop" data-tic-close-drawer></div>
+    <div class="tic-drawer-panel">
+        <div class="tic-drawer-header">
+            <div>
+                <div class="tic-mini-label">Detailed analysis</div>
+                <h5 id="tic-drawer-title">Insight details</h5>
+            </div>
+            <button type="button" class="btn btn-sm btn-light" data-tic-close-drawer aria-label="Fermer">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="rh-spinner" id="rh-spinner">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Chargement...</span>
+            </div>
+        </div>
+        <div class="skeleton-loader" id="rh-skeleton">
+            <div class="skeleton skeleton-header"></div>
+            <div class="skeleton skeleton-card"></div>
+            <div class="skeleton skeleton-card"></div>
+        </div>
+        <div class="rh-empty-state" id="rh-empty-state">
+            <i class="fas fa-mouse-pointer"></i>
+            <h5>Selectionnez un signal</h5>
+            <p>Le panneau affiche les analyses de succession, readiness et risques.</p>
+        </div>
+        <div id="insight-detail-target" style="display: none;"></div>
+    </div>
+</aside>
+
+@section Scripts {
+    <script src="~/js/rh-insights.js" asp-append-version="true"></script>
+}

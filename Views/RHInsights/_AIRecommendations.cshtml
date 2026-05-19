@@ -1,0 +1,13 @@
+@model SIRH.EY.Models.InsightsAI.RhInsightsViewModel
+
+<div class="tic-module-heading">
+    <div>
+        <div class="tic-mini-label">Decision support</div>
+        <h2>AI Recommendations</h2>
+        <p>Recommandations compactes et actionnables pour le comite RH.</p>
+    </div>
+</div>
+
+<div class="tic-section-card p-4">
+    @await Html.PartialAsync("_AIAlertCards", Model.SmartAlerts)
+</div>
