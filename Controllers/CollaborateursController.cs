@@ -111,9 +111,7 @@ public async Task<IActionResult> AskIA([FromBody] RecommendationRequest request)
 
 }
 
-    // GET: Collaborateurs
-
-   public async Task<IActionResult> Index(
+    public async Task<IActionResult> Index(
     string searchString = null,
     string sortOrder = null,
     string departement = null)
@@ -128,12 +126,14 @@ public async Task<IActionResult> AskIA([FromBody] RecommendationRequest request)
 
     var user = await _userManager.GetUserAsync(User);
 
+    if (user == null)
+    {
+        return RedirectToAction("Login", "Account");
+    }
+
     IQueryable<Collaborateur> collaborateurs =
         _context.Collaborateurs;
 
-    // =========================
-    // ROLE : COLLABORATEUR
-    // =========================
     if (User.IsInRole("Collaborateur"))
     {
         var collab = await _context.Collaborateurs
@@ -146,9 +146,6 @@ public async Task<IActionResult> AskIA([FromBody] RecommendationRequest request)
         }
     }
 
-    // =========================
-    // ROLE : MANAGER
-    // =========================
     else if (User.IsInRole("Manager"))
     {
         var manager = await _context.Collaborateurs
@@ -207,7 +204,7 @@ public async Task<IActionResult> AskIA([FromBody] RecommendationRequest request)
 
 
 
-    // GET: Collaborateurs/ChoisirRemplacant/5 — prototype : transversal (autre département + compétences communes) + score au poste
+    // GET: Collaborateurs/ChoisirRemplacant/
 
     public async Task<IActionResult> ChoisirRemplacant(int id)
 
@@ -1302,6 +1299,54 @@ public async Task<IActionResult> AskIA([FromBody] RecommendationRequest request)
 }
 
 
+
+    [HttpGet]
+    public IActionResult GetPostesParDepartement(string departement)
+    {
+        var postes = new List<string>();
+
+        if (string.IsNullOrWhiteSpace(departement))
+            return Json(new List<object>());
+
+        var normalizedDept = departement.Trim().ToLower();
+
+        switch (normalizedDept)
+        {
+            case "assurance":
+                postes = new List<string> { "Audit", "Financial Accounting Advisory Services & Risk", "Climate Change and Sustainability Services", "Forensic & Integrity Services", "Managed Services", "Technology Risk" };
+                break;
+            case "consulting":
+                postes = new List<string> { "Business Transformation", "Supply chain & operations", "Financial Services transformation", "Actuarial Services", "People Consulting", "Innovation & Experience Design", "Technology Strategy & Transformation", "AI and DATA", "Digital Engineering", "Platforms-Microsoft", "Cyber Security" };
+                break;
+            case "strategy & transactions":
+                postes = new List<string> { "Transaction Diligence", "Valuation Modeling & Economics", "Lead Advisory", "Corporate and Growth Strategy", "Turnaround and Restructuring Strategy", "Transaction Strategy and Execution" };
+                break;
+            case "tax":
+                postes = new List<string> { "Global Compliance and Reporting", "Business Tax Services and Advisory", "International Tax Advisory", "Transaction Tax Services", "People Advisory Services", "Entity Compliance and Governance Services", "Labor & Employment Law Advise" };
+                break;
+            case "talent team":
+                postes = new List<string> { "Recrutement", "Suivi spécifique d'intégration", "Administration du personnel et paie", "Gestion de stages", "EY Academy : Formation et développement des compétences", "Gestion de carrière", "Communication interne et bien-être" };
+                break;
+            case "service it":
+                postes = new List<string> { "Support IT" };
+                break;
+            case "finances et contrôle":
+                postes = new List<string> { "Comptabilité analytique et facturation" };
+                break;
+            case "facilities":
+                postes = new List<string> { "Voyages", "Bâtiment", "Hospitalité", "Achats et moyens généraux" };
+                break;
+            case "mbd":
+                postes = new List<string> { "Projets de marketing", "Communication numérique", "Reporting", "Soutien aux appels d'offres" };
+                break;
+            case "risk management":
+                postes = new List<string> { "Gestion des risques liés aux affaires, au client, aux missions" };
+                break;
+        }
+
+        var result = postes.Select(p => new { value = p, label = p });
+        return Json(result);
+    }
 
     // Classe interne pour la demande d'entretien
 

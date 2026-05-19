@@ -4,14 +4,16 @@ public static class CompetenceCatalogService
 {
     public static readonly List<string> Departements = new()
     {
-        "Platforms",
-        "Audit",
-        "Finance",
-        "RH",
+        "Assurance",
         "Consulting",
-        "IT",
-        "Marketing",
-        "Juridique"
+        "Strategy & Transactions",
+        "TAX",
+        "Talent Team",
+        "Service IT",
+        "Finances et contrôle",
+        "Facilities",
+        "MBD",
+        "Risk management"
     };
 
     public static readonly List<string> Postes = new()

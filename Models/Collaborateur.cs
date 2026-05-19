@@ -25,6 +25,7 @@ public class Collaborateur
 
     public DateTime DateEmbauche { get; set; } = DateTime.Now;
     public bool Actif { get; set; } = true;
+    public StatutCollaborateur Statut { get; set; } = StatutCollaborateur.Actif;
 
     public Collaborateur? Manager { get; set; }
     public ICollection<Collaborateur>? Equipe { get; set; }
