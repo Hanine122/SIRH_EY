@@ -32,6 +32,83 @@
         </div>
     </div>
 
+    <!-- Power BI-like Filters Bar -->
+    <div class="ey-filters-bar">
+        <div class="ey-filters-header">
+            <div class="ey-filters-title">
+                <i class="fas fa-filter"></i>
+                <span>Filtres</span>
+            </div>
+            <button class="ey-filters-reset" onclick="resetFilters()">
+                <i class="fas fa-undo"></i> Réinitialiser
+            </button>
+        </div>
+        <div class="ey-filters-content">
+            <!-- Search Bar -->
+            <div class="ey-filter-group">
+                <label class="ey-filter-label">Recherche</label>
+                <div class="ey-search-wrapper">
+                    <i class="fas fa-search"></i>
+                    <input type="text" class="ey-search-input" id="searchFilter" placeholder="Rechercher collaborateur, compétence..." onkeyup="applyFilters()">
+                </div>
+            </div>
+
+            <!-- Department Filter -->
+            <div class="ey-filter-group">
+                <label class="ey-filter-label">Département</label>
+                <select class="ey-filter-select" id="departmentFilter" onchange="applyFilters()">
+                    <option value="">Tous les départements</option>
+                    <option value="IT">IT</option>
+                    <option value="Finance">Finance</option>
+                    <option value="RH">RH</option>
+                    <option value="Marketing">Marketing</option>
+                    <option value="Operations">Opérations</option>
+                    <option value="Sales">Ventes</option>
+                </select>
+            </div>
+
+            <!-- Grade Filter -->
+            <div class="ey-filter-group">
+                <label class="ey-filter-label">Grade</label>
+                <select class="ey-filter-select" id="gradeFilter" onchange="applyFilters()">
+                    <option value="">Tous les grades</option>
+                    <option value="A">Grade A</option>
+                    <option value="B">Grade B</option>
+                    <option value="C">Grade C</option>
+                    <option value="D">Grade D</option>
+                    <option value="E">Grade E</option>
+                </select>
+            </div>
+
+            <!-- Competency Filter -->
+            <div class="ey-filter-group">
+                <label class="ey-filter-label">Compétence</label>
+                <select class="ey-filter-select" id="competencyFilter" onchange="applyFilters()">
+                    <option value="">Toutes les compétences</option>
+                    <option value="Leadership">Leadership</option>
+                    <option value="Communication">Communication</option>
+                    <option value="Technical">Technique</option>
+                    <option value="Project Management">Gestion de projet</option>
+                    <option value="Analytics">Analytique</option>
+                </select>
+            </div>
+
+            <!-- Time Range Filter -->
+            <div class="ey-filter-group">
+                <label class="ey-filter-label">Période</label>
+                <select class="ey-filter-select" id="timeRangeFilter" onchange="applyFilters()">
+                    <option value="6m">6 derniers mois</option>
+                    <option value="1y">1 an</option>
+                    <option value="2y">2 ans</option>
+                    <option value="all">Tout l'historique</option>
+                </select>
+            </div>
+
+            <!-- Active Filters Display -->
+            <div class="ey-active-filters" id="activeFilters"></div>
+        </div>
+    </div>
+
     <!-- Sticky KPI Cards Row -->
     <div class="ey-kpi-wrapper">
         <div class="ey-kpi-grid">
@@ -47,7 +124,10 @@
             </div>
             <div class="ey-kpi-value">@ViewBag.CollaborateursActifs</div>
             <div class="ey-kpi-label">Collaborateurs Actifs</div>
-            <div class="ey-kpi-sparkline" id="sparkline1"></div>
+            <div class="ey-kpi-sub">@ViewBag.CollaborateursActifs total</div>
+            <div class="ey-kpi-progress">
+                <div class="ey-kpi-progress-bar trend-up" style="width: 85%"></div>
+            </div>
         </div>
 
         <!-- KPI 2 -->
@@ -63,6 +143,9 @@
             <div class="ey-kpi-value">@ViewBag.TauxCompetencesValidees%</div>
             <div class="ey-kpi-label">Compétences Validées</div>
             <div class="ey-kpi-sub">@ViewBag.TotalCompetences compétences trackées</div>
+            <div class="ey-kpi-progress">
+                <div class="ey-kpi-progress-bar trend-up" style="width: @ViewBag.TauxCompetencesValidees%"></div>
+            </div>
         </div>
 
         <!-- KPI 3 -->
@@ -78,6 +161,9 @@
             <div class="ey-kpi-value">@ViewBag.TauxFormations%</div>
             <div class="ey-kpi-label">Progression Formations</div>
             <div class="ey-kpi-sub">@ViewBag.TotalInscriptions inscriptions</div>
+            <div class="ey-kpi-progress">
+                <div class="ey-kpi-progress-bar trend-stable" style="width: @ViewBag.TauxFormations%"></div>
+            </div>
         </div>
 
         <!-- KPI 4 -->
@@ -93,6 +179,9 @@
             <div class="ey-kpi-value">@ViewBag.PostesCritiques</div>
             <div class="ey-kpi-label">Postes Critiques</div>
             <div class="ey-kpi-sub">@ViewBag.RemplacantsDisponibles remplaçants potentiels</div>
+            <div class="ey-kpi-progress">
+                <div class="ey-kpi-progress-bar trend-down" style="width: 30%"></div>
+            </div>
         </div>
 
         <!-- KPI 5 -->
@@ -108,6 +197,9 @@
             <div class="ey-kpi-value">@ViewBag.RemplacantsDisponibles</div>
             <div class="ey-kpi-label">Remplaçants Disponibles</div>
             <div class="ey-kpi-sub">Seniors prêts pour succession</div>
+            <div class="ey-kpi-progress">
+                <div class="ey-kpi-progress-bar trend-up" style="width: 65%"></div>
+            </div>
         </div>
 
         <!-- KPI 6 -->
@@ -123,6 +215,9 @@
             <div class="ey-kpi-value">@ViewBag.TauxEcartsCritiques%</div>
             <div class="ey-kpi-label">Écarts Critiques</div>
             <div class="ey-kpi-sub">Skill gaps à combler</div>
+            <div class="ey-kpi-progress">
+                <div class="ey-kpi-progress-bar trend-down" style="width: @ViewBag.TauxEcartsCritiques%"></div>
+            </div>
         </div>
         </div>
     </div>
@@ -266,6 +361,10 @@
                     <span>Niveau faible (1-2)</span>
                 </div>
                 <div class="ey-legend-item">
+                    <div class="ey-legend-color ey-level-critical"></div>
+                    <span>Critique (0-1)</span>
+                </div>
+                <div class="ey-legend-item">
                     <div class="ey-legend-color ey-level-missing"></div>
                     <span>Non évalué</span>
                 </div>
@@ -302,12 +401,18 @@
                                     var competence = collab.Competences != null ? collab.Competences.FirstOrDefault(c => c.Nom == compName) : null;
                                     var niveau = competence != null ? competence.NiveauActuel : 0;
                                     string classe;
+                                    bool isCritical = false;
                                     if (niveau >= 4) { classe = "ey-level-high"; }
                                     else if (niveau == 3) { classe = "ey-level-medium"; }
                                     else if (niveau >= 1) { classe = "ey-level-low"; }
+                                    else if (niveau == 0) { classe = "ey-level-critical"; isCritical = true; }
                                     else { classe = "ey-level-missing"; }
-                                    <td class="ey-heatmap-cell @classe" data-niveau="@niveau">
+                                    <td class="ey-heatmap-cell @classe" data-niveau="@niveau" data-collab="@collab.Prenom @collab.Nom" data-competence="@compName" data-dept="@collab.Departement">
                                         @(niveau > 0 ? niveau.ToString() : "-")
+                                        @if (isCritical)
+                                        {
+                                            <span class="ey-critical-badge">!</span>
+                                        }
                                     </td>
                                 }
                             </tr>
@@ -505,6 +610,332 @@
                 icon.classList.remove('fa-chevron-up');
                 icon.classList.add('fa-chevron-down');
             }
+        }
+
+        // ========================================
+        // FILTERS FUNCTIONALITY
+        // ========================================
+        let currentFilters = {
+            search: '',
+            department: '',
+            grade: '',
+            competency: '',
+            timeRange: '6m'
+        };
+
+        function applyFilters() {
+            currentFilters.search = document.getElementById('searchFilter').value.toLowerCase();
+            currentFilters.department = document.getElementById('departmentFilter').value;
+            currentFilters.grade = document.getElementById('gradeFilter').value;
+            currentFilters.competency = document.getElementById('competencyFilter').value;
+            currentFilters.timeRange = document.getElementById('timeRangeFilter').value;
+
+            updateActiveFilters();
+            filterHeatmap();
+            filterCharts();
+        }
+
+        function resetFilters() {
+            document.getElementById('searchFilter').value = '';
+            document.getElementById('departmentFilter').value = '';
+            document.getElementById('gradeFilter').value = '';
+            document.getElementById('competencyFilter').value = '';
+            document.getElementById('timeRangeFilter').value = '6m';
+
+            currentFilters = {
+                search: '',
+                department: '',
+                grade: '',
+                competency: '',
+                timeRange: '6m'
+            };
+
+            updateActiveFilters();
+            filterHeatmap();
+            filterCharts();
+        }
+
+        function updateActiveFilters() {
+            const container = document.getElementById('activeFilters');
+            container.innerHTML = '';
+
+            if (currentFilters.search) {
+                addFilterTag(container, 'Recherche: ' + currentFilters.search, 'search');
+            }
+            if (currentFilters.department) {
+                addFilterTag(container, 'Département: ' + currentFilters.department, 'department');
+            }
+            if (currentFilters.grade) {
+                addFilterTag(container, 'Grade: ' + currentFilters.grade, 'grade');
+            }
+            if (currentFilters.competency) {
+                addFilterTag(container, 'Compétence: ' + currentFilters.competency, 'competency');
+            }
+            if (currentFilters.timeRange && currentFilters.timeRange !== '6m') {
+                const timeLabels = { '1y': '1 an', '2y': '2 ans', 'all': 'Tout' };
+                addFilterTag(container, 'Période: ' + timeLabels[currentFilters.timeRange], 'timeRange');
+            }
+        }
+
+        function addFilterTag(container, label, filterType) {
+            const tag = document.createElement('div');
+            tag.className = 'ey-filter-tag';
+            tag.innerHTML = `
+                <span>${label}</span>
+                <span class="ey-filter-tag-remove" onclick="removeFilter('${filterType}')">×</span>
+            `;
+            container.appendChild(tag);
+        }
+
+        function removeFilter(filterType) {
+            switch(filterType) {
+                case 'search':
+                    document.getElementById('searchFilter').value = '';
+                    currentFilters.search = '';
+                    break;
+                case 'department':
+                    document.getElementById('departmentFilter').value = '';
+                    currentFilters.department = '';
+                    break;
+                case 'grade':
+                    document.getElementById('gradeFilter').value = '';
+                    currentFilters.grade = '';
+                    break;
+                case 'competency':
+                    document.getElementById('competencyFilter').value = '';
+                    currentFilters.competency = '';
+                    break;
+                case 'timeRange':
+                    document.getElementById('timeRangeFilter').value = '6m';
+                    currentFilters.timeRange = '6m';
+                    break;
+            }
+            updateActiveFilters();
+            filterHeatmap();
+            filterCharts();
+        }
+
+        function filterHeatmap() {
+            const rows = document.querySelectorAll('.ey-heatmap-table tbody tr');
+            rows.forEach(row => {
+                const collabCell = row.querySelector('.ey-collab-cell');
+                if (!collabCell) return;
+
+                const collabName = collabCell.querySelector('.ey-collab-name')?.textContent.toLowerCase() || '';
+                const collabDept = collabCell.querySelector('.ey-collab-dept')?.textContent.toLowerCase() || '';
+
+                let visible = true;
+
+                if (currentFilters.search && !collabName.includes(currentFilters.search)) {
+                    visible = false;
+                }
+                if (currentFilters.department && !collabDept.includes(currentFilters.department.toLowerCase())) {
+                    visible = false;
+                }
+
+                row.style.display = visible ? '' : 'none';
+            });
+        }
+
+        function filterCharts() {
+            // Filter heatmap competency columns based on competency filter
+            if (currentFilters.competency) {
+                const headers = document.querySelectorAll('.ey-heatmap-col-header');
+                const table = document.querySelector('.ey-heatmap-table');
+                if (!table) return;
+
+                const allHeaders = Array.from(headers);
+                const competencyIndex = allHeaders.findIndex(h => h.textContent.includes(currentFilters.competency));
+
+                if (competencyIndex === -1) return;
+
+                // Hide all columns except the selected competency
+                allHeaders.forEach((header, index) => {
+                    const isVisible = index === competencyIndex;
+                    header.style.display = isVisible ? '' : 'none';
+
+                    // Hide corresponding cells in each row
+                    const rows = table.querySelectorAll('tbody tr');
+                    rows.forEach(row => {
+                        const cells = row.querySelectorAll('td');
+                        if (cells[index + 1]) { // +1 because first column is the collaborator name
+                            cells[index + 1].style.display = isVisible ? '' : 'none';
+                        }
+                    });
+                });
+            } else {
+                // Show all columns
+                const headers = document.querySelectorAll('.ey-heatmap-col-header');
+                const table = document.querySelector('.ey-heatmap-table');
+                if (!table) return;
+
+                headers.forEach(header => {
+                    header.style.display = '';
+                });
+
+                const rows = table.querySelectorAll('tbody tr');
+                rows.forEach(row => {
+                    const cells = row.querySelectorAll('td');
+                    cells.forEach(cell => {
+                        cell.style.display = '';
+                    });
+                });
+            }
+        }
+
+        // Initialize filters on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            updateActiveFilters();
+            initHeatmapTooltips();
+            animateCounters();
+            initChartAnimations();
+        });
+
+        // ========================================
+        // COUNTER ANIMATIONS
+        // ========================================
+        function animateCounters() {
+            const counters = document.querySelectorAll('.ey-kpi-value');
+            counters.forEach(counter => {
+                const text = counter.textContent;
+                const hasPercent = text.includes('%');
+                const value = parseFloat(text.replace('%', ''));
+                const duration = 1500;
+                const steps = 60;
+                const increment = value / steps;
+                let current = 0;
+                let step = 0;
+
+                const timer = setInterval(() => {
+                    step++;
+                    current += increment;
+                    if (step >= steps) {
+                        counter.textContent = hasPercent ? value + '%' : Math.round(value);
+                        clearInterval(timer);
+                    } else {
+                        counter.textContent = hasPercent ? Math.round(current) + '%' : Math.round(current);
+                    }
+                }, duration / steps);
+            });
+        }
+
+        // ========================================
+        // CHART REVEAL ANIMATIONS
+        // ========================================
+        function initChartAnimations() {
+            const chartCanvases = document.querySelectorAll('canvas');
+            chartCanvases.forEach(canvas => {
+                canvas.style.opacity = '0';
+                canvas.style.transform = 'scale(0.95)';
+                canvas.style.transition = 'opacity 0.6s ease-out, transform 0.6s ease-out';
+                
+                setTimeout(() => {
+                    canvas.style.opacity = '1';
+                    canvas.style.transform = 'scale(1)';
+                }, 800);
+            });
+        }
+
+        // ========================================
+        // HEATMAP TOOLTIPS & INSIGHTS
+        // ========================================
+        function initHeatmapTooltips() {
+            const tooltip = document.createElement('div');
+            tooltip.className = 'ey-heatmap-tooltip';
+            document.body.appendChild(tooltip);
+
+            const cells = document.querySelectorAll('.ey-heatmap-cell');
+            cells.forEach(cell => {
+                cell.addEventListener('mouseenter', showTooltip);
+                cell.addEventListener('mouseleave', hideTooltip);
+                cell.addEventListener('mousemove', moveTooltip);
+            });
+        }
+
+        function showTooltip(e) {
+            const cell = e.target.closest('.ey-heatmap-cell');
+            if (!cell) return;
+
+            const tooltip = document.querySelector('.ey-heatmap-tooltip');
+            const niveau = parseInt(cell.dataset.niveau);
+            const collab = cell.dataset.collab;
+            const competence = cell.dataset.competence;
+            const dept = cell.dataset.dept;
+
+            let levelText, levelColor, insight;
+
+            if (niveau >= 4) {
+                levelText = 'Élevé';
+                levelColor = '#16a34a';
+                insight = 'Excellente maîtrise - Peut former d autres';
+            } else if (niveau === 3) {
+                levelText = 'Moyen';
+                levelColor = '#f59e0b';
+                insight = 'Niveau satisfaisant - Formation recommandée';
+            } else if (niveau >= 1) {
+                levelText = 'Faible';
+                levelColor = '#dc2626';
+                insight = 'Besoin de formation immédiat';
+            } else if (niveau === 0) {
+                levelText = 'Critique';
+                levelColor = '#991b1b';
+                insight = 'Compétence manquante - Recrutement ou formation prioritaire';
+            } else {
+                levelText = 'Non évalué';
+                levelColor = '#6c757d';
+                insight = 'Évaluation requise';
+            }
+
+            tooltip.innerHTML = `
+                <div class="ey-tooltip-header">${competence}</div>
+                <div class="ey-tooltip-row">
+                    <span class="ey-tooltip-label">Collaborateur:</span>
+                    <span class="ey-tooltip-value">${collab}</span>
+                </div>
+                <div class="ey-tooltip-row">
+                    <span class="ey-tooltip-label">Département:</span>
+                    <span class="ey-tooltip-value">${dept}</span>
+                </div>
+                <div class="ey-tooltip-row">
+                    <span class="ey-tooltip-label">Niveau:</span>
+                    <span class="ey-tooltip-value" style="color: ${levelColor}">${levelText} (${niveau}/5)</span>
+                </div>
+                <div class="ey-tooltip-insight">${insight}</div>
+            `;
+
+            tooltip.classList.add('visible');
+        }
+
+        function hideTooltip() {
+            const tooltip = document.querySelector('.ey-heatmap-tooltip');
+            if (tooltip) {
+                tooltip.classList.remove('visible');
+            }
+        }
+
+        function moveTooltip(e) {
+            const tooltip = document.querySelector('.ey-heatmap-tooltip');
+            if (!tooltip) return;
+
+            const xOffset = 15;
+            const yOffset = 15;
+            const tooltipRect = tooltip.getBoundingClientRect();
+            const windowWidth = window.innerWidth;
+            const windowHeight = window.innerHeight;
+
+            let left = e.clientX + xOffset;
+            let top = e.clientY + yOffset;
+
+            // Prevent tooltip from going off screen
+            if (left + tooltipRect.width > windowWidth) {
+                left = e.clientX - tooltipRect.width - xOffset;
+            }
+            if (top + tooltipRect.height > windowHeight) {
+                top = e.clientY - tooltipRect.height - yOffset;
+            }
+
+            tooltip.style.left = left + 'px';
+            tooltip.style.top = top + 'px';
         }
     </script>
 }
