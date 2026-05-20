@@ -1,0 +1,438 @@
+/* ========================================
+   EY SIDEBAR - SIRH Application
+   Ernst & Young Color Palette
+   ======================================== */
+
+:root {
+    --ey-yellow: #FFD100;
+    --ey-yellow-hover: #E6BC00;
+    --ey-black: #1A1A1A;
+    --ey-dark-gray: #2A2A2A;
+    --ey-medium-gray: #3A3A3A;
+    --ey-light-gray: #F5F5F5;
+    --ey-white: #FFFFFF;
+    --ey-green: #16A34A;
+    --ey-red: #DC2626;
+    --ey-blue: #2563EB;
+}
+
+/* ========================================
+   SIDEBAR CONTAINER
+   ======================================== */
+.ey-sidebar {
+    width: 280px;
+    background: var(--ey-black);
+    color: var(--ey-white);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 1000;
+    transition: transform 0.3s ease, width 0.3s ease;
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3);
+}
+
+.ey-sidebar-content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 1.5rem 1rem;
+}
+
+.ey-sidebar-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.ey-sidebar-content::-webkit-scrollbar-track {
+    background: var(--ey-dark-gray);
+}
+
+.ey-sidebar-content::-webkit-scrollbar-thumb {
+    background: var(--ey-medium-gray);
+    border-radius: 3px;
+}
+
+.ey-sidebar-content::-webkit-scrollbar-thumb:hover {
+    background: var(--ey-yellow);
+}
+
+/* ========================================
+   LOGO SECTION
+   ======================================== */
+.ey-logo-wrap {
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.ey-brand-logo {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+}
+
+.ey-logo-main {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--ey-white);
+    letter-spacing: -0.02em;
+}
+
+.ey-logo-sub {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.6);
+    margin-top: 0.25rem;
+    line-height: 1.4;
+}
+
+/* ========================================
+   QUICK ACCESS SECTION
+   ======================================== */
+.ey-quick-access {
+    margin-bottom: 1.5rem;
+}
+
+.ey-section-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--ey-yellow);
+    margin-bottom: 0.75rem;
+    padding: 0.5rem 0.75rem;
+}
+
+/* ========================================
+   NAVIGATION
+   ======================================== */
+.ey-nav {
+    gap: 0.25rem;
+}
+
+.ey-nav .nav-link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    color: rgba(255, 255, 255, 0.8);
+    text-decoration: none;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.ey-nav .nav-link:hover {
+    background: rgba(255, 209, 0, 0.1);
+    color: var(--ey-yellow);
+    transform: translateX(4px);
+}
+
+.ey-nav .nav-link.active {
+    background: linear-gradient(135deg, var(--ey-yellow) 0%, var(--ey-yellow-hover) 100%);
+    color: var(--ey-black);
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(255, 209, 0, 0.3);
+}
+
+.ey-nav .nav-link i {
+    width: 20px;
+    text-align: center;
+    font-size: 1rem;
+}
+
+.nav-link-label {
+    flex: 1;
+}
+
+/* ========================================
+   MENU ITEMS WITH SUBMENUS
+   ======================================== */
+.ey-menu-item {
+    margin-bottom: 0.5rem;
+}
+
+.ey-menu-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.ey-menu-header:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.ey-menu-header:hover .ey-menu-title {
+    color: var(--ey-yellow);
+}
+
+.ey-menu-title {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: color 0.2s ease;
+}
+
+.ey-menu-title i {
+    width: 20px;
+    text-align: center;
+    font-size: 1rem;
+}
+
+.ey-chevron {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.5);
+    transition: transform 0.3s ease;
+}
+
+.ey-chevron.rotated {
+    transform: rotate(180deg);
+}
+
+/* ========================================
+   BADGES
+   ======================================== */
+.ey-badge {
+    font-size: 0.65rem;
+    font-weight: 600;
+    padding: 0.2rem 0.5rem;
+    border-radius: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.ey-badge-warning {
+    background: var(--ey-yellow);
+    color: var(--ey-black);
+}
+
+.ey-badge-info {
+    background: var(--ey-blue);
+    color: var(--ey-white);
+}
+
+.ey-badge-success {
+    background: var(--ey-green);
+    color: var(--ey-white);
+}
+
+.ey-badge-danger {
+    background: var(--ey-red);
+    color: var(--ey-white);
+}
+
+/* ========================================
+   SUBMENUS
+   ======================================== */
+.ey-submenu {
+    list-style: none;
+    padding: 0;
+    margin: 0.5rem 0 0.5rem 1.5rem;
+    background: var(--ey-dark-gray);
+    border-radius: 8px;
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height 0.3s ease, opacity 0.3s ease;
+    opacity: 0;
+}
+
+.ey-submenu.expanded {
+    max-height: 500px;
+    opacity: 1;
+}
+
+.ey-submenu li {
+    padding: 0;
+}
+
+.ey-submenu .nav-link {
+    padding: 0.625rem 1rem;
+    font-size: 0.8125rem;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.ey-submenu .nav-link:hover {
+    background: rgba(255, 209, 0, 0.08);
+    color: var(--ey-yellow);
+}
+
+.ey-submenu .nav-link.active {
+    background: rgba(255, 209, 0, 0.15);
+    color: var(--ey-yellow);
+    border-left: 3px solid var(--ey-yellow);
+}
+
+/* ========================================
+   SIDEBAR FOOTER
+   ======================================== */
+.ey-sidebar-footer {
+    padding: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--ey-dark-gray);
+}
+
+.ey-sidebar-footer .nav-link {
+    padding: 0.625rem 1rem;
+    margin-bottom: 0.25rem;
+}
+
+/* ========================================
+   RESPONSIVE DESIGN
+   ======================================== */
+.ey-sidebar-toggle {
+    display: none;
+    position: fixed;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 1001;
+    background: var(--ey-yellow);
+    color: var(--ey-black);
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 0 8px 8px 0;
+    cursor: pointer;
+    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s ease;
+}
+
+.ey-sidebar-toggle:hover {
+    background: var(--ey-yellow-hover);
+    width: 48px;
+}
+
+.ey-sidebar-toggle i {
+    font-size: 1.25rem;
+}
+
+.ey-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.ey-overlay.active {
+    display: block;
+    opacity: 1;
+}
+
+/* Mobile */
+@media (max-width: 992px) {
+    .ey-sidebar {
+        transform: translateX(-100%);
+    }
+
+    .ey-sidebar.active {
+        transform: translateX(0);
+    }
+
+    .ey-sidebar-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .ey-main {
+        margin-left: 0 !important;
+    }
+}
+
+/* Tablet */
+@media (min-width: 993px) and (max-width: 1200px) {
+    .ey-sidebar {
+        width: 240px;
+    }
+
+    .ey-main {
+        margin-left: 240px !important;
+    }
+}
+
+/* Desktop */
+@media (min-width: 1201px) {
+    .ey-main {
+        margin-left: 280px !important;
+    }
+}
+
+/* ========================================
+   COLLAPSED STATE (Desktop)
+   ======================================== */
+.ey-sidebar.collapsed {
+    width: 80px;
+}
+
+.ey-sidebar.collapsed .ey-logo-sub,
+.ey-sidebar.collapsed .nav-link-label,
+.ey-sidebar.collapsed .ey-section-title span,
+.ey-sidebar.collapsed .ey-badge,
+.ey-sidebar.collapsed .ey-chevron {
+    display: none;
+}
+
+.ey-sidebar.collapsed .ey-menu-header {
+    justify-content: center;
+    padding: 0.75rem;
+}
+
+.ey-sidebar.collapsed .ey-menu-title {
+    justify-content: center;
+}
+
+.ey-sidebar.collapsed .ey-nav .nav-link {
+    justify-content: center;
+    padding: 0.75rem;
+}
+
+.ey-sidebar.collapsed .ey-submenu {
+    display: none;
+}
+
+.ey-sidebar.collapsed .ey-quick-access {
+    display: none;
+}
+
+/* ========================================
+   ANIMATIONS
+   ======================================== */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.ey-menu-item {
+    animation: slideIn 0.3s ease-out;
+}
+
+.ey-menu-item:nth-child(1) { animation-delay: 0.05s; }
+.ey-menu-item:nth-child(2) { animation-delay: 0.1s; }
+.ey-menu-item:nth-child(3) { animation-delay: 0.15s; }
+.ey-menu-item:nth-child(4) { animation-delay: 0.2s; }
+.ey-menu-item:nth-child(5) { animation-delay: 0.25s; }
