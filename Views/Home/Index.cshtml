@@ -4,179 +4,196 @@
     var formations = ViewBag.FormationsEnCours as List<dynamic> ?? new List<dynamic>();
 }
 
-<div class="ey-dark-hero ey-card mb-4">
-    <div class="row g-3 align-items-center">
-        <div class="col-lg-8">
-            <h1 class="mb-2 fw-bold">Bonjour, @(ViewBag.PrenomConnecte ?? "Collaborateur")</h1>
-            <p class="mb-0 text-white-50">Bienvenue sur votre espace SIRH EY. Voici un aperçu de vos activités aujourd'hui.</p>
-        </div>
-        <div class="col-lg-4 text-lg-end">
-            <div class="ey-date-badge">
-    <div class="ey-date-label">AUJOURD'HUI</div>
-    <div class="ey-date-value">
-        @DateTime.Now.ToString("dd MMMM", new System.Globalization.CultureInfo("fr-FR"))
-    </div>
-</div>
-        </div>
-    </div>
-</div>
-
-<div class="row g-3 mb-4">
-    <div class="col-md-4">
-        <div class="ey-card ey-kpi">
-            <div class="d-flex justify-content-between mb-2">
-                <div class="text-muted">COLLABORATEURS ACTIFS</div>
-                <div class="small text-success fw-semibold">+12%</div>
-            </div>
-            <div class="ey-kpi-value">@ViewBag.NbCollaborateursActifs</div>
-            <div class="ey-progress mt-3"><span style="width:78%"></span></div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="ey-card ey-kpi">
-            <div class="d-flex justify-content-between mb-2">
-                <div class="text-muted">FORMATIONS SUIVIES</div>
-                <div class="small text-muted fw-semibold">0%</div>
-            </div>
-            <div class="ey-kpi-value">@ViewBag.NbFormationsSuivies</div>
-            <div class="ey-progress mt-3"><span style="width:46%;background:#9ca3af;"></span></div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="ey-card ey-kpi">
-            <div class="d-flex justify-content-between mb-2">
-                <div class="text-muted">TAUX DE COMPLÉTION</div>
-                <div class="small text-success fw-semibold">+5%</div>
-            </div>
-            <div class="ey-kpi-value">@ViewBag.TauxCompletion%</div>
-            <div class="ey-progress mt-3"><span style="width:@ViewBag.TauxCompletion%"></span></div>
-        </div>
-    </div>
-</div>
-
-<div class="ey-card p-3 mb-4">
-    <div class="d-flex flex-wrap align-items-center gap-2">
-        <span class="text-muted">ACTIONS RAPIDES</span>
-        <a asp-controller="Collaborateurs" asp-action="Create" class="ey-btn-main text-decoration-none">
-            <i class="fas fa-user-plus me-1"></i> Nouveau collaborateur
-        </a>
-        <a asp-controller="Formations" asp-action="Create" class="ey-btn-main text-decoration-none">
-            <i class="fas fa-graduation-cap me-1"></i> Nouvelle formation
-        </a>
-        <a asp-controller="Collaborateurs" asp-action="Index" class="ms-auto text-decoration-none fw-semibold">Voir tout <i class="fas fa-arrow-right"></i></a>
-    </div>
-</div>
-
-<div class="row g-3">
-    <div class="col-lg-6">
-        <div class="ey-card p-3 h-100">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <div>
-                    <h4 class="mb-0">Module Core RH</h4>
-                    <small class="text-muted">Gestion des effectifs et organigramme</small>
+<div class="row portal-wrapper g-4">
+    <!-- LEFT COLUMN: Workspace -->
+    <div class="col-lg-8 portal-left">
+        
+        <!-- 1. Hero Section -->
+        <div class="hero-banner glass-panel p-4 mb-2">
+            <div class="hero-content">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h1 class="h3 fw-bold mb-0">Bonjour, @(ViewBag.PrenomConnecte ?? "Collaborateur")</h1>
+                    <div class="small opacity-75">
+                        @DateTime.Now.ToString("dd MMMM", new System.Globalization.CultureInfo("fr-FR"))
+                    </div>
                 </div>
-                <a asp-controller="Collaborateurs" asp-action="Index" class="ey-btn-main text-decoration-none">Accéder</a>
+                <p class="mb-4 opacity-75" style="max-width: 500px;">
+                    Bienvenue sur votre espace SIRH EY. Consultez vos activités récentes, suivez vos objectifs et développez vos compétences.
+                </p>
+                <div class="d-flex flex-wrap gap-2 mt-2">
+                    <span class="chip"><i class="fas fa-book-open"></i> @(ViewBag.NbFormationsSuivies ?? 0) Formations en cours</span>
+                    <span class="chip"><i class="fas fa-check-circle"></i> @(ViewBag.TauxCompletion ?? 0)% Compétences</span>
+                    <span class="chip"><i class="fas fa-bolt"></i> Actions RH</span>
+                </div>
             </div>
+        </div>
 
-            <div class="table-responsive mt-3">
-                <table class="table table-hover align-middle ey-rh-table mb-0 border-top">
-                    <thead class="table-light text-muted small">
-                        <tr>
-                            <th class="ps-3 border-0 rounded-start">COLLABORATEUR</th>
-                            <th class="border-0">GRADE</th>
-                            <th class="border-0">ONBOARDING</th>
-                            <th class="border-0">COMPLÉTION</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @if (!recents.Any())
-                        {
-                            <tr><td colspan="4" class="text-muted text-center py-4">Aucun collaborateur.</td></tr>
-                        }
-                        else
-                        {
-                            @foreach (var collab in recents)
-                            {
-                                var daysSince = (DateTime.Now - (collab.DateEmbauche ?? DateTime.Now)).Days;
-                                var isNew = daysSince <= 30;
-                                var onboardingScore = Math.Min(100, Math.Max(0, (daysSince * 100) / 90)); // Simulate 90 days onboarding
-                                var completionRate = Math.Min(100, 40 + (daysSince * 2)); // Simulate profile completion
+        <!-- 2. KPI Cards -->
+        <div class="row g-3 mb-2">
+            <div class="col-md-4">
+                <div class="glass-panel kpi-card kpi-card-actives">
+                    <i class="fas fa-users kpi-icon"></i>
+                    <div class="kpi-label mb-1">COLLABORATEURS ACTIFS</div>
+                    <div class="kpi-value">@ViewBag.NbCollaborateursActifs</div>
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="small text-success fw-semibold"><i class="fas fa-arrow-up"></i> 12%</span>
+                    </div>
+                    <div class="progress-animated mt-2"><div class="progress-bar" style="width: 78%"></div></div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="glass-panel kpi-card kpi-card-trainings">
+                    <i class="fas fa-graduation-cap kpi-icon"></i>
+                    <div class="kpi-label mb-1">FORMATIONS SUIVIES</div>
+                    <div class="kpi-value">@ViewBag.NbFormationsSuivies</div>
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="small text-muted fw-semibold">Stable</span>
+                    </div>
+                    <div class="progress-animated mt-2"><div class="progress-bar" style="width: 46%"></div></div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="glass-panel kpi-card kpi-card-completion">
+                    <i class="fas fa-chart-pie kpi-icon"></i>
+                    <div class="kpi-label mb-1">TAUX DE COMPLÉTION</div>
+                    <div class="kpi-value">@ViewBag.TauxCompletion%</div>
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="small text-success fw-semibold"><i class="fas fa-arrow-up"></i> 5%</span>
+                    </div>
+                    <div class="progress-animated mt-2"><div class="progress-bar" style="width: @ViewBag.TauxCompletion%"></div></div>
+                </div>
+            </div>
+        </div>
 
-                                <tr>
-                                    <td class="ps-3">
-                                        <div class="d-flex align-items-center">
-                                            <div class="ey-box-avatar me-3 shadow-sm bg-dark text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; font-size: 0.9rem;">
-                                                @(collab.Prenom?[0])@(collab.Nom?[0])
-                                            </div>
-                                            <div>
-                                                <div class="fw-bold text-dark d-flex align-items-center gap-2">
-                                                    @collab.Prenom @collab.Nom
-                                                    @if (isNew) { <span class="badge bg-warning text-dark px-1 py-0" style="font-size: 0.65rem;">NOUVEAU</span> }
-                                                </div>
-                                                <div class="text-muted" style="font-size: 0.8rem;">@collab.Departement</div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <span class="badge border border-secondary text-secondary bg-transparent">@collab.Grade</span>
-                                    </td>
-                                    <td>
-                                        <div class="d-flex align-items-center gap-2">
-                                            <div class="progress flex-grow-1" style="height: 6px; width: 60px;">
-                                                <div class="progress-bar @(onboardingScore >= 100 ? "bg-success" : "bg-primary")" style="width: @onboardingScore%"></div>
-                                            </div>
-                                            <span class="small fw-bold @(onboardingScore >= 100 ? "text-success" : "text-muted")">@onboardingScore%</span>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="d-flex align-items-center gap-2">
-                                            <div class="progress flex-grow-1" style="height: 6px; width: 60px;">
-                                                <div class="progress-bar @(completionRate >= 100 ? "bg-success" : "bg-warning")" style="width: @completionRate%"></div>
-                                            </div>
-                                            <span class="small fw-bold @(completionRate >= 100 ? "text-success" : "text-muted")">@completionRate%</span>
-                                        </div>
-                                    </td>
-                                </tr>
-                            }
-                        }
-                    </tbody>
-                </table>
+        <!-- 3. Quick Actions -->
+        <h5 class="fw-bold mb-3 mt-2">Actions rapides</h5>
+        <div class="row g-3">
+            <div class="col-6 col-sm-4 col-md-2 flex-grow-1">
+                <a asp-controller="Collaborateurs" asp-action="Index" class="glass-panel quick-action-card">
+                    <div class="icon-bubble"><i class="fas fa-users"></i></div>
+                    <h6>Voir mon équipe</h6>
+                    <small>Annuaire et infos</small>
+                </a>
+            </div>
+            <div class="col-6 col-sm-4 col-md-2 flex-grow-1">
+                <a asp-controller="Formations" asp-action="Index" class="glass-panel quick-action-card">
+                    <div class="icon-bubble"><i class="fas fa-graduation-cap"></i></div>
+                    <h6>Mes formations</h6>
+                    <small>Catalogue et suivi</small>
+                </a>
+            </div>
+            <div class="col-6 col-sm-4 col-md-2 flex-grow-1">
+                <a asp-controller="Competences" asp-action="Index" class="glass-panel quick-action-card">
+                    <div class="icon-bubble"><i class="fas fa-chart-bar"></i></div>
+                    <h6>Mes compétences</h6>
+                    <small>Cartographie</small>
+                </a>
+            </div>
+            <div class="col-6 col-sm-4 col-md-2 flex-grow-1">
+                <a asp-controller="Progression" asp-action="Index" class="glass-panel quick-action-card">
+                    <div class="icon-bubble"><i class="fas fa-tachometer-alt"></i></div>
+                    <h6>Mon évolution</h6>
+                    <small>Entretiens et KPI</small>
+                </a>
+            </div>
+            <div class="col-6 col-sm-4 col-md-2 flex-grow-1">
+                <a asp-controller="Objectives" asp-action="Index" class="glass-panel quick-action-card">
+                    <div class="icon-bubble"><i class="fas fa-bullseye"></i></div>
+                    <h6>Mes objectifs RH</h6>
+                    <small>Suivi annuel</small>
+                </a>
             </div>
         </div>
     </div>
 
-    <div class="col-lg-6">
-        <div class="ey-card p-3 h-100">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <div>
-                    <h4 class="mb-0">Module Formations</h4>
-                    <small class="text-muted">Programmes et certifications</small>
+    <!-- RIGHT COLUMN: Activity Panel -->
+    <div class="col-lg-4 portal-right">
+        <div class="portal-right-panel p-4 h-100">
+            <h5 class="panel-title">Mon espace</h5>
+
+            <!-- AI Widget -->
+            <div class="ai-insight-card mb-4">
+                <div class="ai-pulse-border"></div>
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div class="ai-icon-bubble">
+                        <i class="fas fa-magic"></i>
+                    </div>
+                    <span class="confidence-badge">Impact estimé +15%</span>
                 </div>
-                <a asp-controller="Formations" asp-action="Index" class="ey-btn-main text-decoration-none">Accéder</a>
+                <h6 class="fw-bold text-white mb-2">Recommandation personnalisée</h6>
+                <p class="small text-white-50 mb-0">
+                    Excellente progression ce trimestre ! En complétant la certification <strong>"Leadership Avancé"</strong>, vous augmenterez significativement votre score d'évolution.
+                </p>
             </div>
 
-            <div class="mt-3">
+            <!-- Deadlines Timeline -->
+            <div class="mb-4">
+                <h6 class="panel-section-title">Échéances à venir</h6>
+                <div class="timeline-container">
+                    <div class="timeline-item">
+                        <div class="timeline-dot dot-high"></div>
+                        <div class="timeline-card">
+                            <h6 class="mb-1 text-white" style="font-size: 0.85rem;">Bilan de mi-année</h6>
+                            <div class="small text-danger fw-semibold"><i class="fas fa-exclamation-circle me-1"></i>Dans 5 jours (15 Juin)</div>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-dot dot-med"></div>
+                        <div class="timeline-card">
+                            <h6 class="mb-1 text-white" style="font-size: 0.85rem;">Formations à venir</h6>
+                            <div class="small text-warning"><i class="far fa-clock me-1"></i>Dans 12 jours</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Formations (reusing ViewBag data) -->
+            <div class="mb-4">
+                <h6 class="panel-section-title">Formations en cours</h6>
                 @if (!formations.Any())
                 {
-                    <div class="text-muted">Aucune formation en cours.</div>
+                    <div class="text-white-50 small">Aucune formation en cours.</div>
                 }
                 else
                 {
-                    @foreach (var formation in formations.Take(4))
+                    @foreach (var formation in formations.Take(3))
                     {
-                        <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
-                            <div>
-                                <div class="fw-semibold">@formation.Titre</div>
-                                <small class="text-muted">@formation.Progression% complété</small>
+                        <div class="mini-training-card">
+                            <div class="circular-progress-wrap" style="--p: @formation.Progression%;">
+                                <div class="circular-progress-inner">@formation.Progression%</div>
                             </div>
-                            <small class="fw-semibold">Dans @formation.JoursRestants jours</small>
+                            <div class="flex-grow-1 min-width-0">
+                                <h6 class="mb-1 text-white text-truncate" style="font-size: 0.85rem;">@formation.Titre</h6>
+                                <div class="small text-white-50">Reste @formation.JoursRestants jours</div>
+                            </div>
                         </div>
                     }
                 }
             </div>
-            <div class="alert alert-info mt-3 mb-0">
-                Vous avez <strong>@ViewBag.NouvellesFormations</strong> nouvelles formations obligatoires assignées ce mois-ci.
+
+            <!-- Certifications -->
+            <div class="mb-4">
+                <h6 class="panel-section-title">Dernières certifications</h6>
+                <div>
+                    <span class="cert-chip"><i class="fas fa-medal text-warning"></i> Agile Scrum</span>
+                    <span class="cert-chip"><i class="fas fa-medal text-warning"></i> Data Analytics</span>
+                    <span class="cert-chip"><i class="fas fa-certificate text-secondary"></i> RGPD Base</span>
+                </div>
             </div>
+
+            <!-- Manager Feedback -->
+            <div class="mb-2">
+                <h6 class="panel-section-title">Retour Manager</h6>
+                <div class="quote-card">
+                    <div class="fst-italic text-white-50 small mb-2">"Très bonne implication sur la formation Leadership."</div>
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="manager-avatar">SD</div>
+                        <div class="small text-white fw-semibold">Ibtissem B., Manager</div>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
 </div>
+ 
