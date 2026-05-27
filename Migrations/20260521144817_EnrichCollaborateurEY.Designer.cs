@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SIRH.EY.Data;
 
@@ -11,9 +12,11 @@ using SIRH.EY.Data;
 namespace SIRH.EY.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260521144817_EnrichCollaborateurEY")]
+    partial class EnrichCollaborateurEY
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -254,22 +257,7 @@ namespace SIRH.EY.Migrations
                     b.Property<bool>("Actif")
                         .HasColumnType("bit");
 
-                    b.Property<string>("Adresse")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("BusinessUnit")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ContactUrgence")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<DateTime>("DateEmbauche")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("DateNaissance")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("DatePrisePoste")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Departement")
@@ -278,47 +266,17 @@ namespace SIRH.EY.Migrations
                     b.Property<string>("Email")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("EtatCivil")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("FormationsObligatoires")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Genre")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("Grade")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("Localisation")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<int?>("ManagerId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Matricule")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Nationalite")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("NiveauHierarchique")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int?>("NiveauPreparationSuccession")
                         .HasColumnType("int");
 
                     b.Property<string>("Nom")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("Pays")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("Poste")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("PotentielCarriere")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Prenom")
@@ -328,17 +286,8 @@ namespace SIRH.EY.Migrations
                     b.Property<int>("Statut")
                         .HasColumnType("int");
 
-                    b.Property<string>("TelephonePersonnel")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("TypeContrat")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("UserId")
                         .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("Ville")
-                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
@@ -479,25 +428,10 @@ namespace SIRH.EY.Migrations
                     b.Property<DateTime>("DateDebut")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("DepartementCible")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("DomaineCompetence")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<int>("DureeHeures")
                         .HasColumnType("int");
 
-                    b.Property<bool>("EstCertifiante")
-                        .HasColumnType("bit");
-
                     b.Property<string>("Formateur")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("MetierCible")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("NiveauDifficulte")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Organisme")
@@ -505,9 +439,6 @@ namespace SIRH.EY.Migrations
 
                     b.Property<int>("PlacesPrises")
                         .HasColumnType("int");
-
-                    b.Property<string>("PosteCible")
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Titre")
                         .IsRequired()

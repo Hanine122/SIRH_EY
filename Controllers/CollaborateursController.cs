@@ -457,6 +457,7 @@ public async Task<IActionResult> AskIA([FromBody] RecommendationRequest request)
         ViewBag.Postes = CompetenceCatalogService.Postes;
 
         ViewBag.Grades = CompetenceCatalogService.Grades;
+        PrepareHrProfileViewData();
 
 
 
@@ -470,7 +471,7 @@ public async Task<IActionResult> AskIA([FromBody] RecommendationRequest request)
 
     [ValidateAntiForgeryToken]
 
-    public async Task<IActionResult> Create([Bind("Id,Nom,Prenom,Email,Departement,Grade,Poste,ManagerId,DateEmbauche,Actif")] Collaborateur collaborateur)
+    public async Task<IActionResult> Create([Bind("Id,Nom,Prenom,Email,DateNaissance,Genre,Nationalite,EtatCivil,Adresse,Ville,Pays,TelephonePersonnel,ContactUrgence,Matricule,Departement,Grade,Poste,ManagerId,TypeContrat,Statut,Localisation,BusinessUnit,NiveauHierarchique,DateEmbauche,DatePrisePoste,FormationsObligatoires,NiveauPreparationSuccession,PotentielCarriere,Actif")] Collaborateur collaborateur)
 
     {
 
@@ -501,6 +502,7 @@ public async Task<IActionResult> AskIA([FromBody] RecommendationRequest request)
         ViewBag.Postes = CompetenceCatalogService.Postes;
 
         ViewBag.Grades = CompetenceCatalogService.Grades;
+        PrepareHrProfileViewData();
 
         return View(collaborateur);
 
@@ -533,6 +535,7 @@ public async Task<IActionResult> AskIA([FromBody] RecommendationRequest request)
         ViewBag.Postes = CompetenceCatalogService.Postes;
 
         ViewBag.Grades = CompetenceCatalogService.Grades;
+        PrepareHrProfileViewData();
 
         return View(collaborateur);
 
@@ -544,7 +547,7 @@ public async Task<IActionResult> AskIA([FromBody] RecommendationRequest request)
 
     [ValidateAntiForgeryToken]
 
-    public async Task<IActionResult> Edit(int id, [Bind("Id,Nom,Prenom,Email,Departement,Grade,Poste,ManagerId,DateEmbauche,Actif")] Collaborateur collaborateur)
+    public async Task<IActionResult> Edit(int id, [Bind("Id,Nom,Prenom,Email,DateNaissance,Genre,Nationalite,EtatCivil,Adresse,Ville,Pays,TelephonePersonnel,ContactUrgence,Matricule,Departement,Grade,Poste,ManagerId,TypeContrat,Statut,Localisation,BusinessUnit,NiveauHierarchique,DateEmbauche,DatePrisePoste,FormationsObligatoires,NiveauPreparationSuccession,PotentielCarriere,Actif")] Collaborateur collaborateur)
 
     {
 
@@ -593,6 +596,7 @@ public async Task<IActionResult> AskIA([FromBody] RecommendationRequest request)
         ViewBag.Postes = CompetenceCatalogService.Postes;
 
         ViewBag.Grades = CompetenceCatalogService.Grades;
+        PrepareHrProfileViewData();
 
         return View(collaborateur);
 
@@ -852,7 +856,7 @@ public async Task<IActionResult> AskIA([FromBody] RecommendationRequest request)
 
             collab.DateEmbauche,
 
-            TypeContrat = "CDI"
+            TypeContrat = collab.TypeContrat ?? "CDI"
 
         });
 
@@ -1360,6 +1364,17 @@ public async Task<IActionResult> AskIA([FromBody] RecommendationRequest request)
 
         public string Commentaire { get; set; }
 
+    }
+
+    private void PrepareHrProfileViewData()
+    {
+        ViewBag.Genres = new[] { "Femme", "Homme", "Non renseigne" };
+        ViewBag.EtatsCivils = new[] { "Celibataire", "Marie(e)", "Divorce(e)", "Veuf/Veuve" };
+        ViewBag.TypesContrat = new[] { "CDI", "CDD", "Stage", "Alternance", "Freelance", "Consultant externe" };
+        ViewBag.Localisations = new[] { "Tunis", "Lac 1", "Lac 2", "Sfax", "Remote", "Hybride" };
+        ViewBag.BusinessUnits = new[] { "Assurance", "Consulting", "Strategy & Transactions", "Tax", "CBS", "Talent Team" };
+        ViewBag.NiveauxHierarchiques = new[] { "Junior", "Senior", "Manager", "Senior Manager", "Director", "Partner" };
+        ViewBag.PotentielsCarriere = new[] { "Emergent", "Solide", "Haut potentiel", "Succession prioritaire" };
     }
 
 }

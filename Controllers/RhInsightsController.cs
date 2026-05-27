@@ -139,6 +139,50 @@ public class RhInsightsController : Controller
                 }
             }
 
+            // Analyse approfondie des écarts (Gap Analysis)
+            var gapAnalysis = new List<GapAnalysisDetail>();
+            foreach (var competenceManquante in manquantes)
+            {
+                var competenceRequise = await _context.CompetencesRequisesParPoste
+                    .FirstOrDefaultAsync(cr => cr.Poste == partant.Poste && 
+                                              string.Equals(cr.Competence, competenceManquante, StringComparison.OrdinalIgnoreCase));
+                
+                var niveauRequis = competenceRequise?.NiveauRequis ?? 3;
+                var priorite = niveauRequis >= 4 ? "High" : niveauRequis >= 3 ? "Medium" : "Low";
+                
+                gapAnalysis.Add(new GapAnalysisDetail
+                {
+                    Competence = competenceManquante,
+                    NiveauRequis = niveauRequis,
+                    NiveauActuel = 0, // Pas de maîtrise
+                    Ecart = niveauRequis,
+                    FormationRecommandee = formationsRecommandees.FirstOrDefault(f => f.Contains(competenceManquante, StringComparison.OrdinalIgnoreCase)) ?? $"Parcours - {competenceManquante}",
+                    Priorite = priorite
+                });
+            }
+
+            // Vérification des livrables obligatoires
+            var livrablesManquants = new List<string>();
+            var livrablesRequis = GetLivrablesForPoste(partant.Poste);
+            var competencesLivrables = new[] { "BRD", "Traceability Matrix", "Technical Design Document", 
+                                              "Requirements Specification", "Project Charter", "Risk Register" };
+            
+            foreach (var livrable in livrablesRequis)
+            {
+                // Vérifier si le candidat a les compétences liées aux livrables
+                var hasLivrableCompetence = nomsCandidat.Any(nc => 
+                    competencesLivrables.Any(cl => nc.Contains(cl, StringComparison.OrdinalIgnoreCase)) ||
+                    nc.Contains(livrable, StringComparison.OrdinalIgnoreCase));
+                
+                if (!hasLivrableCompetence)
+                {
+                    livrablesManquants.Add(livrable);
+                }
+            }
+
+            // Générer les notes du plan de transition
+            var transitionNotes = GenerateTransitionPlanNotes(partant.Poste, gapAnalysis, livrablesManquants);
+
             candidats.Add(new RhInsightsCandidatDetail
             {
                 Id = candidat.Id,
@@ -153,7 +197,11 @@ public class RhInsightsController : Controller
                 CompetencesPossedees = competencesRequises.Where(r => nomsCandidat.Any(a => comparer.Equals(a, r))).ToList(),
                 FormationsRecommandees = formationsRecommandees,
                 ProfilTransversal = profilTransversal,
-                NbCompetencesCommunes = communes
+                NbCompetencesCommunes = communes,
+                GapAnalysis = gapAnalysis,
+                LivrablesManquants = livrablesManquants,
+                AlerteLivrablesCritiques = livrablesManquants.Count > 0,
+                TransitionPlanNotes = transitionNotes
             });
         }
 
@@ -524,6 +572,62 @@ public class RhInsightsController : Controller
 
         return (int)Math.Round(100.0 * value / total);
     }
+
+    /// <summary>
+    /// Récupère les livrables obligatoires pour un poste donné
+    /// </summary>
+    private static List<string> GetLivrablesForPoste(string? poste)
+    {
+        if (string.IsNullOrWhiteSpace(poste))
+            return new List<string>();
+
+        var posteLower = poste.ToLower();
+        
+        // Recherche partielle dans le dictionnaire
+        foreach (var kvp in LivrablesObligatoiresRegistry.Livrables)
+        {
+            if (posteLower.Contains(kvp.Key.ToLower()) || kvp.Key.ToLower().Contains(posteLower.Split(' ')[0]))
+            {
+                return kvp.Value;
+            }
+        }
+
+        // Fallback: livrables génériques pour tout poste
+        return new List<string> { "Documentation", "Status Reports" };
+    }
+
+    /// <summary>
+    /// Génère les notes du plan de transition basées sur les écarts et livrables manquants
+    /// </summary>
+    private static string GenerateTransitionPlanNotes(string? poste, List<GapAnalysisDetail> gapAnalysis, List<string> livrablesManquants)
+    {
+        var notes = new System.Text.StringBuilder();
+        
+        if (gapAnalysis.Any(g => g.Priorite == "High"))
+        {
+            notes.Append("⚠️ ALERT: Compétences critiques manquantes identifiées. ");
+            var highPrioritySkills = string.Join(", ", gapAnalysis.Where(g => g.Priorite == "High").Select(g => g.Competence));
+            notes.Append($"Priorité: {highPrioritySkills}. ");
+        }
+
+        if (livrablesManquants.Count > 0)
+        {
+            notes.Append($"📋 Livrables non maîtrisés: {string.Join(", ", livrablesManquants)}. ");
+            notes.Append("Recommandation: Binômage avec un expert avant prise de poste. ");
+        }
+
+        if (gapAnalysis.Count > 3)
+        {
+            notes.Append("📚 Plan de formation intensif recommandé (30-60 jours avant prise de fonction). ");
+        }
+
+        if (notes.Length == 0)
+        {
+            notes.Append("✅ Profil compatible. Transition standard recommandée avec période d'adaptation de 2 semaines.");
+        }
+
+        return notes.ToString().Trim();
+    }
 }
 
 /// <summary>
@@ -544,4 +648,37 @@ public class RhInsightsCandidatDetail
     public List<string> FormationsRecommandees { get; set; } = new();
     public bool ProfilTransversal { get; set; }
     public int NbCompetencesCommunes { get; set; }
+    
+    // Nouveaux champs pour l'analyse approfondie
+    public List<GapAnalysisDetail> GapAnalysis { get; set; } = new();
+    public List<string> LivrablesManquants { get; set; } = new();
+    public bool AlerteLivrablesCritiques { get; set; }
+    public string TransitionPlanNotes { get; set; } = "";
+}
+
+/// <summary>
+/// Détail de l'analyse des écarts de compétences
+/// </summary>
+public class GapAnalysisDetail
+{
+    public string Competence { get; set; } = "";
+    public int NiveauRequis { get; set; }
+    public int NiveauActuel { get; set; }
+    public int Ecart { get; set; }
+    public string FormationRecommandee { get; set; } = "";
+    public string Priorite { get; set; } = "Medium"; // High, Medium, Low
+}
+
+// Livrables obligatoires par type de poste
+public static class LivrablesObligatoiresRegistry
+{
+    public static readonly Dictionary<string, List<string>> Livrables = new()
+    {
+        { "Business Analyst", new List<string> { "BRD", "Traceability Matrix", "Requirements Specification" } },
+        { "Consultant", new List<string> { "BRD", "Stakeholder Analysis", "Gap Analysis Report" } },
+        { "Project Manager", new List<string> { "Project Charter", "Risk Register", "Status Reports" } },
+        { "Technical Lead", new List<string> { "Technical Design Document", "Code Review Checklist", "Architecture Diagram" } },
+        { "Auditeur", new List<string> { "Audit Report", "Control Matrix", "Risk Assessment" } },
+        { "Développeur", new List<string> { "Technical Design Document", "Unit Tests", "Documentation" } }
+    };
 }

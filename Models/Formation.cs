@@ -18,7 +18,13 @@ public class Formation
     
     // Nouvelle propriété pour l'organisme
     public string? Organisme { get; set; } // "Interne" ou "Externe"
-public string? CompetenceVisee { get; set; } // ex: "Leadership", "Gestion de Projet"
+    public string? CompetenceVisee { get; set; } // ex: "Leadership", "Gestion de Projet"
+    public string? DepartementCible { get; set; }
+    public string? MetierCible { get; set; }
+    public string? PosteCible { get; set; }
+    public string? DomaineCompetence { get; set; }
+    public string? NiveauDifficulte { get; set; }
+    public bool EstCertifiante { get; set; } = false;
     public ICollection<Inscription>? Inscriptions { get; set; }
     
 }

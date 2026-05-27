@@ -49,6 +49,13 @@ public async Task<IActionResult> Index()
     }
     ViewBag.PrenomConnecte = prenom;
 
+    var user = await _userManager.GetUserAsync(User);
+    var collaborateurConnecte = user == null
+        ? null
+        : await _context.Collaborateurs
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.UserId == user.Id || c.Email == user.Email);
+
     // Collaborateurs actifs récents (les 4 derniers)
     var collaborateurs = await _context.Collaborateurs
         .Where(c => c.Actif)
@@ -71,22 +78,26 @@ public async Task<IActionResult> Index()
     }
     ViewBag.CollaborateursRecents = collaborateurs;
 
-    // Formations en cours (inscriptions non terminées)
-    var inscriptions = await _context.Inscriptions
+    // Formations du collaborateur connecte quand son compte est lie a un profil RH.
+    var inscriptionsQuery = _context.Inscriptions
         .Include(i => i.Formation)
-        .Where(i => !i.Terminee)
-        .ToListAsync();
+        .AsNoTracking();
+
+    if (collaborateurConnecte != null)
+        inscriptionsQuery = inscriptionsQuery.Where(i => i.CollaborateurId == collaborateurConnecte.Id);
+
+    var inscriptions = await inscriptionsQuery.ToListAsync();
 
     var formationsEnCours = new List<dynamic>();
-    foreach (var insc in inscriptions)
+    foreach (var insc in inscriptions.Where(i => !i.Terminee))
     {
         var f = insc.Formation;
         if (f == null) continue;
 
-        int progression = 0;
+        int progression = Math.Clamp(insc.Progression, 0, 100);
         int joursRestants = 0;
 
-        if (f.DateDebut <= DateTime.Now && !insc.Terminee)
+        if (progression == 0 && f.DateDebut <= DateTime.Now)
         {
             var dureeJours = Math.Max(1, f.DureeHeures / 8);
             var joursPasses = (DateTime.Now - f.DateDebut).Days;
@@ -97,13 +108,17 @@ public async Task<IActionResult> Index()
         else if (f.DateDebut > DateTime.Now)
         {
             joursRestants = (int)(f.DateDebut - DateTime.Now).Days;
-            progression = 0;
         }
 
         formationsEnCours.Add(new { Titre = f.Titre, Progression = progression, JoursRestants = joursRestants });
     }
     // Éviter les doublons de titres (si plusieurs inscrits à la même formation)
     ViewBag.FormationsEnCours = formationsEnCours.GroupBy(f => f.Titre).Select(g => g.First()).ToList();
+    ViewBag.Certifications = inscriptions
+        .Where(i => i.Terminee && i.Formation != null)
+        .OrderByDescending(i => i.DateInscription)
+        .Take(6)
+        .ToList();
 
     // Nouvelles formations obligatoires (ex: créées ce mois-ci)
     var nouvelles = await _context.Formations

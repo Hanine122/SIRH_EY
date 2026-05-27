@@ -2,6 +2,7 @@
     ViewData["Title"] = "Tableau de bord";
     var recents = ViewBag.CollaborateursRecents as List<dynamic> ?? new List<dynamic>();
     var formations = ViewBag.FormationsEnCours as List<dynamic> ?? new List<dynamic>();
+    var certifications = ViewBag.Certifications as List<SIRH.EY.Models.Inscription> ?? new List<SIRH.EY.Models.Inscription>();
 }
 
 <div class="row portal-wrapper g-4">
@@ -175,9 +176,17 @@
             <div class="mb-4">
                 <h6 class="panel-section-title">Dernières certifications</h6>
                 <div>
-                    <span class="cert-chip"><i class="fas fa-medal text-warning"></i> Agile Scrum</span>
-                    <span class="cert-chip"><i class="fas fa-medal text-warning"></i> Data Analytics</span>
-                    <span class="cert-chip"><i class="fas fa-certificate text-secondary"></i> RGPD Base</span>
+                    @if (!certifications.Any())
+                    {
+                        <span class="text-muted small">Aucune certification obtenue pour le moment.</span>
+                    }
+                    else
+                    {
+                        @foreach (var certif in certifications.Take(4))
+                        {
+                            <span class="cert-chip"><i class="fas fa-medal text-warning"></i> @certif.Formation?.Titre</span>
+                        }
+                    }
                 </div>
             </div>
 

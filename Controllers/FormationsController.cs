@@ -45,6 +45,24 @@ namespace SIRH.EY.Controllers
             ViewBag.Catalogue = toutesFormations.Where(f => !formationsInscritesIds.Contains(f.Id)).ToList();
             ViewBag.ToutesFormations = toutesFormations;
             ViewBag.FormationsInscritesIds = formationsInscritesIds;
+            ViewBag.DepartementsFormation = toutesFormations
+                .Select(f => f.DepartementCible ?? f.Categorie)
+                .Where(v => !string.IsNullOrWhiteSpace(v))
+                .Distinct()
+                .OrderBy(v => v)
+                .ToList();
+            ViewBag.PostesFormation = toutesFormations
+                .Select(f => f.PosteCible)
+                .Where(v => !string.IsNullOrWhiteSpace(v))
+                .Distinct()
+                .OrderBy(v => v)
+                .ToList();
+            ViewBag.DomainesFormation = toutesFormations
+                .Select(f => f.DomaineCompetence ?? f.CompetenceVisee)
+                .Where(v => !string.IsNullOrWhiteSpace(v))
+                .Distinct()
+                .OrderBy(v => v)
+                .ToList();
 
             // Utilisation correcte du paramétrage (exemple)
             int delai = _parametreService.GetValue<int>("DELAI_VALIDATION_FORMATION", 5);
@@ -206,12 +224,13 @@ namespace SIRH.EY.Controllers
         // GET: Formations/Create
         public IActionResult Create()
         {
+            PrepareFormationViewData();
             return View();
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,Titre,Formateur,DureeHeures,CapaciteMax,PlacesPrises,Categorie,DateDebut,Organisme,CompetenceVisee")] Formation formation)
+        public async Task<IActionResult> Create([Bind("Id,Titre,Formateur,DureeHeures,CapaciteMax,PlacesPrises,Categorie,DateDebut,Organisme,CompetenceVisee,DepartementCible,MetierCible,PosteCible,DomaineCompetence,NiveauDifficulte,EstCertifiante")] Formation formation)
         {
             if (ModelState.IsValid)
             {
@@ -219,6 +238,7 @@ namespace SIRH.EY.Controllers
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
+            PrepareFormationViewData();
             return View(formation);
         }
 
@@ -228,12 +248,13 @@ namespace SIRH.EY.Controllers
             if (id == null) return NotFound();
             var formation = await _context.Formations.FindAsync(id);
             if (formation == null) return NotFound();
+            PrepareFormationViewData();
             return View(formation);
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,Titre,Formateur,DureeHeures,CapaciteMax,PlacesPrises,Categorie,DateDebut,Organisme,CompetenceVisee")] Formation formation)
+        public async Task<IActionResult> Edit(int id, [Bind("Id,Titre,Formateur,DureeHeures,CapaciteMax,PlacesPrises,Categorie,DateDebut,Organisme,CompetenceVisee,DepartementCible,MetierCible,PosteCible,DomaineCompetence,NiveauDifficulte,EstCertifiante")] Formation formation)
         {
             if (id != formation.Id) return NotFound();
             if (ModelState.IsValid)
@@ -250,6 +271,7 @@ namespace SIRH.EY.Controllers
                 }
                 return RedirectToAction(nameof(Index));
             }
+            PrepareFormationViewData();
             return View(formation);
         }
         [HttpPost]
@@ -335,6 +357,14 @@ public async Task<IActionResult> TerminerFormation(int inscriptionId)
         private bool FormationExists(int id)
         {
             return _context.Formations.Any(e => e.Id == id);
+        }
+
+        private void PrepareFormationViewData()
+        {
+            ViewBag.Departements = CompetenceCatalogService.Departements;
+            ViewBag.Postes = CompetenceCatalogService.Postes;
+            ViewBag.NiveauxDifficulte = new[] { "Fondamental", "Intermediaire", "Avance", "Expert" };
+            ViewBag.DomainesCompetence = new[] { "Audit", "Risk", "Leadership", "Management", "Data", "Platforms", "RH", "Consulting", "Compliance" };
         }
     }
 }
