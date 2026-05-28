@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using SIRH.EY.Data;
@@ -154,7 +154,7 @@ public async Task<IActionResult> Catalogue(int? collaborateurId)
     // Construire le modèle avec les secteurs EY
     var model = new CompetenceCatalogViewModel
     {
-        // CollaborateurId = collaborateurId,
+        CollaborateurId = collaborateur.Id,
         CollaborateurNom = $"{collaborateur.Prenom} {collaborateur.Nom}",
         Grade = collaborateur.Grade,
         Poste = collaborateur.Poste,

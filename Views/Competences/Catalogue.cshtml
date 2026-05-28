@@ -5,68 +5,138 @@
     var collaborateurId = Model.CollaborateurId;
 }
 
-<div class="container-fluid py-4">
+@section Styles {
+    <link rel="stylesheet" href="~/css/ey-formations-catalogue.css" asp-append-version="true" />
+    <style>
+        .competence-grid-card {
+            border-radius: 12px;
+            background: #ffffff;
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-top: 3px solid #ffd600;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+            transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease, border-color 0.25s ease;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 100%;
+        }
+
+        .competence-grid-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.05);
+            border-color: rgba(255, 214, 0, 0.4);
+        }
+
+        .competence-grid-card.card-acquired {
+            border-top-color: #12b981;
+            background-color: #fafdfb;
+        }
+
+        .competence-grid-card.card-selected-active {
+            border-top-color: #1a73e8;
+            background-color: #f7faff;
+        }
+        
+        .ey-custom-tabs {
+            border-bottom: 2px solid #e5e7eb;
+            gap: 4px;
+        }
+
+        .ey-custom-tabs .nav-link {
+            border: none;
+            background: transparent;
+            color: #6b7280;
+            font-weight: 600;
+            padding: 10px 20px;
+            font-size: 0.88rem;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s ease;
+        }
+
+        .ey-custom-tabs .nav-link:hover {
+            color: #111827;
+            border-bottom-color: rgba(255, 214, 0, 0.5);
+            background-color: rgba(255, 214, 0, 0.04);
+            border-radius: 8px 8px 0 0;
+        }
+
+        .ey-custom-tabs .nav-link.active {
+            color: #111827;
+            border-bottom-color: #ffd600;
+            background-color: transparent;
+        }
+    </style>
+}
+
+<div class="formations-container container-fluid py-4">
     <!-- En-tête -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
         <div>
-            <h1 class="h3 mb-1">
-                <i class="fas fa-layer-group me-2" style="color: #FFD600;"></i>
-                Catalogue des compétences EY
-            </h1>
-            <p class="text-muted mb-0">
-                Profil : <strong>@Model.CollaborateurNom</strong> 
+            <h2 class="fw-bold text-dark mb-1">
+                <i class="fas fa-layer-group me-2 text-warning"></i>
+                Catalogue des Compétences EY
+            </h2>
+            <p class="text-muted small mb-0">
+                <i class="far fa-user me-1"></i> Collaborateur : <strong class="text-dark">@Model.CollaborateurNom</strong> 
                 @if (!string.IsNullOrWhiteSpace(Model.Poste))
                 {
-                    <span>· @Model.Poste</span>
+                    <span>· <i class="fas fa-user-tie mx-1 text-muted"></i> @Model.Poste</span>
                 }
                 @if (!string.IsNullOrWhiteSpace(Model.Departement))
                 {
-                    <span>· @Model.Departement</span>
+                    <span>· <i class="far fa-building mx-1 text-muted"></i> @Model.Departement</span>
                 }
             </p>
         </div>
         <div>
-            <a asp-action="Index" asp-route-collaborateurId="@collaborateurId" class="btn btn-outline-secondary rounded-pill">
-                <i class="fas fa-arrow-left me-1"></i> Retour aux compétences
+            <a asp-action="Index" asp-route-collaborateurId="@collaborateurId" class="ey-btn-premium-ghost text-decoration-none">
+                <i class="fas fa-arrow-left me-1"></i> Retour au parcours
             </a>
         </div>
     </div>
 
-    <div class="card border-0 shadow-sm mb-3 competence-catalog-toolbar">
-        <div class="card-body">
-            <div class="row g-2 align-items-end">
-                <div class="col-lg-5">
-                    <label class="form-label small text-muted">Recherche</label>
-                    <input id="competenceCatalogSearch" class="form-control" placeholder="Rechercher une competence, categorie, poste cible..." />
+    <!-- Filters Dashboard Card -->
+    <div class="ey-premium-filter-card p-3 mb-4">
+        <h6 class="fw-bold text-dark mb-3"><i class="fas fa-search text-warning me-2"></i>Recherche dans le référentiel des compétences</h6>
+        <div class="row g-3 align-items-end">
+            <div class="col-lg-5 col-md-6">
+                <label class="form-label small">Recherche par mot-clé</label>
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
+                    <input id="competenceCatalogSearch" class="form-control border-start-0" placeholder="Rechercher une compétence, catégorie, poste ciblé..." />
                 </div>
-                <div class="col-lg-3">
-                    <label class="form-label small text-muted">Categorie</label>
-                    <select id="competenceCategoryFilter" class="form-select">
-                        <option value="">Toutes les categories</option>
-                        @foreach (var categorie in Model.Secteurs.SelectMany(s => s.Competences).Select(c => c.Categorie).Where(c => !string.IsNullOrWhiteSpace(c)).Distinct().OrderBy(c => c))
-                        {
-                            <option value="@categorie">@categorie</option>
-                        }
-                    </select>
-                </div>
-                <div class="col-lg-2">
-                    <label class="form-label small text-muted">Type</label>
-                    <select id="competenceTypeFilter" class="form-select">
-                        <option value="">Tous</option>
-                        <option value="Technique">Technique</option>
-                        <option value="Fonctionnel">Fonctionnel</option>
-                        <option value="Transverse">Transverse</option>
-                    </select>
-                </div>
-                <div class="col-lg-2">
-                    <button type="button" class="btn btn-dark w-100" id="resetCompetenceFilters"><i class="fas fa-undo me-1"></i>Reset</button>
-                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <label class="form-label small">Catégorie</label>
+                <select id="competenceCategoryFilter" class="form-select form-select-sm">
+                    <option value="">Toutes les catégories</option>
+                    @foreach (var categorie in Model.Secteurs.SelectMany(s => s.Competences).Select(c => c.Categorie).Where(c => !string.IsNullOrWhiteSpace(c)).Distinct().OrderBy(c => c))
+                    {
+                        <option value="@categorie">@categorie</option>
+                    }
+                </select>
+            </div>
+            <div class="col-lg-2 col-md-6">
+                <label class="form-label small">Type de compétence</label>
+                <select id="competenceTypeFilter" class="form-select form-select-sm">
+                    <option value="">Tous les types</option>
+                    <option value="Technique">Technique</option>
+                    <option value="Fonctionnel">Fonctionnel</option>
+                    <option value="Transverse">Transverse</option>
+                </select>
+            </div>
+            <div class="col-lg-2 col-md-6">
+                <button type="button" class="ey-btn-premium-ghost w-100 py-1" id="resetCompetenceFilters">
+                    <i class="fas fa-undo me-1"></i>Réinitialiser
+                </button>
             </div>
         </div>
     </div>
 
     <!-- Onglets par secteur EY -->
-    <ul class="nav nav-tabs ey-tabs" id="secteursTabs" role="tablist">
+    <ul class="nav nav-tabs ey-custom-tabs mb-3" id="secteursTabs" role="tablist">
         @foreach (var secteur in Model.Secteurs)
         {
             <li class="nav-item" role="presentation">
@@ -78,8 +148,8 @@
                         role="tab" 
                         aria-controls="@secteur.Id" 
                         aria-selected="@(secteur == Model.Secteurs.First() ? "true" : "false")">
-                    <i class="@secteur.IconClass me-2"></i>@secteur.Nom
-                    <span class="badge rounded-pill ms-2" style="background: #FFD600; color: #000; font-size: 0.7rem;">
+                    <i class="@secteur.IconClass me-1"></i>@secteur.Nom
+                    <span class="badge rounded-pill ms-2 bg-warning text-dark font-monospace" style="font-size: 0.65rem;">
                         @secteur.Competences.Count
                     </span>
                 </button>
@@ -98,80 +168,90 @@
                 
                 @if (secteur.Competences.Any())
                 {
-                    <div class="row g-3 py-3">
+                    <div class="row g-4 py-2">
                         @foreach (var comp in secteur.Competences)
                         {
-                            var badgeClass = comp.NiveauRequis >= 4 ? "bg-warning text-dark" : 
-                                           comp.NiveauRequis >= 3 ? "bg-primary" : "bg-secondary";
+                            var badgeClass = comp.NiveauRequis >= 4 ? "badge-mandatory" : 
+                                           comp.NiveauRequis >= 3 ? "badge-certified" : "badge-recommended";
                             var isSelected = Model.CompetencesSelectionneesIds.Contains(comp.Id) || comp.EstDejaAcquise;
-                            var cardClass = comp.EstDejaAcquise ? "border-success bg-light" : 
-                                          isSelected ? "border-primary bg-light" : "bg-white";
+                            var cardClass = comp.EstDejaAcquise ? "card-acquired" : 
+                                          isSelected ? "card-selected-active" : "";
                             
-                            <div class="col-md-6 col-lg-4 col-xl-3">
-                                <div class="card h-100 ey-competence-card @cardClass shadow-sm" style="border-radius: 12px; transition: all 0.2s ease;"
+                            <div class="col-md-6 col-lg-4 col-xl-3 d-flex">
+                                <div class="card competence-grid-card @cardClass p-3 w-100"
                                      data-search="@($"{comp.Nom} {comp.Categorie} {comp.PosteCible} {comp.TypeCompetence}")"
                                      data-category="@comp.Categorie"
                                      data-type="@comp.TypeCompetence">
-                                    <div class="card-body">
-                                        <!-- Checkbox pour sélection -->
-                                        <div class="form-check mb-2">
-                                            <input class="form-check-input competence-checkbox" 
-                                                   type="checkbox" 
-                                                   value="@comp.Id" 
-                                                   id="chk_@comp.Id"
-                                                   @(isSelected ? "checked" : "")
-                                                   @(comp.EstDejaAcquise ? "disabled" : "")
-                                                   data-nom="@comp.Nom"
-                                                   data-niveau="@comp.NiveauRequis">
-                                            <label class="form-check-label small" for="chk_@comp.Id">
+                                    
+                                    <div>
+                                        <!-- Selection checkbox / acquired status -->
+                                        <div class="form-check mb-2 ps-0 d-flex justify-content-between align-items-center">
+                                            <div>
                                                 @if (comp.EstDejaAcquise)
                                                 {
-                                                    <span class="text-success"><i class="fas fa-check-circle me-1"></i>Déjà acquise</span>
+                                                    <span class="text-success small fw-bold"><i class="fas fa-check-circle me-1"></i>Acquise</span>
                                                 }
-                                            </label>
+                                                else
+                                                {
+                                                    <div class="d-inline-flex align-items-center gap-2">
+                                                        <input class="form-check-input competence-checkbox ms-0" 
+                                                               type="checkbox" 
+                                                               value="@comp.Id" 
+                                                               id="chk_@comp.Id"
+                                                               @(isSelected ? "checked" : "")
+                                                               data-nom="@comp.Nom"
+                                                               data-niveau="@comp.NiveauRequis"
+                                                               style="cursor: pointer; width: 16px; height: 16px;">
+                                                        <label class="form-check-label small text-muted ms-1" style="cursor: pointer;" for="chk_@comp.Id">
+                                                            Sélectionner
+                                                        </label>
+                                                    </div>
+                                                }
+                                            </div>
                                         </div>
 
-                                        <!-- Nom de la compétence -->
-                                        <h6 class="fw-bold mb-2" style="font-size: 0.95rem; line-height: 1.3;">@comp.Nom</h6>
+                                        <!-- Skill details -->
+                                        <h6 class="fw-bold text-dark mb-3 mt-1" style="font-size: 0.95rem; line-height: 1.35;">@comp.Nom</h6>
 
-                                        <!-- Badge type de compétence -->
-                                        <div class="mb-2">
-                                            <span class="badge rounded-pill text-bg-light border" style="font-size: 0.7rem;">
+                                        <!-- Badges list -->
+                                        <div class="d-flex flex-wrap gap-1 mb-3">
+                                            <span class="ey-badge-pill bg-light text-dark border font-monospace" style="font-size: 0.65rem;">
                                                 @comp.TypeCompetence
                                             </span>
                                             @if (!string.IsNullOrWhiteSpace(comp.Categorie))
                                             {
-                                                <span class="badge border border-secondary text-secondary bg-transparent" style="font-size: 0.7rem;">
+                                                <span class="ey-badge-pill bg-light text-dark border font-monospace" style="font-size: 0.65rem;">
                                                     @comp.Categorie
                                                 </span>
                                             }
-                                            <span class="badge @badgeClass" style="font-size: 0.7rem;">
-                                                Niveau @(comp.NiveauRequis)/5
+                                            <span class="ey-badge-pill @badgeClass font-monospace" style="font-size: 0.65rem;">
+                                                Niveau requis : @comp.NiveauRequis/5
                                             </span>
                                         </div>
 
-                                        <!-- Poste cible -->
+                                        <!-- Target Role -->
                                         @if (!string.IsNullOrWhiteSpace(comp.PosteCible))
                                         {
-                                            <div class="small text-muted mb-2">
-                                                <i class="fas fa-bullseye me-1"></i>@comp.PosteCible
-                                            </div>
-                                        }
-
-                                        <!-- Niveau actuel si déjà acquise -->
-                                        @if (comp.EstDejaAcquise && comp.NiveauActuel.HasValue)
-                                        {
-                                            <div class="mt-2">
-                                                <div class="d-flex justify-content-between small mb-1">
-                                                    <span class="text-muted">Niveau actuel</span>
-                                                    <span class="fw-bold">@comp.NiveauActuel/5</span>
-                                                </div>
-                                                <div class="progress" style="height: 4px;">
-                                                    <div class="progress-bar bg-success" style="width: @((comp.NiveauActuel.Value / 5.0) * 100)%"></div>
-                                                </div>
+                                            <div class="small text-muted mb-2 d-flex align-items-center gap-1">
+                                                <i class="fas fa-bullseye text-warning" style="width: 14px;"></i>
+                                                <span>Cible : @comp.PosteCible</span>
                                             </div>
                                         }
                                     </div>
+
+                                    <!-- Current level if already acquired -->
+                                    @if (comp.EstDejaAcquise && comp.NiveauActuel.HasValue)
+                                    {
+                                        <div class="border-top pt-2 mt-2">
+                                            <div class="d-flex justify-content-between small mb-1">
+                                                <span class="text-muted">Niveau actuel du collaborateur</span>
+                                                <span class="fw-bold text-success">@comp.NiveauActuel/5</span>
+                                            </div>
+                                            <div class="progress" style="height: 5px; background-color: #e5e7eb;">
+                                                <div class="progress-bar bg-success" style="width: @((comp.NiveauActuel.Value / 5.0) * 100)%"></div>
+                                            </div>
+                                        </div>
+                                    }
                                 </div>
                             </div>
                         }
@@ -179,31 +259,33 @@
                 }
                 else
                 {
-                    <div class="alert alert-light border text-center py-4" style="border-radius: 12px;">
-                        <i class="fas fa-inbox fa-2x text-muted mb-2"></i>
-                        <p class="text-muted mb-0">Aucune compétence référencée pour ce secteur.</p>
+                    <div class="alert alert-light border text-center py-5 rounded-3">
+                        <i class="fas fa-folder-open fa-3x text-muted mb-3"></i>
+                        <h5 class="fw-bold text-dark">Aucune compétence référencée</h5>
+                        <p class="text-muted small">Aucune compétence n'est actuellement définie pour ce secteur d'activité EY.</p>
                     </div>
                 }
             </div>
         }
     </div>
 
-    <!-- Barre d'action -->
-    <div class="card mt-4 shadow-sm" style="border-radius: 12px;">
+    <!-- Action Drawer / Footer Toolbar -->
+    <div class="card mt-4 shadow-sm border border-light" style="border-radius: 12px; background: #ffffff;">
         <div class="card-body p-3">
-            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                <div>
-                    <span class="fw-bold" id="selectedCount">0</span> compétence(s) sélectionnée(s)
-                    <span class="text-muted small ms-2">
-                        (cochez les compétences à ajouter au profil)
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                <div class="text-dark">
+                    <i class="fas fa-check-double text-warning me-1"></i>
+                    <span class="fw-bold fs-5 text-dark" id="selectedCount">0</span> compétence(s) sélectionnée(s) à ajouter
+                    <span class="text-muted small ms-2 d-block d-sm-inline">
+                        (cochez les compétences ci-dessus pour compléter le profil)
                     </span>
                 </div>
                 <div class="d-flex gap-2">
-                    <button type="button" class="btn btn-outline-secondary rounded-pill" onclick="deselectAll()">
+                    <button type="button" class="ey-btn-premium-ghost py-2 px-3" onclick="deselectAll()">
                         <i class="fas fa-times me-1"></i> Tout déselectionner
                     </button>
-                    <button type="button" class="ey-btn-main rounded-pill" onclick="saveSelectedCompetences()">
-                        <i class="fas fa-save me-1"></i> Ajouter au profil
+                    <button type="button" class="ey-btn-premium-gold py-2 px-4" onclick="saveSelectedCompetences()">
+                        <i class="fas fa-save me-1"></i> Ajouter au profil du collaborateur
                     </button>
                 </div>
             </div>
@@ -211,73 +293,30 @@
     </div>
 </div>
 
-<style>
-    .ey-tabs .nav-link {
-        color: #495057;
-        font-weight: 500;
-        border: none;
-        border-bottom: 3px solid transparent;
-        padding: 0.75rem 1.25rem;
-        transition: all 0.2s ease;
-    }
-    
-    .ey-tabs .nav-link:hover {
-        color: #000;
-        border-bottom-color: #FFD600;
-        background: rgba(255, 214, 0, 0.05);
-    }
-    
-    .ey-tabs .nav-link.active {
-        color: #000;
-        border-bottom-color: #FFD600;
-        background: transparent;
-    }
-    
-    .ey-competence-card {
-        cursor: pointer;
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-    
-    .ey-competence-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
-    }
-    
-    .ey-competence-card input[type="checkbox"]:checked + label {
-        color: #FFD600;
-        font-weight: 600;
-    }
-
-    .competence-catalog-toolbar {
-        border-radius: 14px;
-        background: linear-gradient(135deg, #ffffff 0%, #fffdf0 100%);
-    }
-
-    .ey-competence-card {
-        border-top: 3px solid #FFD600;
-    }
-</style>
-
 <script>
-    // Compteur de compétences sélectionnées
+    // Selected checkboxes counter
     function updateSelectedCount() {
-        const checked = document.querySelectorAll('.competence-checkbox:checked:not(:disabled)').length;
+        const checked = document.querySelectorAll('.competence-checkbox:checked').length;
         document.getElementById('selectedCount').textContent = checked;
     }
 
-    // Déselectionner tout
+    // Deselect all checkboxes
     function deselectAll() {
-        document.querySelectorAll('.competence-checkbox:not(:disabled)').forEach(cb => {
+        document.querySelectorAll('.competence-checkbox').forEach(cb => {
             cb.checked = false;
+            const card = cb.closest('.competence-grid-card');
+            if (card) {
+                card.classList.remove('card-selected-active');
+            }
         });
         updateSelectedCount();
     }
 
-    // Sauvegarder les compétences sélectionnées
+    // Save selected skills
     async function saveSelectedCompetences() {
-        const selectedCheckboxes = document.querySelectorAll('.competence-checkbox:checked:not(:disabled)');
+        const selectedCheckboxes = document.querySelectorAll('.competence-checkbox:checked');
         if (selectedCheckboxes.length === 0) {
-            alert('Veuillez sélectionner au moins une compétence.');
+            alert('Veuillez sélectionner au moins une compétence dans le catalogue.');
             return;
         }
 
@@ -291,7 +330,7 @@
         });
 
         try {
-            const response = await fetch('@Url.Action("AjouterCompetencesCatalogue", "Competences")', {
+            const response = await fetch('/api/competences/ajouter-catalogue', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -306,27 +345,37 @@
             const result = await response.json();
             if (result.success) {
                 alert(`${result.count} compétence(s) ajoutée(s) avec succès.`);
-                // Rafraîchir la page ou rediriger
                 window.location.href = '@Url.Action("Index", "Competences", new { collaborateurId = collaborateurId })';
             } else {
-                alert('Erreur : ' + (result.message || 'Une erreur est survenue'));
+                alert('Erreur : ' + (result.message || 'Une erreur est survenue lors de l\'enregistrement.'));
             }
         } catch (error) {
             console.error('Error:', error);
-            alert('Une erreur est survenue lors de l\'ajout des compétences.');
+            alert('Une erreur réseau ou serveur est survenue lors de l\'ajout des compétences.');
         }
     }
 
-    // Initialiser le compteur
-    document.addEventListener('DOMContentLoaded', updateSelectedCount);
-    
-    // Écouter les changements de checkboxes
-    document.addEventListener('change', function(e) {
-        if (e.target.classList.contains('competence-checkbox')) {
-            updateSelectedCount();
-        }
+    // Initialize counter
+    document.addEventListener('DOMContentLoaded', () => {
+        updateSelectedCount();
+        
+        // Listen to checkboxes changes to add visual classes
+        document.querySelectorAll('.competence-checkbox').forEach(cb => {
+            cb.addEventListener('change', function() {
+                const card = this.closest('.competence-grid-card');
+                if (card) {
+                    if (this.checked) {
+                        card.classList.add('card-selected-active');
+                    } else {
+                        card.classList.remove('card-selected-active');
+                    }
+                }
+                updateSelectedCount();
+            });
+        });
     });
 
+    // Client-side Filters
     const searchInput = document.getElementById('competenceCatalogSearch');
     const categoryFilter = document.getElementById('competenceCategoryFilter');
     const typeFilter = document.getElementById('competenceTypeFilter');
@@ -337,16 +386,24 @@
         const category = categoryFilter?.value || '';
         const type = typeFilter?.value || '';
 
-        document.querySelectorAll('.ey-competence-card').forEach(card => {
+        document.querySelectorAll('.competence-grid-card').forEach(card => {
             const search = (card.dataset.search || '').toLowerCase();
             const matchesSearch = !q || search.includes(q);
             const matchesCategory = !category || card.dataset.category === category;
             const matchesType = !type || card.dataset.type === type;
-            card.closest('[class*="col-"]').style.display = matchesSearch && matchesCategory && matchesType ? '' : 'none';
+            
+            const col = card.closest('[class*="col-"]');
+            if (col) {
+                col.style.display = (matchesSearch && matchesCategory && matchesType) ? 'flex' : 'none';
+            }
         });
     }
 
-    [searchInput, categoryFilter, typeFilter].forEach(el => el?.addEventListener('input', applyCatalogFilters));
+    [searchInput, categoryFilter, typeFilter].forEach(el => {
+        el?.addEventListener('input', applyCatalogFilters);
+        el?.addEventListener('change', applyCatalogFilters);
+    });
+
     resetFilters?.addEventListener('click', function () {
         if (searchInput) searchInput.value = '';
         if (categoryFilter) categoryFilter.value = '';

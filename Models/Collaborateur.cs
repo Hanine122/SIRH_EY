@@ -33,6 +33,9 @@ public class Collaborateur
     public string? Departement { get; set; }
     public string? Poste { get; set; }
     public int? ManagerId { get; set; }
+    public int? DepartementId { get; set; }
+    public int? PosteId { get; set; }
+    public string? RoleRH { get; set; }
     public string? TypeContrat { get; set; }
     public string? Localisation { get; set; }
     public string? BusinessUnit { get; set; }

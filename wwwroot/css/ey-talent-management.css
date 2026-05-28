@@ -703,3 +703,419 @@
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
+
+/* ========================================
+   PREMIUM 9-BOX RH STRATEGIC MATRIX
+   ======================================== */
+.ey-nine-box-premium {
+    background:
+        radial-gradient(circle at top right, rgba(255, 230, 0, 0.12), transparent 32%),
+        linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    box-shadow: 0 18px 48px rgba(15, 23, 42, 0.08);
+}
+
+.ey-nine-box-premium .ey-nine-box-cell {
+    min-height: 360px;
+    padding: 1rem;
+    border-width: 1px;
+    border-style: solid;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+    overflow: hidden;
+}
+
+.ey-nine-box-premium .ey-nine-box-cell:hover {
+    transform: translateY(-2px);
+}
+
+.ey-nine-box-premium .ey-box-title {
+    font-size: 0.86rem;
+    color: #111827;
+}
+
+.ey-box-collaborateurs-rich {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+    max-height: 530px;
+    overflow-y: auto;
+    padding-right: 0.15rem;
+}
+
+.ey-nine-empty {
+    padding: 1rem;
+    border: 1px dashed #d8dee8;
+    border-radius: 10px;
+    color: #64748b;
+    background: rgba(255, 255, 255, 0.65);
+    font-size: 0.78rem;
+}
+
+.ey-nine-collab-card {
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid rgba(226, 232, 240, 0.95);
+    border-radius: 12px;
+    padding: 0.85rem;
+    cursor: pointer;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.06);
+}
+
+.ey-nine-collab-card:hover,
+.ey-nine-collab-card:focus {
+    transform: translateY(-3px);
+    border-color: #ffe600;
+    box-shadow: 0 16px 32px rgba(15, 23, 42, 0.12);
+    outline: none;
+}
+
+.ey-nine-collab-card.has-eval {
+    border-left: 4px solid #ffe600;
+}
+
+.ey-nine-collab-head {
+    display: flex;
+    gap: 0.65rem;
+    align-items: center;
+    margin-bottom: 0.7rem;
+}
+
+.ey-nine-collab-avatar,
+.ey-nine-panel-avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #ffe600 0%, #f8c600 100%);
+    color: #111827;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 0.82rem;
+    box-shadow: 0 10px 20px rgba(255, 230, 0, 0.22);
+}
+
+.ey-nine-collab-main {
+    min-width: 0;
+}
+
+.ey-nine-collab-main strong {
+    display: block;
+    font-size: 0.9rem;
+    color: #111827;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ey-nine-collab-main span {
+    display: block;
+    font-size: 0.72rem;
+    color: #64748b;
+    line-height: 1.25;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ey-nine-meta-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.35rem;
+    margin-bottom: 0.75rem;
+}
+
+.ey-nine-meta-grid span {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-width: 0;
+    padding: 0.35rem 0.45rem;
+    border-radius: 8px;
+    background: #f8fafc;
+    color: #475569;
+    font-size: 0.68rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ey-nine-meta-grid i {
+    color: #111827;
+    opacity: 0.72;
+}
+
+.ey-nine-score-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.45rem;
+    margin-bottom: 0.7rem;
+}
+
+.ey-nine-score-pill {
+    padding: 0.45rem;
+    border-radius: 10px;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    border: 1px solid #edf2f7;
+}
+
+.ey-nine-score-pill span {
+    display: block;
+    color: #64748b;
+    font-size: 0.62rem;
+    line-height: 1.1;
+}
+
+.ey-nine-score-pill strong {
+    display: block;
+    margin-top: 0.2rem;
+    color: #111827;
+    font-size: 0.78rem;
+    line-height: 1.15;
+}
+
+.ey-nine-badge-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-bottom: 0.75rem;
+}
+
+.ey-nine-badge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    padding: 0.25rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.66rem;
+    font-weight: 700;
+    border: 1px solid transparent;
+}
+
+.trend-up {
+    background: #ecfdf5;
+    color: #047857;
+    border-color: #a7f3d0;
+}
+
+.trend-down {
+    background: #fef2f2;
+    color: #b91c1c;
+    border-color: #fecaca;
+}
+
+.trend-neutral {
+    background: #f1f5f9;
+    color: #475569;
+    border-color: #e2e8f0;
+}
+
+.badge-promotion {
+    background: rgba(255, 230, 0, 0.22);
+    color: #6b5b00;
+    border-color: rgba(255, 230, 0, 0.85);
+}
+
+.badge-successor {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border-color: #bfdbfe;
+}
+
+.badge-gap {
+    background: #fff7ed;
+    color: #c2410c;
+    border-color: #fed7aa;
+}
+
+.ey-nine-action-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.35rem;
+}
+
+.ey-nine-action {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 30px;
+    padding: 0.3rem 0.45rem;
+    border-radius: 8px;
+    background: #111827;
+    color: #ffffff;
+    font-size: 0.66rem;
+    font-weight: 700;
+    text-decoration: none;
+    transition: background 0.18s ease, transform 0.18s ease;
+}
+
+.ey-nine-action:hover {
+    background: #2d3748;
+    color: #ffe600;
+    transform: translateY(-1px);
+}
+
+.ey-nine-detail-panel {
+    width: min(460px, 100vw) !important;
+    border: 0;
+    background: #f8fafc;
+    box-shadow: -28px 0 60px rgba(15, 23, 42, 0.16);
+}
+
+.ey-nine-detail-panel .offcanvas-header {
+    background: linear-gradient(135deg, #111827 0%, #1f2937 70%, #3b3b1d 100%);
+    color: #ffffff;
+    border-bottom: 3px solid #ffe600;
+}
+
+.ey-nine-panel-kicker {
+    display: block;
+    color: #ffe600;
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 0.2rem;
+}
+
+.ey-nine-panel-profile {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 1rem;
+    background: #ffffff;
+    border-radius: 14px;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+    margin-bottom: 1rem;
+}
+
+.ey-nine-panel-profile h3 {
+    margin: 0;
+    color: #111827;
+    font-size: 1.15rem;
+    font-weight: 800;
+}
+
+.ey-nine-panel-profile p {
+    margin: 0.2rem 0 0;
+    color: #64748b;
+    font-size: 0.85rem;
+}
+
+.ey-nine-panel-kpis {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.65rem;
+    margin-bottom: 1rem;
+}
+
+.ey-nine-panel-kpis div {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 0.8rem;
+    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.05);
+}
+
+.ey-nine-panel-kpis span {
+    display: block;
+    color: #64748b;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.ey-nine-panel-kpis strong {
+    display: block;
+    margin-top: 0.3rem;
+    color: #111827;
+    font-size: 1rem;
+    line-height: 1.15;
+}
+
+.ey-nine-panel-section {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 0.8rem;
+}
+
+.ey-nine-panel-section h6 {
+    margin: 0 0 0.5rem;
+    color: #111827;
+    font-size: 0.78rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.ey-nine-panel-section p {
+    margin: 0;
+    color: #475569;
+    font-size: 0.86rem;
+    line-height: 1.5;
+}
+
+.ey-nine-panel-facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.ey-nine-panel-facts span {
+    padding: 0.35rem 0.55rem;
+    border-radius: 999px;
+    background: #f1f5f9;
+    color: #334155;
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
+.ey-nine-panel-risk {
+    border-left: 4px solid #f59e0b;
+}
+
+.ey-nine-panel-reco {
+    border-left: 4px solid #ffe600;
+    background: linear-gradient(180deg, #ffffff 0%, #fffbea 100%);
+}
+
+.ey-nine-panel-actions {
+    position: sticky;
+    bottom: 0;
+    padding-top: 0.5rem;
+    background: linear-gradient(180deg, rgba(248, 250, 252, 0), #f8fafc 35%);
+}
+
+.ey-nine-panel-actions .ey-btn-talent {
+    width: 100%;
+    justify-content: center;
+}
+
+@media (max-width: 1200px) {
+    .ey-nine-box-premium .ey-nine-box-cell {
+        min-height: 300px;
+    }
+
+    .ey-nine-meta-grid,
+    .ey-nine-score-grid,
+    .ey-nine-action-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .ey-nine-box-premium .ey-nine-box-cell {
+        min-height: auto;
+    }
+
+    .ey-box-collaborateurs-rich {
+        max-height: none;
+    }
+
+    .ey-nine-panel-kpis {
+        grid-template-columns: 1fr;
+    }
+}

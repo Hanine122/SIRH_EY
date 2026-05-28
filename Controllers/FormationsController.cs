@@ -34,6 +34,15 @@ namespace SIRH.EY.Controllers
 
             ViewBag.CollaborateurId = collaborateurId;
 
+            var collaborateur = await _context.Collaborateurs
+                .FirstOrDefaultAsync(c => c.Id == collaborateurId);
+            ViewBag.Collaborateur = collaborateur;
+
+            var plans = await _context.PlansDeveloppement
+                .Where(p => p.CollaborateurId == collaborateurId)
+                .ToListAsync();
+            ViewBag.PlansDeveloppement = plans;
+
             var inscriptions = await _context.Inscriptions
                 .Include(i => i.Formation)
                 .Where(i => i.CollaborateurId == collaborateurId)

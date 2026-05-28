@@ -1,0 +1,350 @@
+/* Leaflet and premium styling for EY Learning & Formation Module */
+:root {
+    --ey-gold: #ffe600;
+    --ey-gold-hover: #ffd600;
+    --ey-charcoal: #1e1e1e;
+    --ey-black: #000000;
+    --ey-grey-light: #f8f9fa;
+    --ey-grey-medium: #e9ecef;
+    --ey-grey-text: #6c757d;
+    --ey-white: #ffffff;
+    --ey-border-color: rgba(0, 0, 0, 0.08);
+
+    /* Badge colors */
+    --badge-mandatory-bg: #fff0f0;
+    --badge-mandatory-text: #d9383a;
+    --badge-mandatory-border: #fdb8b9;
+
+    --badge-certified-bg: #ebf5ff;
+    --badge-certified-text: #1a73e8;
+    --badge-certified-border: #adcef9;
+
+    --badge-recommended-bg: #eafdf5;
+    --badge-recommended-text: #0d8a57;
+    --badge-recommended-border: #a6f4d0;
+
+    --badge-highdemand-bg: #fff8e1;
+    --badge-highdemand-text: #b78103;
+    --badge-highdemand-border: #fde397;
+
+    --badge-strategic-bg: #f3e8ff;
+    --badge-strategic-text: #7e22ce;
+    --badge-strategic-border: #d8b4fe;
+}
+
+/* Base resets & spacing inside container */
+.formations-container {
+    background-color: var(--ey-white);
+    color: var(--ey-charcoal);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+/* Premium Card System */
+.ey-premium-card {
+    background: var(--ey-white);
+    border: 1px solid var(--ey-border-color);
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease, border-color 0.3s ease;
+    overflow: hidden;
+    position: relative;
+    border-top: 3px solid var(--ey-gold);
+}
+
+.ey-premium-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.06);
+    border-color: rgba(255, 230, 0, 0.5);
+}
+
+/* Mes Formations Page Overrides */
+.mes-formations-hero {
+    border-radius: 16px;
+    background: linear-gradient(135deg, #1e1e1e 0%, #0d0d0d 100%) !important;
+    position: relative;
+    overflow: hidden;
+    color: var(--ey-white);
+}
+
+/* Badges System */
+.ey-badge-pill {
+    font-size: 0.72rem;
+    font-weight: 650;
+    padding: 4px 10px;
+    border-radius: 50px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border: 1px solid transparent;
+}
+
+.badge-mandatory {
+    background-color: var(--badge-mandatory-bg);
+    color: var(--badge-mandatory-text);
+    border-color: var(--badge-mandatory-border);
+}
+
+.badge-certified {
+    background-color: var(--badge-certified-bg);
+    color: var(--badge-certified-text);
+    border-color: var(--badge-certified-border);
+}
+
+.badge-recommended {
+    background-color: var(--badge-recommended-bg);
+    color: var(--badge-recommended-text);
+    border-color: var(--badge-recommended-border);
+}
+
+.badge-highdemand {
+    background-color: var(--badge-highdemand-bg);
+    color: var(--badge-highdemand-text);
+    border-color: var(--badge-highdemand-border);
+}
+
+.badge-strategic {
+    background-color: var(--badge-strategic-bg);
+    color: var(--badge-strategic-text);
+    border-color: var(--badge-strategic-border);
+}
+
+/* Card details grid */
+.ey-card-details-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px 12px;
+    font-size: 0.82rem;
+    color: #4b5563;
+    border-top: 1px dashed var(--ey-grey-medium);
+    border-bottom: 1px dashed var(--ey-grey-medium);
+    padding: 12px 0;
+    margin: 12px 0;
+}
+
+.ey-detail-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.ey-detail-item i {
+    color: #9ca3af;
+    width: 14px;
+    text-align: center;
+}
+
+/* Covered skills tags */
+.covered-skills-container {
+    margin: 8px 0;
+}
+
+.skill-tag {
+    display: inline-block;
+    background-color: #f3f4f6;
+    color: #374151;
+    font-size: 0.72rem;
+    font-weight: 500;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-right: 4px;
+    margin-bottom: 4px;
+    border: 1px solid #e5e7eb;
+}
+
+/* Post compatibility indicator */
+.compat-indicator-container {
+    background: #f9fafb;
+    border: 1px solid #f3f4f6;
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin-bottom: 12px;
+}
+
+.compat-progress-bar {
+    height: 6px;
+    background-color: #e5e7eb;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-top: 4px;
+}
+
+.compat-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #ffd600, #ffe600);
+    border-radius: 10px;
+}
+
+/* Premium Filter Dashboard Panel */
+.ey-premium-filter-card {
+    background-color: var(--ey-white);
+    border: 1px solid var(--ey-border-color);
+    border-radius: 14px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.02);
+}
+
+.ey-premium-filter-card label {
+    font-weight: 600;
+    color: var(--ey-charcoal);
+    margin-bottom: 4px;
+}
+
+.ey-premium-filter-card .form-control,
+.ey-premium-filter-card .form-select {
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 0.85rem;
+}
+
+.ey-premium-filter-card .form-control:focus,
+.ey-premium-filter-card .form-select:focus {
+    border-color: #d1bf00;
+    box-shadow: 0 0 0 3px rgba(255, 230, 0, 0.2);
+}
+
+/* Strategic Section Styles */
+.strategic-section-title {
+    font-size: 1.15rem;
+    font-weight: 750;
+    color: var(--ey-black);
+    position: relative;
+    padding-left: 12px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.strategic-section-title::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 15%;
+    height: 70%;
+    width: 4px;
+    background-color: var(--ey-gold);
+    border-radius: 20px;
+}
+
+.strategic-panel-card {
+    background: linear-gradient(135deg, #ffffff 0%, #fffdf0 100%);
+    border: 1px solid rgba(255, 230, 0, 0.15) !important;
+    border-radius: 12px;
+}
+
+/* Premium UI Buttons */
+.ey-btn-premium-main {
+    background-color: var(--ey-charcoal);
+    color: var(--ey-white);
+    border: 1px solid var(--ey-charcoal);
+    padding: 8px 16px;
+    font-weight: 600;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.ey-btn-premium-main:hover {
+    background-color: var(--ey-black);
+    border-color: var(--ey-black);
+    color: var(--ey-white);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.ey-btn-premium-ghost {
+    background-color: transparent;
+    color: var(--ey-charcoal);
+    border: 1px solid #d1d5db;
+    padding: 8px 16px;
+    font-weight: 600;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.ey-btn-premium-ghost:hover {
+    background-color: #f9fafb;
+    border-color: #9ca3af;
+    color: var(--ey-black);
+    transform: translateY(-1px);
+}
+
+.ey-btn-premium-gold {
+    background-color: var(--ey-gold);
+    color: var(--ey-charcoal);
+    border: 1px solid var(--ey-gold);
+    padding: 8px 16px;
+    font-weight: 650;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.ey-btn-premium-gold:hover {
+    background-color: var(--ey-gold-hover);
+    border-color: var(--ey-gold-hover);
+    color: var(--ey-charcoal);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(255, 230, 0, 0.25);
+}
+
+.ey-btn-premium-disabled {
+    background-color: #f3f4f6;
+    color: #9ca3af;
+    border: 1px solid #e5e7eb;
+    padding: 8px 16px;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: not-allowed;
+    width: 100%;
+}
+
+/* Micro-animations and skeletons */
+.lift-card-container {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Competence Catalogue specific premium elements */
+.competence-banner {
+    background: linear-gradient(135deg, #ffffff 0%, #fffdf4 100%);
+    border: 1px solid rgba(255, 214, 0, 0.2);
+    border-radius: 16px;
+}
+
+.ey-competence-tab-btn {
+    border: none;
+    background: transparent;
+    padding: 10px 16px;
+    font-weight: 600;
+    color: #4b5563;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.ey-competence-tab-btn:hover {
+    color: var(--ey-black);
+    border-bottom-color: rgba(255, 214, 0, 0.5);
+    background-color: rgba(255, 214, 0, 0.03);
+}
+
+.ey-competence-tab-btn.active {
+    color: var(--ey-black);
+    border-bottom-color: var(--ey-gold);
+}
+
+/* Responsive improvements */
+@media (max-width: 768px) {
+    .ey-card-details-grid {
+        grid-template-columns: 1fr;
+    }
+}

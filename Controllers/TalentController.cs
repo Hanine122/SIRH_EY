@@ -97,7 +97,8 @@ public class TalentController : Controller
     {
         var query = _context.Collaborateurs
             .Include(c => c.Competences)
-            .Include(c => c.Inscriptions)
+            .Include(c => c.Inscriptions!)
+                .ThenInclude(i => i.Formation)
             .Where(c => c.Actif)
             .AsQueryable();
 
@@ -152,7 +153,8 @@ public class TalentController : Controller
     {
         var collaborateur = await _context.Collaborateurs
             .Include(c => c.Competences)
-            .Include(c => c.Inscriptions)
+            .Include(c => c.Inscriptions!)
+                .ThenInclude(i => i.Formation)
             .FirstOrDefaultAsync(c => c.Id == id);
 
         if (collaborateur == null) return NotFound();
