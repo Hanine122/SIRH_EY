@@ -1,6 +1,8 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using SIRH.EY.Authorization;
 using SIRH.EY.Data;
 using SIRH.EY.Models;
 using SIRH.EY.Services;
@@ -75,28 +77,37 @@ public class CompetencesController : Controller
         }
     };
 
+    private readonly ITeamAccessService _teamAccess;
+    private readonly IOwnershipService _ownership;
+
     public CompetencesController(
         ApplicationDbContext context,
         IReferentielRhService referentielRhService,
-        IPlanDeveloppementService planDeveloppementService)
+        IPlanDeveloppementService planDeveloppementService,
+        ITeamAccessService teamAccess,
+        IOwnershipService ownership)
     {
         _context = context;
         _referentielRhService = referentielRhService;
         _planDeveloppementService = planDeveloppementService;
+        _teamAccess = teamAccess;
+        _ownership = ownership;
     }
 
-    // GET: Competences?collaborateurId=xx
     // GET: Competences?collaborateurId=xx
 public async Task<IActionResult> Index(int? collaborateurId, string categorie)
 {
     if (collaborateurId == null)
     {
-        ViewBag.Message = "Veuillez sÃ©lectionner un collaborateur.";
+        ViewBag.Message = "Veuillez sélectionner un collaborateur.";
         return View(new List<Competence>());
     }
 
     var collaborateur = await _context.Collaborateurs.FindAsync(collaborateurId);
     if (collaborateur == null) return NotFound();
+
+    if (!await _teamAccess.CanAccessCollaborateurAsync(User, collaborateurId.Value))
+        return Forbid();
 
     ViewBag.CollaborateurNom = collaborateur.Prenom + " " + collaborateur.Nom;
     ViewBag.CollaborateurId = collaborateurId;
@@ -137,12 +148,15 @@ ViewBag.PlanDeveloppement = plans;
 public async Task<IActionResult> Catalogue(int? collaborateurId)
 {
     if (collaborateurId == null) return NotFound();
-    
+
     var collaborateur = await _context.Collaborateurs
         .Include(c => c.Competences)
         .FirstOrDefaultAsync(c => c.Id == collaborateurId);
-    
+
     if (collaborateur == null) return NotFound();
+
+    if (!await _teamAccess.CanAccessCollaborateurAsync(User, collaborateurId.Value))
+        return Forbid();
 
     // Récupérer les compétences existantes du collaborateur
     var competencesExistantes = collaborateur.Competences?.ToList() ?? new List<Competence>();
@@ -209,6 +223,9 @@ public async Task<IActionResult> AjouterCompetencesCatalogue([FromBody] JsonElem
 
         var collaborateur = await _context.Collaborateurs.FindAsync(collaborateurId);
         if (collaborateur == null) return NotFound(new { success = false, message = "Collaborateur introuvable" });
+
+        if (!await _teamAccess.CanAccessCollaborateurAsync(User, collaborateurId))
+            return Forbid();
 
         if (!requestData.TryGetProperty("competences", out var competencesElem) || !competencesElem.EnumerateArray().Any())
             return BadRequest(new { success = false, message = "Aucune compétence sélectionnée" });
@@ -294,6 +311,7 @@ private string GetDefaultCategorie(string competenceNom)
     return "Métier";
 }
 
+[Authorize(Roles = Roles.ITAdminOrRHOrManager)]
 public async Task<IActionResult> MatriceEquipe(int? collaborateurId)
 {
     // Si un collaborateur est passÃ©, on prend son dÃ©partement
@@ -325,6 +343,7 @@ public async Task<IActionResult> MatriceEquipe(int? collaborateurId)
 }
 
     // GET: Competences/Evaluate/5
+    [Authorize(Roles = Roles.ITAdminOrRH)]
     public async Task<IActionResult> Evaluate(int id)
     {
         var competence = await _context.Competences.FindAsync(id);
@@ -334,6 +353,7 @@ public async Task<IActionResult> MatriceEquipe(int? collaborateurId)
 
     // POST: Competences/Evaluate
     [HttpPost]
+    [Authorize(Roles = Roles.ITAdminOrRH)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Evaluate(int id, int nouveauNiveau, DateTime dateEvaluation)
     {
@@ -354,6 +374,10 @@ public async Task<IActionResult> MatriceEquipe(int? collaborateurId)
             .Include(c => c.EvaluationCompetence)
             .FirstOrDefaultAsync(c => c.Id == id);
         if (competence == null) return NotFound();
+
+        // Only the competence owner (or RH/ITAdmin) may self-evaluate
+        if (!await _ownership.OwnsCompetenceAsync(User, id))
+            return Forbid();
 
         var evaluation = competence.EvaluationCompetence;
         var seuilRh = evaluation?.SeuilRh ?? await GetSeuilRhAsync(competence);
@@ -386,6 +410,9 @@ public async Task<IActionResult> MatriceEquipe(int? collaborateurId)
             .Include(c => c.EvaluationCompetence)
             .FirstOrDefaultAsync(c => c.Id == vm.CompetenceId);
         if (competence == null) return NotFound();
+
+        if (!await _ownership.OwnsCompetenceAsync(User, vm.CompetenceId))
+            return Forbid();
 
         if (!ModelState.IsValid)
         {
@@ -426,6 +453,7 @@ public async Task<IActionResult> MatriceEquipe(int? collaborateurId)
     }
 
     // GET: Competences/ValidationManager/5
+    [Authorize(Roles = Roles.ITAdminOrRHOrManager)]
     public async Task<IActionResult> ValidationManager(int id)
     {
         var competence = await _context.Competences
@@ -433,6 +461,10 @@ public async Task<IActionResult> MatriceEquipe(int? collaborateurId)
             .Include(c => c.EvaluationCompetence)
             .FirstOrDefaultAsync(c => c.Id == id);
         if (competence == null) return NotFound();
+
+        // Manager scope: can only validate for direct reports
+        if (!await _ownership.OwnsCompetenceAsync(User, id))
+            return Forbid();
 
         var evaluation = competence.EvaluationCompetence;
         if (evaluation == null)
@@ -462,6 +494,7 @@ public async Task<IActionResult> MatriceEquipe(int? collaborateurId)
 
     // POST: Competences/ValidationManager
     [HttpPost]
+    [Authorize(Roles = Roles.ITAdminOrRHOrManager)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ValidationManager(ValidationManagerCompetenceViewModel vm)
     {
@@ -469,6 +502,9 @@ public async Task<IActionResult> MatriceEquipe(int? collaborateurId)
             .Include(c => c.EvaluationCompetence)
             .FirstOrDefaultAsync(c => c.Id == vm.CompetenceId);
         if (competence == null) return NotFound();
+
+        if (!await _ownership.OwnsCompetenceAsync(User, vm.CompetenceId))
+            return Forbid();
         if (competence.EvaluationCompetence == null)
         {
             TempData["Error"] = "Aucune auto-Ã©valuation Ã  valider.";
@@ -498,6 +534,9 @@ public async Task<IActionResult> MatriceEquipe(int? collaborateurId)
 
 public async Task<IActionResult> Explorer(int collaborateurId)
 {
+    if (!await _teamAccess.CanAccessCollaborateurAsync(User, collaborateurId))
+        return Forbid();
+
     var competences = await _context.Competences
         .Where(c => c.CollaborateurId == collaborateurId)
         .ToListAsync();
@@ -516,6 +555,7 @@ public async Task<IActionResult> PlanifierExamen(int inscriptionId, DateTime dat
 }
 
     [HttpPost]
+    [Authorize(Roles = Roles.ITAdminOrRH)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> GenererPlanDeveloppement(int collaborateurId, string? returnUrl = null)
     {
@@ -548,6 +588,7 @@ public async Task<IActionResult> PlanifierExamen(int inscriptionId, DateTime dat
     }
 
     // GET: Competences/Create
+    [Authorize(Roles = Roles.ITAdminOrRH)]
     public async Task<IActionResult> Create(int? collaborateurId)
     {
         if (collaborateurId == null)
@@ -573,8 +614,9 @@ public async Task<IActionResult> PlanifierExamen(int inscriptionId, DateTime dat
 
     // POST: Competences/Create
     [HttpPost]
-[ValidateAntiForgeryToken]
-public async Task<IActionResult> Create([Bind("Id,Nom,CategorieCompetenceId,NiveauActuel,DateEvaluation,CollaborateurId")] Competence competence, List<string> selectedCompetences, string? selectedGrade)
+    [Authorize(Roles = Roles.ITAdminOrRH)]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Create([Bind("Id,Nom,CategorieCompetenceId,NiveauActuel,DateEvaluation,CollaborateurId")] Competence competence, List<string> selectedCompetences, string? selectedGrade)
 {
     var collaborateur = await _context.Collaborateurs.FindAsync(competence.CollaborateurId);
     var grade = !string.IsNullOrWhiteSpace(selectedGrade) ? selectedGrade : collaborateur?.Grade;
@@ -612,6 +654,7 @@ public async Task<IActionResult> Create([Bind("Id,Nom,CategorieCompetenceId,Nive
     return View(competence);
 }
     // GET: Competences/Edit/5
+    [Authorize(Roles = Roles.ITAdminOrRH)]
     public async Task<IActionResult> Edit(int? id)
     {
         if (id == null) return NotFound();
@@ -626,6 +669,7 @@ public async Task<IActionResult> Create([Bind("Id,Nom,CategorieCompetenceId,Nive
 
     // POST: Competences/Edit/5
     [HttpPost]
+    [Authorize(Roles = Roles.ITAdminOrRH)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(int id, [Bind("Id,Nom,CategorieCompetenceId,NiveauActuel,NiveauCible,DateEvaluation,CollaborateurId")] Competence competence)
     {
@@ -650,6 +694,7 @@ public async Task<IActionResult> Create([Bind("Id,Nom,CategorieCompetenceId,Nive
     }
 
     // GET: Competences/Delete/5
+    [Authorize(Roles = Roles.ITAdminOrRH)]
     public async Task<IActionResult> Delete(int? id)
     {
         if (id == null) return NotFound();
@@ -663,6 +708,7 @@ public async Task<IActionResult> Create([Bind("Id,Nom,CategorieCompetenceId,Nive
 
     // POST: Competences/Delete/5
     [HttpPost, ActionName("Delete")]
+    [Authorize(Roles = Roles.ITAdminOrRH)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteConfirmed(int id)
     {

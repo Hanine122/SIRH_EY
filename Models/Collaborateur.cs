@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SIRH.EY.Models;
 
@@ -29,16 +30,45 @@ public class Collaborateur
     public string? ContactUrgence { get; set; }
 
     public string? Matricule { get; set; }
+
+    // ── Legacy string fields (kept for backward-compat with existing views) ──
     public string? Grade { get; set; }
     public string? Departement { get; set; }
     public string? Poste { get; set; }
+    public string? BusinessUnit { get; set; }
+    public string? Localisation { get; set; }
+
+    // ── Self-referential manager ──
     public int? ManagerId { get; set; }
-    public int? DepartementId { get; set; }
-    public int? PosteId { get; set; }
+
+    // ── HR Master Data foreign keys ──
+    [Display(Name = "Département")]
+    public int? DepartmentId { get; set; }
+    public Department? DepartmentRef { get; set; }
+
+    [Display(Name = "Sous-département")]
+    public int? SubDepartmentId { get; set; }
+    public SubDepartment? SubDepartmentRef { get; set; }
+
+    [Display(Name = "Poste (référentiel)")]
+    public int? PositionId { get; set; }
+    public Position? PositionRef { get; set; }
+
+    [Display(Name = "Grade (référentiel)")]
+    public int? GradeId { get; set; }
+    public GradeEntity? GradeRef { get; set; }
+
+    [Display(Name = "Business Unit")]
+    public int? BusinessUnitId { get; set; }
+    public BusinessUnitEntity? BusinessUnitRef { get; set; }
+
+    [Display(Name = "Localisation")]
+    public int? LocationId { get; set; }
+    public LocationEntity? LocationRef { get; set; }
+
+    // ── Other HR fields ──
     public string? RoleRH { get; set; }
     public string? TypeContrat { get; set; }
-    public string? Localisation { get; set; }
-    public string? BusinessUnit { get; set; }
     public string? NiveauHierarchique { get; set; }
     public DateTime? DatePrisePoste { get; set; }
     public string? FormationsObligatoires { get; set; }

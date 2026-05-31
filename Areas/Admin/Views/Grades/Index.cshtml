@@ -1,0 +1,54 @@
+@model IEnumerable<SIRH.EY.Models.GradeEntity>
+@{
+    ViewData["Title"] = "Grades";
+}
+
+<div class="d-flex justify-content-between align-items-start mb-4">
+    <div>
+        <div class="ey-page-kicker">Référentiel RH</div>
+        <h1 class="ey-page-title">Grades</h1>
+        <p class="ey-page-lead mb-0">@Model.Count() grade(s) défini(s).</p>
+    </div>
+    <a asp-action="Create" class="ey-btn-main text-decoration-none"><i class="fas fa-plus me-1"></i> Nouveau</a>
+</div>
+
+@if (TempData["Success"] != null) { <div class="alert alert-success alert-dismissible fade show"><i class="fas fa-check-circle me-1"></i>@TempData["Success"]<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div> }
+@if (TempData["Error"] != null) { <div class="alert alert-danger alert-dismissible fade show"><i class="fas fa-exclamation-triangle me-1"></i>@TempData["Error"]<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div> }
+
+<div class="ey-card">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Niveau</th>
+                    <th>Grade</th>
+                    <th>Description</th>
+                    <th>Statut</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var g in Model)
+                {
+                    <tr>
+                        <td><span class="badge bg-warning bg-opacity-10 text-warning fw-bold">N@g.Level</span></td>
+                        <td class="fw-semibold">@g.Name</td>
+                        <td class="text-muted small">@(g.Description ?? "—")</td>
+                        <td>
+                            @if (g.IsActive) { <span class="badge bg-success bg-opacity-10 text-success">Actif</span> }
+                            else { <span class="badge bg-secondary bg-opacity-10 text-secondary">Inactif</span> }
+                        </td>
+                        <td class="text-end">
+                            <a asp-action="Edit" asp-route-id="@g.Id" class="btn btn-sm btn-outline-secondary me-1"><i class="fas fa-pen"></i></a>
+                            <form asp-action="Delete" asp-route-id="@g.Id" method="post" class="d-inline" onsubmit="return confirm('Supprimer le grade « @g.Name » ?')">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+                @if (!Model.Any()) { <tr><td colspan="5" class="text-center text-muted py-4"><i class="fas fa-inbox fa-2x mb-2 d-block opacity-25"></i>Aucun grade trouvé.</td></tr> }
+            </tbody>
+        </table>
+    </div>
+</div>

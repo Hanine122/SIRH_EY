@@ -1,11 +1,14 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using SIRH.EY.Authorization;
 using SIRH.EY.Data;
 using SIRH.EY.Models;
 using System.Linq;
 
 namespace SIRH.EY.Controllers;
 
+[Authorize(Roles = Roles.ITAdminOrRH)]
 public class ReportingController : Controller
 {
     private readonly ApplicationDbContext _context;

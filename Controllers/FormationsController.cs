@@ -2,9 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using SIRH.EY.Authorization;
 using SIRH.EY.Data;
 using SIRH.EY.Models;
 using SIRH.EY.Services;
@@ -15,11 +17,19 @@ namespace SIRH.EY.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly IParametreService _parametreService;
+        private readonly ITeamAccessService _teamAccess;
+        private readonly IOwnershipService _ownership;
 
-       public FormationsController(ApplicationDbContext context, IParametreService parametreService)
+        public FormationsController(
+            ApplicationDbContext context,
+            IParametreService parametreService,
+            ITeamAccessService teamAccess,
+            IOwnershipService ownership)
         {
             _context = context;
             _parametreService = parametreService;
+            _teamAccess = teamAccess;
+            _ownership = ownership;
         }
 
         // GET: Formations (version simplifiée : catalogue complet)
@@ -27,10 +37,18 @@ namespace SIRH.EY.Controllers
         {
             if (collaborateurId == null)
             {
-                var premier = await _context.Collaborateurs.FirstOrDefaultAsync();
-                if (premier == null) return RedirectToAction("Create", "Collaborateurs");
-                collaborateurId = premier.Id;
+                // Default to the current user's own profile
+                collaborateurId = await _teamAccess.GetCurrentCollaborateurIdAsync(User);
+                if (collaborateurId == null)
+                {
+                    var premier = await _context.Collaborateurs.FirstOrDefaultAsync();
+                    if (premier == null) return RedirectToAction("Create", "Collaborateurs");
+                    collaborateurId = premier.Id;
+                }
             }
+
+            if (!await _teamAccess.CanAccessCollaborateurAsync(User, collaborateurId.Value))
+                return Forbid();
 
             ViewBag.CollaborateurId = collaborateurId;
 
@@ -88,6 +106,9 @@ namespace SIRH.EY.Controllers
         // Télécharger le certificat PDF (formation terminée uniquement)
         public async Task<IActionResult> TelechargerCertificat(int inscriptionId)
         {
+            if (!await _ownership.OwnsInscriptionAsync(User, inscriptionId))
+                return Forbid();
+
             var inscription = await _context.Inscriptions
                 .Include(i => i.Formation)
                 .Include(i => i.Collaborateur)
@@ -117,6 +138,9 @@ namespace SIRH.EY.Controllers
         // Reprendre / démarrer : espace module (prototype)
         public async Task<IActionResult> ReprendreFormation(int inscriptionId)
         {
+            if (!await _ownership.OwnsInscriptionAsync(User, inscriptionId))
+                return Forbid();
+
             var inscription = await _context.Inscriptions
                 .Include(i => i.Formation)
                 .Include(i => i.Collaborateur)
@@ -131,6 +155,9 @@ namespace SIRH.EY.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> AvancerModule(int inscriptionId, int deltaPourcent = 20)
         {
+            if (!await _ownership.OwnsInscriptionAsync(User, inscriptionId))
+                return Forbid();
+
             var inscription = await _context.Inscriptions
                 .Include(i => i.Formation)
                 .FirstOrDefaultAsync(i => i.Id == inscriptionId);
@@ -149,6 +176,9 @@ namespace SIRH.EY.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> PlanifierExamen(int inscriptionId, DateTime dateExamen, string? lieu = null, string? commentaire = null)
         {
+            if (!await _ownership.OwnsInscriptionAsync(User, inscriptionId))
+                return Forbid();
+
             var inscription = await _context.Inscriptions
                 .Include(i => i.Formation)
                 .FirstOrDefaultAsync(i => i.Id == inscriptionId);
@@ -186,6 +216,8 @@ namespace SIRH.EY.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Inscrire(int formationId, int collaborateurId)
         {
+            if (!await _teamAccess.CanAccessCollaborateurAsync(User, collaborateurId))
+                return Forbid();
             var formation = await _context.Formations.FindAsync(formationId);
             if (formation != null && formation.PlacesPrises < formation.CapaciteMax)
             {
@@ -213,6 +245,9 @@ namespace SIRH.EY.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> AnnulerInscription(int inscriptionId)
         {
+            if (!await _ownership.OwnsInscriptionAsync(User, inscriptionId))
+                return Forbid();
+
             var inscription = await _context.Inscriptions
                 .Include(i => i.Formation)
                 .FirstOrDefaultAsync(i => i.Id == inscriptionId);
@@ -231,6 +266,7 @@ namespace SIRH.EY.Controllers
         }
 
         // GET: Formations/Create
+        [Authorize(Roles = Roles.ITAdminOrRH)]
         public IActionResult Create()
         {
             PrepareFormationViewData();
@@ -238,6 +274,7 @@ namespace SIRH.EY.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = Roles.ITAdminOrRH)]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("Id,Titre,Formateur,DureeHeures,CapaciteMax,PlacesPrises,Categorie,DateDebut,Organisme,CompetenceVisee,DepartementCible,MetierCible,PosteCible,DomaineCompetence,NiveauDifficulte,EstCertifiante")] Formation formation)
         {
@@ -252,6 +289,7 @@ namespace SIRH.EY.Controllers
         }
 
         // GET: Formations/Edit/5
+        [Authorize(Roles = Roles.ITAdminOrRH)]
         public async Task<IActionResult> Edit(int? id)
         {
             if (id == null) return NotFound();
@@ -262,6 +300,7 @@ namespace SIRH.EY.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = Roles.ITAdminOrRH)]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, [Bind("Id,Titre,Formateur,DureeHeures,CapaciteMax,PlacesPrises,Categorie,DateDebut,Organisme,CompetenceVisee,DepartementCible,MetierCible,PosteCible,DomaineCompetence,NiveauDifficulte,EstCertifiante")] Formation formation)
         {
@@ -284,8 +323,9 @@ namespace SIRH.EY.Controllers
             return View(formation);
         }
         [HttpPost]
-[ValidateAntiForgeryToken]
-public async Task<IActionResult> TerminerFormation(int inscriptionId)
+        [Authorize(Roles = Roles.ITAdminOrRH)]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> TerminerFormation(int inscriptionId)
 {
     var inscription = await _context.Inscriptions
         .Include(i => i.Formation)
@@ -345,6 +385,7 @@ public async Task<IActionResult> TerminerFormation(int inscriptionId)
     return RedirectToAction(nameof(Index), new { collaborateurId = inscription.CollaborateurId });
 }
         // GET: Formations/Delete/5
+        [Authorize(Roles = Roles.ITAdminOrRH)]
         public async Task<IActionResult> Delete(int? id)
         {
             if (id == null) return NotFound();
@@ -354,6 +395,7 @@ public async Task<IActionResult> TerminerFormation(int inscriptionId)
         }
 
         [HttpPost, ActionName("Delete")]
+        [Authorize(Roles = Roles.ITAdminOrRH)]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {

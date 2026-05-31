@@ -1,5 +1,7 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using SIRH.EY.Authorization;
 using SIRH.EY.Data;
 using SIRH.EY.Models;
 using SIRH.EY.Models.InsightsAI;
@@ -11,9 +13,7 @@ using System.Threading.Tasks;
 
 namespace SIRH.EY.Controllers;
 
-/// <summary>
-/// Controleur pour le module RH Insights - tour de controle proactive des risques RH.
-/// </summary>
+[Authorize(Roles = Roles.ITAdminOrRH)]
 public class RhInsightsController : Controller
 {
     private readonly ApplicationDbContext _context;

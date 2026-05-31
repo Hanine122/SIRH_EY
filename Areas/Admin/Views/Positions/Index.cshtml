@@ -1,0 +1,63 @@
+@model IEnumerable<SIRH.EY.Models.Position>
+@{
+    ViewData["Title"] = "Postes";
+}
+
+<div class="d-flex justify-content-between align-items-start mb-4">
+    <div>
+        <div class="ey-page-kicker">Référentiel RH</div>
+        <h1 class="ey-page-title">Postes</h1>
+        <p class="ey-page-lead mb-0">@Model.Count() poste(s) enregistré(s).</p>
+    </div>
+    <a asp-action="Create" class="ey-btn-main text-decoration-none"><i class="fas fa-plus me-1"></i> Nouveau</a>
+</div>
+
+@if (TempData["Success"] != null) { <div class="alert alert-success alert-dismissible fade show"><i class="fas fa-check-circle me-1"></i>@TempData["Success"]<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div> }
+@if (TempData["Error"] != null) { <div class="alert alert-danger alert-dismissible fade show"><i class="fas fa-exclamation-triangle me-1"></i>@TempData["Error"]<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div> }
+
+<div class="ey-card p-3 mb-3">
+    <form method="get" class="row g-2">
+        <div class="col-md-5"><input name="search" class="form-control" placeholder="Rechercher par titre..." value="@ViewBag.Search" /></div>
+        <div class="col-md-2"><button type="submit" class="btn btn-outline-secondary w-100"><i class="fas fa-search me-1"></i>Filtrer</button></div>
+    </form>
+</div>
+
+<div class="ey-card">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Titre du poste</th>
+                    <th>Code</th>
+                    <th>Sous-département</th>
+                    <th>Département</th>
+                    <th>Statut</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var p in Model)
+                {
+                    <tr>
+                        <td class="fw-semibold">@p.Name</td>
+                        <td><code class="text-muted">@(p.Code ?? "—")</code></td>
+                        <td class="text-muted small">@(p.SubDepartment?.Name ?? "—")</td>
+                        <td class="text-muted small">@(p.SubDepartment?.Department?.Name ?? "—")</td>
+                        <td>
+                            @if (p.IsActive) { <span class="badge bg-success bg-opacity-10 text-success">Actif</span> }
+                            else { <span class="badge bg-secondary bg-opacity-10 text-secondary">Inactif</span> }
+                        </td>
+                        <td class="text-end">
+                            <a asp-action="Edit" asp-route-id="@p.Id" class="btn btn-sm btn-outline-secondary me-1"><i class="fas fa-pen"></i></a>
+                            <form asp-action="Delete" asp-route-id="@p.Id" method="post" class="d-inline" onsubmit="return confirm('Supprimer « @p.Name » ?')">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+                @if (!Model.Any()) { <tr><td colspan="6" class="text-center text-muted py-4"><i class="fas fa-inbox fa-2x mb-2 d-block opacity-25"></i>Aucun poste trouvé.</td></tr> }
+            </tbody>
+        </table>
+    </div>
+</div>

@@ -1,20 +1,13 @@
-using Microsoft.AspNetCore.Mvc;
-
-using Microsoft.EntityFrameworkCore;
-
-using SIRH.EY.Data;
-
-using SIRH.EY.Models;
-
-using SIRH.EY.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
-
-using System;
-
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using SIRH.EY.Authorization;
+using SIRH.EY.Data;
+using SIRH.EY.Models;
+using SIRH.EY.Services;
 using System.Collections.Generic;
-
 using System.Linq;
-
 using System.Threading.Tasks;
 
 
@@ -36,15 +29,18 @@ public class CollaborateursController : Controller
     private readonly ApplicationDbContext _context;
     private readonly FlowiseService _flowiseService;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly ITeamAccessService _teamAccess;
 
     public CollaborateursController(
         ApplicationDbContext context,
         FlowiseService flowiseService,
-        UserManager<ApplicationUser> userManager)
+        UserManager<ApplicationUser> userManager,
+        ITeamAccessService teamAccess)
     {
         _context = context;
         _flowiseService = flowiseService;
         _userManager = userManager;
+        _teamAccess = teamAccess;
     }
 
     // public CollaborateursController(ApplicationDbContext context, FlowiseService flowiseService)
@@ -125,38 +121,12 @@ public async Task<IActionResult> AskIA([FromBody] RecommendationRequest request)
     ViewBag.DepartementFilter = departement;
 
     var user = await _userManager.GetUserAsync(User);
-
     if (user == null)
-    {
         return RedirectToAction("Login", "Account");
-    }
 
+    // Service applies role-aware data scope (ITAdmin/RH=all, Manager=team, Collaborateur=self)
     IQueryable<Collaborateur> collaborateurs =
-        _context.Collaborateurs;
-
-    if (User.IsInRole("Collaborateur"))
-    {
-        var collab = await _context.Collaborateurs
-            .FirstOrDefaultAsync(c => c.UserId == user.Id);
-
-        if (collab != null)
-        {
-            collaborateurs = collaborateurs
-                .Where(c => c.Id == collab.Id);
-        }
-    }
-
-    else if (User.IsInRole("Manager"))
-    {
-        var manager = await _context.Collaborateurs
-            .FirstOrDefaultAsync(c => c.UserId == user.Id);
-
-        if (manager != null)
-        {
-            collaborateurs = collaborateurs
-                .Where(c => c.ManagerId == manager.Id);
-        }
-    }
+        await _teamAccess.ApplyAccessFilterAsync(User, _context.Collaborateurs);
 
     // =========================
     // FILTRES
@@ -206,6 +176,7 @@ public async Task<IActionResult> AskIA([FromBody] RecommendationRequest request)
 
     // GET: Collaborateurs/ChoisirRemplacant/
 
+    [Authorize(Roles = Roles.ITAdminOrRH)]
     public async Task<IActionResult> ChoisirRemplacant(int id)
 
     {
@@ -418,6 +389,9 @@ public async Task<IActionResult> AskIA([FromBody] RecommendationRequest request)
 
         if (collaborateur == null) return NotFound();
 
+        if (!await _teamAccess.CanAccessCollaborateurAsync(User, id.Value))
+            return Forbid();
+
 
 
         ViewBag.Competences = await _context.Competences.Where(c => c.CollaborateurId == id).ToListAsync();
@@ -438,6 +412,7 @@ public async Task<IActionResult> AskIA([FromBody] RecommendationRequest request)
 
     // GET: Collaborateurs/Create
 
+    [Authorize(Roles = Roles.ITAdminOrRH)]
     public IActionResult Create()
 
     {
@@ -468,7 +443,7 @@ public async Task<IActionResult> AskIA([FromBody] RecommendationRequest request)
 
 
     [HttpPost]
-
+    [Authorize(Roles = Roles.ITAdminOrRH)]
     [ValidateAntiForgeryToken]
 
     public async Task<IActionResult> Create([Bind("Id,Nom,Prenom,Email,DateNaissance,Genre,Nationalite,EtatCivil,Adresse,Ville,Pays,TelephonePersonnel,ContactUrgence,Matricule,Departement,Grade,Poste,ManagerId,TypeContrat,Statut,Localisation,BusinessUnit,NiveauHierarchique,DateEmbauche,DatePrisePoste,FormationsObligatoires,NiveauPreparationSuccession,PotentielCarriere,Actif")] Collaborateur collaborateur)
@@ -512,6 +487,7 @@ public async Task<IActionResult> AskIA([FromBody] RecommendationRequest request)
 
     // GET: Collaborateurs/Edit/5
 
+    [Authorize(Roles = Roles.ITAdminOrRH)]
     public async Task<IActionResult> Edit(int? id)
 
     {
@@ -544,7 +520,7 @@ public async Task<IActionResult> AskIA([FromBody] RecommendationRequest request)
 
 
     [HttpPost]
-
+    [Authorize(Roles = Roles.ITAdminOrRH)]
     [ValidateAntiForgeryToken]
 
     public async Task<IActionResult> Edit(int id, [Bind("Id,Nom,Prenom,Email,DateNaissance,Genre,Nationalite,EtatCivil,Adresse,Ville,Pays,TelephonePersonnel,ContactUrgence,Matricule,Departement,Grade,Poste,ManagerId,TypeContrat,Statut,Localisation,BusinessUnit,NiveauHierarchique,DateEmbauche,DatePrisePoste,FormationsObligatoires,NiveauPreparationSuccession,PotentielCarriere,Actif")] Collaborateur collaborateur)
@@ -605,7 +581,7 @@ public async Task<IActionResult> AskIA([FromBody] RecommendationRequest request)
 
 
     [HttpPost]
-
+    [Authorize(Roles = Roles.ITAdminOrRH)]
     [ValidateAntiForgeryToken]
 
     public async Task<IActionResult> AssignerManager(int managerId, List<int> selectedCollaborateurIds)
@@ -664,6 +640,7 @@ public async Task<IActionResult> AskIA([FromBody] RecommendationRequest request)
 
     // GET: Collaborateurs/Delete/5
 
+    [Authorize(Roles = Roles.ITAdminOrRH)]
     public async Task<IActionResult> Delete(int? id)
 
     {
@@ -681,7 +658,7 @@ public async Task<IActionResult> AskIA([FromBody] RecommendationRequest request)
 
 
     [HttpPost, ActionName("Delete")]
-
+    [Authorize(Roles = Roles.ITAdminOrRH)]
     [ValidateAntiForgeryToken]
 
     public async Task<IActionResult> DeleteConfirmed(int id)
@@ -702,6 +679,7 @@ public async Task<IActionResult> AskIA([FromBody] RecommendationRequest request)
 
     // GET: Collaborateurs/Depart/5
 
+    [Authorize(Roles = Roles.ITAdminOrRH)]
     public async Task<IActionResult> Depart(int id)
 
     {
@@ -801,7 +779,7 @@ public async Task<IActionResult> AskIA([FromBody] RecommendationRequest request)
 
 
     [HttpPost]
-
+    [Authorize(Roles = Roles.ITAdminOrRH)]
     [ValidateAntiForgeryToken]
 
     public async Task<IActionResult> ConfirmDepart(int idPartant, int idRemplacant)
@@ -831,7 +809,7 @@ public async Task<IActionResult> AskIA([FromBody] RecommendationRequest request)
 
 
     [HttpGet]
-
+    [Authorize(Roles = Roles.ITAdminOrRH)]
     public async Task<IActionResult> GetProfilCandidat(int id)
 
     {
@@ -865,7 +843,7 @@ public async Task<IActionResult> AskIA([FromBody] RecommendationRequest request)
 
 
     [HttpPost]
-
+    [Authorize(Roles = Roles.ITAdminOrRH)]
     public async Task<IActionResult> EnvoyerDemandeEntretiens([FromBody] DemandeEntretienRequest request)
 
     {
@@ -919,7 +897,7 @@ public async Task<IActionResult> AskIA([FromBody] RecommendationRequest request)
 
 
     [HttpPost]
-
+    [Authorize(Roles = Roles.ITAdminOrRH)]
     [ValidateAntiForgeryToken]
 
     public async Task<IActionResult> ConfirmerRemplacement(int partantId, int remplacantId)
@@ -957,7 +935,7 @@ public async Task<IActionResult> AskIA([FromBody] RecommendationRequest request)
 
 
     [HttpPost]
-
+    [Authorize(Roles = Roles.ITAdminOrRH)]
     [ValidateAntiForgeryToken]
 
     public async Task<IActionResult> ExportComparaisonRemplacantsPdf(int partantId, string candidatIds)
@@ -1191,7 +1169,7 @@ public async Task<IActionResult> AskIA([FromBody] RecommendationRequest request)
 
 
     [HttpGet]
-
+    [Authorize(Roles = Roles.ITAdminOrRH)]
     public async Task<IActionResult> GetRemplacants(int id)
 
 {

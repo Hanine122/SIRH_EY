@@ -1,8 +1,11 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using SIRH.EY.Authorization;
 using SIRH.EY.Data;
 using SIRH.EY.Models;
+using SIRH.EY.Services;
 
 namespace SIRH.EY.Controllers;
 
@@ -10,16 +13,25 @@ public class TalentController : Controller
 {
     private readonly ApplicationDbContext _context;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly ITeamAccessService _teamAccess;
+    private readonly IOwnershipService _ownership;
 
-    public TalentController(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
+    public TalentController(
+        ApplicationDbContext context,
+        UserManager<ApplicationUser> userManager,
+        ITeamAccessService teamAccess,
+        IOwnershipService ownership)
     {
         _context = context;
         _userManager = userManager;
+        _teamAccess = teamAccess;
+        _ownership = ownership;
     }
 
     // =========================
     // DASHBOARD TALENT
     // =========================
+    [Authorize(Roles = Roles.ITAdminOrRHOrManager)]
     public async Task<IActionResult> Index()
     {
         var user = await _userManager.GetUserAsync(User);
@@ -93,6 +105,7 @@ public class TalentController : Controller
     // =========================
     // MATRICE 9-BOX
     // =========================
+    [Authorize(Roles = Roles.ITAdminOrRHOrManager)]
     public async Task<IActionResult> Matrix9Box(string? departement = null, string? grade = null)
     {
         var query = _context.Collaborateurs
@@ -149,8 +162,12 @@ public class TalentController : Controller
 
     // API GET pour charger les détails collaborateur dans le panel AJAX
     [HttpGet]
+    [Authorize(Roles = Roles.ITAdminOrRHOrManager)]
     public async Task<IActionResult> GetCollaborateurDetails(int id)
     {
+        if (!await _teamAccess.CanAccessCollaborateurAsync(User, id))
+            return Forbid();
+
         var collaborateur = await _context.Collaborateurs
             .Include(c => c.Competences)
             .Include(c => c.Inscriptions!)
@@ -197,9 +214,13 @@ public class TalentController : Controller
     }
 
     [HttpPost]
-    public async Task<IActionResult> EvaluateAjax(int collaborateurId, int performanceScore, int potentielScore, 
+    [Authorize(Roles = Roles.ITAdminOrRHOrManager)]
+    public async Task<IActionResult> EvaluateAjax(int collaborateurId, int performanceScore, int potentielScore,
         string? commentairesPerformance, string? commentairesPotentiel)
     {
+        if (!await _teamAccess.CanAccessCollaborateurAsync(User, collaborateurId))
+            return Forbid();
+
         var user = await _userManager.GetUserAsync(User);
         
         var evaluation = new TalentEvaluation
@@ -226,17 +247,23 @@ public class TalentController : Controller
     public async Task<IActionResult> MyOKRs(int? collaborateurId = null)
     {
         var user = await _userManager.GetUserAsync(User);
-        
-        // Déterminer le collaborateur
+
+        // Default to own profile
+        if (collaborateurId == null)
+            collaborateurId = await _teamAccess.GetCurrentCollaborateurIdAsync(User);
+
         Collaborateur? collaborateur = null;
         if (collaborateurId.HasValue)
         {
+            if (!await _teamAccess.CanAccessCollaborateurAsync(User, collaborateurId.Value))
+                return Forbid();
+
             collaborateur = await _context.Collaborateurs.FindAsync(collaborateurId);
         }
         else
         {
-            collaborateur = await _context.Collaborateurs
-                .FirstOrDefaultAsync(c => c.UserId == user!.Id);
+            collaborateur = user == null ? null :
+                await _context.Collaborateurs.FirstOrDefaultAsync(c => c.UserId == user.Id);
         }
 
         if (collaborateur == null) return NotFound();
@@ -254,8 +281,11 @@ public class TalentController : Controller
         return View(okrs);
     }
 
-    public IActionResult CreateOKR(int collaborateurId)
+    public async Task<IActionResult> CreateOKR(int collaborateurId)
     {
+        if (!await _teamAccess.CanAccessCollaborateurAsync(User, collaborateurId))
+            return Forbid();
+
         ViewBag.CollaborateurId = collaborateurId;
         ViewBag.CurrentYear = DateTime.Now.Year;
         return View();
@@ -266,6 +296,8 @@ public class TalentController : Controller
         int annee, Trimestre trimestre, DateTime dateFinCible,
         List<string> keyResultDescriptions, List<double> keyResultTargets)
     {
+        if (!await _teamAccess.CanAccessCollaborateurAsync(User, collaborateurId))
+            return Forbid();
         var user = await _userManager.GetUserAsync(User);
 
         var okr = new OKR
@@ -304,6 +336,9 @@ public class TalentController : Controller
         var kr = await _context.KeyResults.FindAsync(keyResultId);
         if (kr == null) return NotFound();
 
+        if (!await _ownership.OwnsOkrAsync(User, kr.OKRId))
+            return Forbid();
+
         kr.ValeurActuelle = valeurActuelle;
         kr.Statut = valeurActuelle >= kr.ValeurCible ? KeyResultStatut.Completed : KeyResultStatut.InProgress;
 
@@ -334,10 +369,14 @@ public class TalentController : Controller
     }
 
     [HttpPost]
+    [Authorize(Roles = Roles.ITAdminOrRHOrManager)]
     public async Task<IActionResult> ValidateOKR(int okrId)
     {
         var okr = await _context.OKRs.FindAsync(okrId);
         if (okr == null) return NotFound();
+
+        if (!await _teamAccess.CanAccessCollaborateurAsync(User, okr.CollaborateurId))
+            return Forbid();
 
         okr.ValideParManager = true;
         okr.DateValidation = DateTime.Now;

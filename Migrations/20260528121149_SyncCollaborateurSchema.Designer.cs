@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SIRH.EY.Data;
 
@@ -11,9 +12,11 @@ using SIRH.EY.Data;
 namespace SIRH.EY.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260528121149_SyncCollaborateurSchema")]
+    partial class SyncCollaborateurSchema
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -226,34 +229,6 @@ namespace SIRH.EY.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
-            modelBuilder.Entity("SIRH.EY.Models.BusinessUnitEntity", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Code")
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<string>("Description")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("BusinessUnits");
-                });
-
             modelBuilder.Entity("SIRH.EY.Models.CategorieCompetence", b =>
                 {
                     b.Property<int>("Id")
@@ -288,9 +263,6 @@ namespace SIRH.EY.Migrations
                     b.Property<string>("BusinessUnit")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int?>("BusinessUnitId")
-                        .HasColumnType("int");
-
                     b.Property<string>("ContactUrgence")
                         .HasColumnType("nvarchar(max)");
 
@@ -306,7 +278,7 @@ namespace SIRH.EY.Migrations
                     b.Property<string>("Departement")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int?>("DepartmentId")
+                    b.Property<int?>("DepartementId")
                         .HasColumnType("int");
 
                     b.Property<string>("Email")
@@ -324,14 +296,8 @@ namespace SIRH.EY.Migrations
                     b.Property<string>("Grade")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int?>("GradeId")
-                        .HasColumnType("int");
-
                     b.Property<string>("Localisation")
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<int?>("LocationId")
-                        .HasColumnType("int");
 
                     b.Property<int?>("ManagerId")
                         .HasColumnType("int");
@@ -355,11 +321,11 @@ namespace SIRH.EY.Migrations
                     b.Property<string>("Pays")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int?>("PositionId")
-                        .HasColumnType("int");
-
                     b.Property<string>("Poste")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("PosteId")
+                        .HasColumnType("int");
 
                     b.Property<string>("PotentielCarriere")
                         .HasColumnType("nvarchar(max)");
@@ -372,9 +338,6 @@ namespace SIRH.EY.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("Statut")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("SubDepartmentId")
                         .HasColumnType("int");
 
                     b.Property<string>("TelephonePersonnel")
@@ -391,19 +354,7 @@ namespace SIRH.EY.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("BusinessUnitId");
-
-                    b.HasIndex("DepartmentId");
-
-                    b.HasIndex("GradeId");
-
-                    b.HasIndex("LocationId");
-
                     b.HasIndex("ManagerId");
-
-                    b.HasIndex("PositionId");
-
-                    b.HasIndex("SubDepartmentId");
 
                     b.HasIndex("UserId");
 
@@ -470,34 +421,6 @@ namespace SIRH.EY.Migrations
                     b.ToTable("CompetencesRequisesParPoste");
                 });
 
-            modelBuilder.Entity("SIRH.EY.Models.Department", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Code")
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<string>("Description")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Departments");
-                });
-
             modelBuilder.Entity("SIRH.EY.Models.EvaluationCompetence", b =>
                 {
                     b.Property<int>("Id")
@@ -546,37 +469,6 @@ namespace SIRH.EY.Migrations
                     b.HasIndex("InscriptionId");
 
                     b.ToTable("EvaluationsCompetences");
-                });
-
-            modelBuilder.Entity("SIRH.EY.Models.EvaluationHistorique", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("CompetenceId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("DateChangement")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("NiveauAncien")
-                        .HasColumnType("int");
-
-                    b.Property<int>("NiveauNouveau")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Raison")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CompetenceId");
-
-                    b.ToTable("EvaluationsHistoriques");
                 });
 
             modelBuilder.Entity("SIRH.EY.Models.Formation", b =>
@@ -653,33 +545,6 @@ namespace SIRH.EY.Migrations
                     b.ToTable("FormationCompetences");
                 });
 
-            modelBuilder.Entity("SIRH.EY.Models.GradeEntity", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Description")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<int>("Level")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Grades");
-                });
-
             modelBuilder.Entity("SIRH.EY.Models.Inscription", b =>
                 {
                     b.Property<int>("Id")
@@ -754,35 +619,6 @@ namespace SIRH.EY.Migrations
                     b.HasIndex("OKRId");
 
                     b.ToTable("KeyResults");
-                });
-
-            modelBuilder.Entity("SIRH.EY.Models.LocationEntity", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("City")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("Country")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Locations");
                 });
 
             modelBuilder.Entity("SIRH.EY.Models.OKR", b =>
@@ -910,117 +746,6 @@ namespace SIRH.EY.Migrations
                     b.ToTable("PlansDeveloppement");
                 });
 
-            modelBuilder.Entity("SIRH.EY.Models.Position", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Code")
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<string>("Description")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<int?>("SubDepartmentId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("SubDepartmentId");
-
-                    b.ToTable("Positions");
-                });
-
-            modelBuilder.Entity("SIRH.EY.Models.SubDepartment", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Code")
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<int>("DepartmentId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Description")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("DepartmentId");
-
-                    b.ToTable("SubDepartments");
-                });
-
-            modelBuilder.Entity("SIRH.EY.Models.SystemParameter", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Category")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("Description")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsEditable")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsVisible")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Key")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("ModifiedBy")
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.Property<DateTime>("ModifiedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Value")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Key")
-                        .IsUnique();
-
-                    b.ToTable("SystemParameters");
-                });
-
             modelBuilder.Entity("SIRH.EY.Models.TalentEvaluation", b =>
                 {
                     b.Property<int>("Id")
@@ -1118,59 +843,16 @@ namespace SIRH.EY.Migrations
 
             modelBuilder.Entity("SIRH.EY.Models.Collaborateur", b =>
                 {
-                    b.HasOne("SIRH.EY.Models.BusinessUnitEntity", "BusinessUnitRef")
-                        .WithMany("Collaborateurs")
-                        .HasForeignKey("BusinessUnitId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("SIRH.EY.Models.Department", "DepartmentRef")
-                        .WithMany("Collaborateurs")
-                        .HasForeignKey("DepartmentId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("SIRH.EY.Models.GradeEntity", "GradeRef")
-                        .WithMany("Collaborateurs")
-                        .HasForeignKey("GradeId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("SIRH.EY.Models.LocationEntity", "LocationRef")
-                        .WithMany("Collaborateurs")
-                        .HasForeignKey("LocationId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
                     b.HasOne("SIRH.EY.Models.Collaborateur", "Manager")
                         .WithMany("Equipe")
-                        .HasForeignKey("ManagerId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("SIRH.EY.Models.Position", "PositionRef")
-                        .WithMany("Collaborateurs")
-                        .HasForeignKey("PositionId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("SIRH.EY.Models.SubDepartment", "SubDepartmentRef")
-                        .WithMany("Collaborateurs")
-                        .HasForeignKey("SubDepartmentId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .HasForeignKey("ManagerId");
 
                     b.HasOne("SIRH.EY.Models.ApplicationUser", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.SetNull);
 
-                    b.Navigation("BusinessUnitRef");
-
-                    b.Navigation("DepartmentRef");
-
-                    b.Navigation("GradeRef");
-
-                    b.Navigation("LocationRef");
-
                     b.Navigation("Manager");
-
-                    b.Navigation("PositionRef");
-
-                    b.Navigation("SubDepartmentRef");
 
                     b.Navigation("User");
                 });
@@ -1208,17 +890,6 @@ namespace SIRH.EY.Migrations
                     b.Navigation("Competence");
 
                     b.Navigation("Inscription");
-                });
-
-            modelBuilder.Entity("SIRH.EY.Models.EvaluationHistorique", b =>
-                {
-                    b.HasOne("SIRH.EY.Models.Competence", "Competence")
-                        .WithMany()
-                        .HasForeignKey("CompetenceId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Competence");
                 });
 
             modelBuilder.Entity("SIRH.EY.Models.FormationCompetence", b =>
@@ -1306,27 +977,6 @@ namespace SIRH.EY.Migrations
                     b.Navigation("Formation");
                 });
 
-            modelBuilder.Entity("SIRH.EY.Models.Position", b =>
-                {
-                    b.HasOne("SIRH.EY.Models.SubDepartment", "SubDepartment")
-                        .WithMany("Positions")
-                        .HasForeignKey("SubDepartmentId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("SubDepartment");
-                });
-
-            modelBuilder.Entity("SIRH.EY.Models.SubDepartment", b =>
-                {
-                    b.HasOne("SIRH.EY.Models.Department", "Department")
-                        .WithMany("SubDepartments")
-                        .HasForeignKey("DepartmentId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Department");
-                });
-
             modelBuilder.Entity("SIRH.EY.Models.TalentEvaluation", b =>
                 {
                     b.HasOne("SIRH.EY.Models.Collaborateur", "Collaborateur")
@@ -1342,11 +992,6 @@ namespace SIRH.EY.Migrations
                     b.Navigation("Collaborateur");
 
                     b.Navigation("Evaluateur");
-                });
-
-            modelBuilder.Entity("SIRH.EY.Models.BusinessUnitEntity", b =>
-                {
-                    b.Navigation("Collaborateurs");
                 });
 
             modelBuilder.Entity("SIRH.EY.Models.CategorieCompetence", b =>
@@ -1368,21 +1013,9 @@ namespace SIRH.EY.Migrations
                     b.Navigation("EvaluationCompetence");
                 });
 
-            modelBuilder.Entity("SIRH.EY.Models.Department", b =>
-                {
-                    b.Navigation("Collaborateurs");
-
-                    b.Navigation("SubDepartments");
-                });
-
             modelBuilder.Entity("SIRH.EY.Models.Formation", b =>
                 {
                     b.Navigation("Inscriptions");
-                });
-
-            modelBuilder.Entity("SIRH.EY.Models.GradeEntity", b =>
-                {
-                    b.Navigation("Collaborateurs");
                 });
 
             modelBuilder.Entity("SIRH.EY.Models.Inscription", b =>
@@ -1390,26 +1023,9 @@ namespace SIRH.EY.Migrations
                     b.Navigation("EvaluationsFormation");
                 });
 
-            modelBuilder.Entity("SIRH.EY.Models.LocationEntity", b =>
-                {
-                    b.Navigation("Collaborateurs");
-                });
-
             modelBuilder.Entity("SIRH.EY.Models.OKR", b =>
                 {
                     b.Navigation("KeyResults");
-                });
-
-            modelBuilder.Entity("SIRH.EY.Models.Position", b =>
-                {
-                    b.Navigation("Collaborateurs");
-                });
-
-            modelBuilder.Entity("SIRH.EY.Models.SubDepartment", b =>
-                {
-                    b.Navigation("Collaborateurs");
-
-                    b.Navigation("Positions");
                 });
 #pragma warning restore 612, 618
         }
