@@ -138,34 +138,56 @@ using (var scope = app.Services.CreateScope())
     await SeedHrMasterData(context);
 
     // 5. Collaborateurs seed
-    var collabData = new List<(string email, string nom, string prenom, string departement, string poste, string grade, int? managerId)>
+    // Role is derived from department/poste — NOT from seniority grade.
+    // "RH" dept → RH identity role; "Manager" in title/grade → Manager role; else → Collaborateur.
+    static string ResolveIdentityRole(string departement, string grade, string poste) =>
+        departement.Equals("RH", StringComparison.OrdinalIgnoreCase)
+            ? "RH"
+            : (grade.Equals("Manager", StringComparison.OrdinalIgnoreCase) ||
+               poste.Contains("Manager", StringComparison.OrdinalIgnoreCase))
+                ? "Manager"
+                : "Collaborateur";
+
+    var collabData = new List<(string email, string nom, string prenom, string departement, string poste, string grade)>
     {
-        ("hanine.hammami@ey.com",     "Hammami",    "Hanine",    "RH",         "HR Director",     "Manager", null),
-        ("smiai.nour@ey.com",         "Nour",       "Smiäi",     "Tax",        "Data Analyst",    "Senior",  null),
-        ("mariem.safri@ey.com",       "Safri",      "Mariem",    "Audit",      "Senior Auditor",  "Senior",  null),
-        ("raed.amri@ey.com",          "Amri",       "Raed",      "Consulting", "Consultant",      "Junior",  null),
-        ("ayoub.gombra@ey.com",       "Gombra",     "Ayoub",     "Tax",        "Consultant",      "Junior",  null),
-        ("Ahmed.benyoussef@ey.com",   "Ben Youssef","Ahmed",     "Audit",      "Audit Manager",   "Manager", null),
-        ("sofien.klaou@ey.com",       "Klaou",      "Sofien",    "Advisory",   "Senior Consultant","Senior", null),
-        ("ibtissem.bessrour@ey.com",  "Besrour",    "ibtissem",  "Risk",       "Risk Manager",    "Manager", null),
+        ("hanine.hammami@ey.com",    "Hammami",    "Hanine",   "RH",         "HR Director",      "Manager"),
+        ("smiai.nour@ey.com",        "Nour",       "Smiäi",    "Tax",        "Data Analyst",     "Senior"),
+        ("mariem.safri@ey.com",      "Safri",      "Mariem",   "Audit",      "Senior Auditor",   "Senior"),
+        ("raed.amri@ey.com",         "Amri",       "Raed",     "Consulting", "Consultant",       "Junior"),
+        ("ayoub.gombra@ey.com",      "Gombra",     "Ayoub",    "Tax",        "Consultant",       "Junior"),
+        ("Ahmed.benyoussef@ey.com",  "Ben Youssef","Ahmed",    "Audit",      "Audit Manager",    "Manager"),
+        ("sofien.klaou@ey.com",      "Klaou",      "Sofien",   "Advisory",   "Senior Consultant","Senior"),
+        ("ibtissem.bessrour@ey.com", "Besrour",    "ibtissem", "Risk",       "Risk Manager",     "Manager"),
     };
 
     foreach (var data in collabData)
     {
+        var expectedRole = ResolveIdentityRole(data.departement, data.grade, data.poste);
+
         var user = await userManager.FindByEmailAsync(data.email);
         if (user == null)
         {
             user = new ApplicationUser
             {
-                UserName = data.email,
-                Email = data.email,
+                UserName     = data.email,
+                Email        = data.email,
                 EmailConfirmed = true,
-                Nom = data.nom,
-                Prenom = data.prenom
+                Nom          = data.nom,
+                Prenom       = data.prenom
             };
             await userManager.CreateAsync(user, "Temp@123456");
-            var identityRole = data.grade == "Manager" ? "Manager" : "Collaborateur";
-            await userManager.AddToRoleAsync(user, identityRole);
+            await userManager.AddToRoleAsync(user, expectedRole);
+        }
+        else
+        {
+            // Idempotent role repair — correct wrong role assignments on every startup
+            var currentRoles = await userManager.GetRolesAsync(user);
+            if (!currentRoles.Contains(expectedRole))
+            {
+                if (currentRoles.Count > 0)
+                    await userManager.RemoveFromRolesAsync(user, currentRoles);
+                await userManager.AddToRoleAsync(user, expectedRole);
+            }
         }
 
         if (!await context.Collaborateurs.AnyAsync(c => c.Email == data.email))
@@ -183,20 +205,45 @@ using (var scope = app.Services.CreateScope())
                 UserId       = user.Id
             });
         }
+        else
+        {
+            // Ensure UserId linkage is always up-to-date
+            var existing = await context.Collaborateurs.FirstOrDefaultAsync(c => c.Email == data.email);
+            if (existing != null && existing.UserId != user.Id)
+            {
+                existing.UserId = user.Id;
+            }
+        }
     }
     await context.SaveChangesAsync();
 
-    // 6. Assign Audit manager relationships
+    // 6. Assign manager hierarchy (idempotent)
+    // Audit team: Audit Manager → all Audit members who are not managers
     var auditManager = await context.Collaborateurs.FirstOrDefaultAsync(c => c.Poste == "Audit Manager");
     if (auditManager != null)
     {
         var equipeAudit = await context.Collaborateurs
-            .Where(c => c.Departement == "Audit" && c.Poste != "Audit Manager")
+            .Where(c => c.Departement == "Audit" && c.Id != auditManager.Id)
             .ToListAsync();
         foreach (var c in equipeAudit)
-            c.ManagerId = auditManager.Id;
-        await context.SaveChangesAsync();
+            if (c.ManagerId != auditManager.Id)
+                c.ManagerId = auditManager.Id;
     }
+
+    // Risk team: Risk Manager → all Risk members who are not managers
+    var riskManager = await context.Collaborateurs.FirstOrDefaultAsync(c => c.Poste == "Risk Manager");
+    if (riskManager != null)
+    {
+        var equipeRisk = await context.Collaborateurs
+            .Where(c => c.Departement == "Risk" && c.Id != riskManager.Id)
+            .ToListAsync();
+        foreach (var c in equipeRisk)
+            if (c.ManagerId != riskManager.Id)
+                c.ManagerId = riskManager.Id;
+    }
+
+    // RH Director manages no direct reports in the current dataset — left unassigned intentionally.
+    await context.SaveChangesAsync();
 
     // 7. Demo data (competences, formations, etc.)
     await DemoDataSeeder.SeedAsync(context);
@@ -339,5 +386,18 @@ static async Task SeedHrMasterData(ApplicationDbContext context)
         new SystemParameter { Key = "SMTP.Port",             Value = "587",     Category = "Email",       Description = "Port SMTP" },
     };
     context.SystemParameters.AddRange(parameters);
+    await context.SaveChangesAsync();
+
+    // Contract Types
+    var contractTypes = new[]
+    {
+        new ContractType { Name = "CDI",                  Code = "CDI",  Description = "Contrat à durée indéterminée",    MaxDurationMonths = null, IsActive = true },
+        new ContractType { Name = "CDD",                  Code = "CDD",  Description = "Contrat à durée déterminée",      MaxDurationMonths = 12,   IsActive = true },
+        new ContractType { Name = "Stage",                Code = "STG",  Description = "Convention de stage",             MaxDurationMonths = 6,    IsActive = true },
+        new ContractType { Name = "Alternance",           Code = "ALT",  Description = "Contrat d'apprentissage",         MaxDurationMonths = 24,   IsActive = true },
+        new ContractType { Name = "Freelance",            Code = "FRL",  Description = "Prestation indépendante",         MaxDurationMonths = null, IsActive = true },
+        new ContractType { Name = "Consultant externe",   Code = "CONS", Description = "Mission de conseil externe",      MaxDurationMonths = 12,   IsActive = true },
+    };
+    context.ContractTypes.AddRange(contractTypes);
     await context.SaveChangesAsync();
 }

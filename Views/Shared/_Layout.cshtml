@@ -1,10 +1,28 @@
 @using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using SIRH.EY.Data
 @inject UserManager<ApplicationUser> UserManager
+@inject ApplicationDbContext LayoutDbContext
 
 @{
     var user = await UserManager.GetUserAsync(User);
     var roles = user != null ? await UserManager.GetRolesAsync(user) : new List<string>();
     var role = roles.FirstOrDefault() ?? "Utilisateur";
+
+    // Resolve current user's collaborateur ID for profile links
+    int? ownCollabId = null;
+    if (user != null)
+    {
+        var ownCollab = await LayoutDbContext.Collaborateurs
+            .AsNoTracking()
+            .Where(c => c.UserId == user.Id)
+            .Select(c => new { c.Id })
+            .FirstOrDefaultAsync();
+        ownCollabId = ownCollab?.Id;
+    }
+
+    bool isPrivileged  = roles.Contains("ITAdmin") || roles.Contains("RH");
+    bool isManagerPlus = isPrivileged || roles.Contains("Manager");
 }
 
 <!DOCTYPE html>
@@ -49,9 +67,12 @@
                         <a class="nav-link @(currentController == "Home" ? "active" : "")" asp-controller="Home" asp-action="Index">
                             <i class="fas fa-th-large"></i><span class="nav-link-label">Dashboard</span>
                         </a>
-                        <a class="nav-link @(currentController == "Reporting" ? "active" : "")" asp-controller="Reporting" asp-action="ExecutiveDashboard">
-                            <i class="fas fa-chart-line"></i><span class="nav-link-label">Tableau de bord exécutif</span>
-                        </a>
+                        @if (isPrivileged)
+                        {
+                            <a class="nav-link @(currentController == "Reporting" ? "active" : "")" asp-controller="Reporting" asp-action="ExecutiveDashboard">
+                                <i class="fas fa-chart-line"></i><span class="nav-link-label">Tableau de bord exécutif</span>
+                            </a>
+                        }
                     </nav>
                 </div>
 
@@ -69,14 +90,19 @@
                         <ul class="ey-submenu" id="submenu-core-rh">
                             <li>
                                 <a class="nav-link @((currentController == "Collaborateurs" && currentAction == "Index") ? "active" : "")" asp-controller="Collaborateurs" asp-action="Index">
-                                    <i class="fas fa-users"></i><span class="nav-link-label">Collaborateurs</span>
+                                    <i class="fas fa-users"></i>
+                                    <span class="nav-link-label">@(isPrivileged ? "Collaborateurs" : "Mon équipe")</span>
                                 </a>
                             </li>
-                            <li>
-                                <a class="nav-link @((currentController == "Collaborateurs" && currentAction == "Details") ? "active" : "")" asp-controller="Collaborateurs" asp-action="Details" asp-route-id="1">
-                                    <i class="fas fa-id-card"></i><span class="nav-link-label">Compétences & Formations</span>
-                                </a>
-                            </li>
+                            @if (ownCollabId.HasValue)
+                            {
+                                <li>
+                                    <a class="nav-link @((currentController == "Collaborateurs" && currentAction == "Details") ? "active" : "")"
+                                       asp-controller="Collaborateurs" asp-action="Details" asp-route-id="@ownCollabId">
+                                        <i class="fas fa-id-card"></i><span class="nav-link-label">Mon profil</span>
+                                    </a>
+                                </li>
+                            }
                         </ul>
                     </div>
 
@@ -119,46 +145,60 @@
                             <i class="fas fa-chevron-down ey-chevron" id="chevron-competences"></i>
                         </div>
                         <ul class="ey-submenu" id="submenu-competences">
-                            <li>
-                                <a class="nav-link @(currentController == "Competences" && currentAction == "MatriceEquipe" ? "active" : "")" asp-controller="Competences" asp-action="MatriceEquipe">
-                                    <i class="fas fa-th"></i><span class="nav-link-label">Matrice de compétences</span>
-                                </a>
-                            </li>
-                            <li>
-                                <a class="nav-link @(currentController == "Talent" ? "active" : "")" asp-controller="Talent" asp-action="Index">
-                                    <i class="fas fa-gem"></i><span class="nav-link-label">Gestion des talents</span>
-                                </a>
-                            </li>
-                            <li>
-                                <a class="nav-link" asp-controller="Talent" asp-action="Index">
-                                    <i class="fas fa-border-all"></i><span class="nav-link-label">Matrice 9-box</span>
-                                </a>
-                            </li>
+                            @if (ownCollabId.HasValue)
+                            {
+                                <li>
+                                    <a class="nav-link" asp-controller="Competences" asp-action="Index" asp-route-collaborateurId="@ownCollabId">
+                                        <i class="fas fa-chart-bar"></i><span class="nav-link-label">Mes compétences</span>
+                                    </a>
+                                </li>
+                            }
+                            @if (isManagerPlus)
+                            {
+                                <li>
+                                    <a class="nav-link @(currentController == "Competences" && currentAction == "MatriceEquipe" ? "active" : "")" asp-controller="Competences" asp-action="MatriceEquipe">
+                                        <i class="fas fa-th"></i><span class="nav-link-label">Matrice de compétences</span>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="nav-link @(currentController == "Talent" && currentAction == "Index" ? "active" : "")" asp-controller="Talent" asp-action="Index">
+                                        <i class="fas fa-gem"></i><span class="nav-link-label">Gestion des talents</span>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="nav-link @(currentController == "Talent" && currentAction == "Matrix9Box" ? "active" : "")" asp-controller="Talent" asp-action="Matrix9Box">
+                                        <i class="fas fa-border-all"></i><span class="nav-link-label">Matrice 9-box</span>
+                                    </a>
+                                </li>
+                            }
                         </ul>
                     </div>
 
-                    <!-- Analytique & Reporting -->
-                    <div class="ey-menu-item">
-                        <div class="ey-menu-header" onclick="toggleSubmenu('analytics')">
-                            <div class="ey-menu-title">
-                                <i class="fas fa-chart-pie"></i>
-                                <span>Analytique & Reporting</span>
+                    <!-- Analytique & Reporting — RH and ITAdmin only -->
+                    @if (isPrivileged)
+                    {
+                        <div class="ey-menu-item">
+                            <div class="ey-menu-header" onclick="toggleSubmenu('analytics')">
+                                <div class="ey-menu-title">
+                                    <i class="fas fa-chart-pie"></i>
+                                    <span>Analytique & Reporting</span>
+                                </div>
+                                <i class="fas fa-chevron-down ey-chevron" id="chevron-analytics"></i>
                             </div>
-                            <i class="fas fa-chevron-down ey-chevron" id="chevron-analytics"></i>
+                            <ul class="ey-submenu" id="submenu-analytics">
+                                <li>
+                                    <a class="nav-link @(currentController == "RhInsights" ? "active" : "")" asp-controller="RhInsights" asp-action="Index">
+                                        <i class="fas fa-brain"></i><span class="nav-link-label">RH Insights</span>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="nav-link @(currentController == "Reporting" ? "active" : "")" asp-controller="Reporting" asp-action="ExecutiveDashboard">
+                                        <i class="fas fa-chart-area"></i><span class="nav-link-label">Tableau de bord exécutif</span>
+                                    </a>
+                                </li>
+                            </ul>
                         </div>
-                        <ul class="ey-submenu" id="submenu-analytics">
-                            <li>
-                                <a class="nav-link" asp-controller="RHInsights" asp-action="Index">
-                                    <i class="fas fa-brain"></i><span class="nav-link-label">RH Insights</span>
-                                </a>
-                            </li>
-                            <li>
-                                <a class="nav-link" asp-controller="Reporting" asp-action="Index">
-                                    <i class="fas fa-chart-area"></i><span class="nav-link-label">Graphiques de performance</span>
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
+                    }
 
                     <!-- Administration IT (ITAdmin uniquement) -->
                     @if (roles.Contains("ITAdmin"))
@@ -212,6 +252,12 @@
                                     <a class="nav-link @(currentController == "Locations" ? "active" : "")"
                                        asp-area="Admin" asp-controller="Locations" asp-action="Index">
                                         <i class="fas fa-map-marker-alt"></i><span class="nav-link-label">Localisations</span>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="nav-link @(currentController == "ContractTypes" ? "active" : "")"
+                                       asp-area="Admin" asp-controller="ContractTypes" asp-action="Index">
+                                        <i class="fas fa-file-contract"></i><span class="nav-link-label">Types de contrat</span>
                                     </a>
                                 </li>
                                 <li>

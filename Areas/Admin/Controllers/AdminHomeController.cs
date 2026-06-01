@@ -24,6 +24,7 @@ public class AdminHomeController : Controller
         ViewBag.GradeCount          = await _context.Grades.CountAsync();
         ViewBag.BusinessUnitCount   = await _context.BusinessUnits.CountAsync();
         ViewBag.LocationCount       = await _context.Locations.CountAsync();
+        ViewBag.ContractTypeCount   = await _context.ContractTypes.CountAsync();
         ViewBag.ParameterCount      = await _context.SystemParameters.CountAsync();
         ViewBag.CollaborateurCount  = await _context.Collaborateurs.CountAsync(c => c.Actif);
         return View();

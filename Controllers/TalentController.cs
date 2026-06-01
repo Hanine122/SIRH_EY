@@ -34,9 +34,10 @@ public class TalentController : Controller
     [Authorize(Roles = Roles.ITAdminOrRHOrManager)]
     public async Task<IActionResult> Index()
     {
-        var user = await _userManager.GetUserAsync(User);
-        
-        var collaborateurs = await _context.Collaborateurs
+        // Scope: Managers see only their team; RH/ITAdmin see everyone
+        var scopedQuery = await _teamAccess.ApplyAccessFilterAsync(User, _context.Collaborateurs);
+
+        var collaborateurs = await scopedQuery
             .Include(c => c.Competences)
             .Include(c => c.Inscriptions)
             .Where(c => c.Actif)
@@ -108,7 +109,10 @@ public class TalentController : Controller
     [Authorize(Roles = Roles.ITAdminOrRHOrManager)]
     public async Task<IActionResult> Matrix9Box(string? departement = null, string? grade = null)
     {
-        var query = _context.Collaborateurs
+        // Scope: Managers see only their team in the 9-Box
+        var scopedBase = await _teamAccess.ApplyAccessFilterAsync(User, _context.Collaborateurs);
+
+        var query = scopedBase
             .Include(c => c.Competences)
             .Include(c => c.Inscriptions!)
                 .ThenInclude(i => i.Formation)
@@ -117,15 +121,16 @@ public class TalentController : Controller
 
         if (!string.IsNullOrEmpty(departement))
             query = query.Where(c => c.Departement == departement);
-        
+
         if (!string.IsNullOrEmpty(grade))
             query = query.Where(c => c.Grade == grade);
 
         var collaborateurs = await query.ToListAsync();
 
-        // Récupérer les évaluations manuelles existantes
+        // Récupérer les évaluations manuelles existantes (scoped to visible collaborateurs)
+        var collaborateurIds = collaborateurs.Select(c => c.Id).ToList();
         var manualEvaluations = await _context.TalentEvaluations
-            .Where(t => t.Actif)
+            .Where(t => t.Actif && collaborateurIds.Contains(t.CollaborateurId))
             .ToListAsync();
 
         var matrix = new Dictionary<NineBoxCategory, List<MatrixItemViewModel>>();
@@ -151,8 +156,11 @@ public class TalentController : Controller
         }
 
         ViewBag.Matrix = matrix;
-        ViewBag.Departements = await _context.Collaborateurs
+        // Dropdown lists scoped to visible collaborateurs only
+        var visibleBase = await _teamAccess.ApplyAccessFilterAsync(User, _context.Collaborateurs);
+        ViewBag.Departements = await visibleBase
             .Select(c => c.Departement)
+            .Where(d => d != null)
             .Distinct()
             .ToListAsync();
         ViewBag.Grades = new[] { "Junior", "Senior", "Manager", "Director" };

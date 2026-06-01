@@ -18,6 +18,8 @@ public class PositionsController : Controller
         _context = context;
     }
 
+    // ── LIST ──────────────────────────────────────────────────────────────────
+
     public async Task<IActionResult> Index(string? search)
     {
         ViewBag.Search = search;
@@ -32,6 +34,140 @@ public class PositionsController : Controller
         return View(await query.OrderBy(p => p.Name).ToListAsync());
     }
 
+    // ── DETAILS + JUNCTION MANAGEMENT ────────────────────────────────────────
+
+    public async Task<IActionResult> Details(int id)
+    {
+        var position = await _context.Positions
+            .Include(p => p.SubDepartment).ThenInclude(s => s!.Department)
+            .Include(p => p.RequiredCompetences)
+            .Include(p => p.MandatoryFormations).ThenInclude(mf => mf.Formation)
+            .Include(p => p.GradeEligibilities).ThenInclude(ge => ge.GradeEntity)
+            .FirstOrDefaultAsync(p => p.Id == id);
+
+        if (position == null) return NotFound();
+
+        ViewBag.AvailableFormations = await _context.Formations
+            .OrderBy(f => f.Titre)
+            .Select(f => new SelectListItem { Value = f.Id.ToString(), Text = f.Titre })
+            .ToListAsync();
+
+        ViewBag.AvailableGrades = await _context.Grades
+            .Where(g => g.IsActive)
+            .OrderBy(g => g.Level)
+            .Select(g => new SelectListItem { Value = g.Id.ToString(), Text = $"N{g.Level} – {g.Name}" })
+            .ToListAsync();
+
+        return View(position);
+    }
+
+    // ── REQUIRED COMPETENCES ──────────────────────────────────────────────────
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> AddRequiredCompetence(
+        int positionId, string competenceName, string? category, int requiredLevel, bool isMandatory)
+    {
+        if (!await _context.Positions.AnyAsync(p => p.Id == positionId)) return NotFound();
+        if (string.IsNullOrWhiteSpace(competenceName)) return BadRequest();
+
+        _context.PositionRequiredCompetences.Add(new PositionRequiredCompetence
+        {
+            PositionId     = positionId,
+            CompetenceName = competenceName.Trim(),
+            Category       = category?.Trim(),
+            RequiredLevel  = Math.Clamp(requiredLevel, 1, 5),
+            IsMandatory    = isMandatory
+        });
+        await _context.SaveChangesAsync();
+        TempData["Success"] = $"Compétence « {competenceName} » ajoutée.";
+        return RedirectToAction(nameof(Details), new { id = positionId });
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> RemoveRequiredCompetence(int id, int positionId)
+    {
+        var item = await _context.PositionRequiredCompetences.FindAsync(id);
+        if (item != null) _context.PositionRequiredCompetences.Remove(item);
+        await _context.SaveChangesAsync();
+        return RedirectToAction(nameof(Details), new { id = positionId });
+    }
+
+    // ── MANDATORY FORMATIONS ──────────────────────────────────────────────────
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> AddMandatoryFormation(int positionId, int formationId, int? deadlineMonths)
+    {
+        if (!await _context.Positions.AnyAsync(p => p.Id == positionId)) return NotFound();
+        if (!await _context.Formations.AnyAsync(f => f.Id == formationId)) return BadRequest();
+
+        // Prevent duplicates
+        if (!await _context.PositionMandatoryFormations.AnyAsync(
+                pmf => pmf.PositionId == positionId && pmf.FormationId == formationId))
+        {
+            _context.PositionMandatoryFormations.Add(new PositionMandatoryFormation
+            {
+                PositionId     = positionId,
+                FormationId    = formationId,
+                DeadlineMonths = deadlineMonths
+            });
+            await _context.SaveChangesAsync();
+            TempData["Success"] = "Formation obligatoire ajoutée.";
+        }
+        else
+        {
+            TempData["Error"] = "Cette formation est déjà associée à ce poste.";
+        }
+
+        return RedirectToAction(nameof(Details), new { id = positionId });
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> RemoveMandatoryFormation(int id, int positionId)
+    {
+        var item = await _context.PositionMandatoryFormations.FindAsync(id);
+        if (item != null) _context.PositionMandatoryFormations.Remove(item);
+        await _context.SaveChangesAsync();
+        return RedirectToAction(nameof(Details), new { id = positionId });
+    }
+
+    // ── GRADE ELIGIBILITIES ───────────────────────────────────────────────────
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> AddGradeEligibility(int positionId, int gradeEntityId, bool isMinimum)
+    {
+        if (!await _context.Positions.AnyAsync(p => p.Id == positionId)) return NotFound();
+
+        if (!await _context.PositionGradeEligibilities.AnyAsync(
+                pge => pge.PositionId == positionId && pge.GradeEntityId == gradeEntityId))
+        {
+            _context.PositionGradeEligibilities.Add(new PositionGradeEligibility
+            {
+                PositionId    = positionId,
+                GradeEntityId = gradeEntityId,
+                IsMinimum     = isMinimum
+            });
+            await _context.SaveChangesAsync();
+            TempData["Success"] = "Grade ajouté.";
+        }
+        else
+        {
+            TempData["Error"] = "Ce grade est déjà associé à ce poste.";
+        }
+
+        return RedirectToAction(nameof(Details), new { id = positionId });
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> RemoveGradeEligibility(int id, int positionId)
+    {
+        var item = await _context.PositionGradeEligibilities.FindAsync(id);
+        if (item != null) _context.PositionGradeEligibilities.Remove(item);
+        await _context.SaveChangesAsync();
+        return RedirectToAction(nameof(Details), new { id = positionId });
+    }
+
+    // ── CREATE / EDIT / DELETE ────────────────────────────────────────────────
+
     public async Task<IActionResult> Create()
     {
         await LoadSubDepartmentsAsync();
@@ -43,6 +179,8 @@ public class PositionsController : Controller
     {
         if (ModelState.IsValid)
         {
+            position.CreatedBy = User.Identity?.Name;
+            position.CreatedAt = DateTime.UtcNow;
             _context.Positions.Add(position);
             await _context.SaveChangesAsync();
             TempData["Success"] = $"Poste « {position.Name} » créé.";
@@ -66,9 +204,19 @@ public class PositionsController : Controller
         if (id != position.Id) return BadRequest();
         if (ModelState.IsValid)
         {
-            _context.Update(position);
+            var existing = await _context.Positions.FindAsync(id);
+            if (existing == null) return NotFound();
+
+            existing.Name            = position.Name;
+            existing.Code            = position.Code;
+            existing.SubDepartmentId = position.SubDepartmentId;
+            existing.Description     = position.Description;
+            existing.IsActive        = position.IsActive;
+            existing.UpdatedBy       = User.Identity?.Name;
+            existing.UpdatedAt       = DateTime.UtcNow;
+
             await _context.SaveChangesAsync();
-            TempData["Success"] = $"Poste « {position.Name} » mis à jour.";
+            TempData["Success"] = $"Poste « {existing.Name} » mis à jour.";
             return RedirectToAction(nameof(Index));
         }
         await LoadSubDepartmentsAsync(position.SubDepartmentId);

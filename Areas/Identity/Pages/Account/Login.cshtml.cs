@@ -111,13 +111,34 @@ namespace SIRH.EY.Areas.Identity.Pages.Account
 
             if (ModelState.IsValid)
             {
-                // This doesn't count login failures towards account lockout
-                // To enable password failures to trigger account lockout, set lockoutOnFailure: true
                 var result = await _signInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: false);
                 if (result.Succeeded)
                 {
                     _logger.LogInformation("User logged in.");
-                    return RedirectToAction("Index", "Home");
+
+                    // If there is an explicit, non-root returnUrl honour it (e.g. deep link from access-denied redirect)
+                    var defaultRoot = Url.Content("~/");
+                    if (!string.IsNullOrEmpty(returnUrl) && returnUrl != defaultRoot)
+                        return LocalRedirect(returnUrl);
+
+                    // Role-based landing page
+                    var loggedInUser = await _signInManager.UserManager.FindByEmailAsync(Input.Email);
+                    if (loggedInUser != null)
+                    {
+                        var userRoles = await _signInManager.UserManager.GetRolesAsync(loggedInUser);
+
+                        if (userRoles.Contains("ITAdmin"))
+                            return LocalRedirect("/Admin/AdminHome");
+
+                        if (userRoles.Contains("RH"))
+                            return LocalRedirect("/RhInsights");
+
+                        if (userRoles.Contains("Manager"))
+                            return LocalRedirect("/Talent");
+                    }
+
+                    // Collaborateur (or unrecognised role) → Home which auto-scopes to their own data
+                    return LocalRedirect("/");
                 }
                 if (result.RequiresTwoFactor)
                 {

@@ -1,16 +1,19 @@
 @model SIRH.EY.Models.Collaborateur
+@using SIRH.EY.Models
 @{
     ViewData["Title"] = "Nouveau collaborateur";
-    var managers = ViewBag.Managers as List<SIRH.EY.Models.Collaborateur> ?? new List<SIRH.EY.Models.Collaborateur>();
-    var departements = ViewBag.Departements as IReadOnlyList<string> ?? Array.Empty<string>();
-    var postes = ViewBag.Postes as IReadOnlyList<string> ?? Array.Empty<string>();
-    var genres = ViewBag.Genres as IReadOnlyList<string> ?? Array.Empty<string>();
-    var etatsCivils = ViewBag.EtatsCivils as IReadOnlyList<string> ?? Array.Empty<string>();
-    var typesContrat = ViewBag.TypesContrat as IReadOnlyList<string> ?? Array.Empty<string>();
-    var localisations = ViewBag.Localisations as IReadOnlyList<string> ?? Array.Empty<string>();
-    var businessUnits = ViewBag.BusinessUnits as IReadOnlyList<string> ?? Array.Empty<string>();
-    var niveauxHierarchiques = ViewBag.NiveauxHierarchiques as IReadOnlyList<string> ?? Array.Empty<string>();
-    var potentielsCarriere = ViewBag.PotentielsCarriere as IReadOnlyList<string> ?? Array.Empty<string>();
+    var managers          = ViewBag.Managers         as List<Collaborateur>     ?? new();
+    var departments       = ViewBag.Departments      as List<Department>        ?? new();
+    var subDepartments    = ViewBag.SubDepartments   as List<SubDepartment>     ?? new();
+    var positions         = ViewBag.Positions        as List<Position>          ?? new();
+    var gradeEntities     = ViewBag.GradeEntities    as List<GradeEntity>       ?? new();
+    var buEntities        = ViewBag.BusinessUnitEntities as List<BusinessUnitEntity> ?? new();
+    var locationEntities  = ViewBag.LocationEntities as List<LocationEntity>    ?? new();
+    var contractTypes     = ViewBag.ContractTypes    as List<ContractType>      ?? new();
+    var genres            = ViewBag.Genres            as string[] ?? Array.Empty<string>();
+    var etatsCivils       = ViewBag.EtatsCivils       as string[] ?? Array.Empty<string>();
+    var niveauxH          = ViewBag.NiveauxHierarchiques as string[] ?? Array.Empty<string>();
+    var potentiels        = ViewBag.PotentielsCarriere   as string[] ?? Array.Empty<string>();
 }
 
 @section Styles {
@@ -33,6 +36,7 @@
         <form asp-action="Create" method="post">
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
+            <!-- Informations personnelles -->
             <div class="ey-form-section">
                 <div class="ey-section-title">Informations personnelles</div>
                 <div class="row g-3">
@@ -42,12 +46,12 @@
                     <div class="col-md-6"><label asp-for="DateNaissance" class="ey-label">Date de naissance</label><input asp-for="DateNaissance" class="ey-input" type="date" /></div>
                     <div class="col-md-4">
                         <label asp-for="Genre" class="ey-label">Genre</label>
-                        <select asp-for="Genre" class="ey-input"><option value="">Non renseigne</option>@foreach (var item in genres) { <option value="@item">@item</option> }</select>
+                        <select asp-for="Genre" class="ey-input"><option value="">Non renseigne</option>@foreach (var g in genres) { <option value="@g">@g</option> }</select>
                     </div>
                     <div class="col-md-4"><label asp-for="Nationalite" class="ey-label">Nationalite</label><input asp-for="Nationalite" class="ey-input" /></div>
                     <div class="col-md-4">
                         <label asp-for="EtatCivil" class="ey-label">Etat civil</label>
-                        <select asp-for="EtatCivil" class="ey-input"><option value="">Selectionnez</option>@foreach (var item in etatsCivils) { <option value="@item">@item</option> }</select>
+                        <select asp-for="EtatCivil" class="ey-input"><option value="">Selectionnez</option>@foreach (var e in etatsCivils) { <option value="@e">@e</option> }</select>
                     </div>
                     <div class="col-md-8"><label asp-for="Adresse" class="ey-label">Adresse</label><input asp-for="Adresse" class="ey-input" /></div>
                     <div class="col-md-4"><label asp-for="Ville" class="ey-label">Ville</label><input asp-for="Ville" class="ey-input" /></div>
@@ -57,64 +61,105 @@
                 </div>
             </div>
 
+            <!-- Informations professionnelles (master data FK) -->
             <div class="ey-form-section">
                 <div class="ey-section-title">Informations professionnelles</div>
                 <div class="row g-3">
                     <div class="col-md-4"><label asp-for="Matricule" class="ey-label">Matricule</label><input asp-for="Matricule" class="ey-input" placeholder="EY-0001" /></div>
+
                     <div class="col-md-4">
-                        <label asp-for="Departement" class="ey-label">Departement</label>
-                        <select asp-for="Departement" class="ey-input js-departement-select" data-poste-target="#Poste">
-                            <option value="">Selectionnez un departement</option>
-                            @foreach (var item in departements) { <option value="@item">@item</option> }
+                        <label asp-for="DepartmentId" class="ey-label">Département</label>
+                        <select asp-for="DepartmentId" class="ey-input js-dept-select" id="DepartmentId">
+                            <option value="">Selectionnez un département</option>
+                            @foreach (var d in departments) { <option value="@d.Id">@d.Name</option> }
                         </select>
                     </div>
+
                     <div class="col-md-4">
-                        <label asp-for="Poste" class="ey-label">Poste</label>
-                        <select asp-for="Poste" class="ey-input js-poste-select">
-                            <option value="">Selectionnez d'abord un departement</option>
-                            @foreach (var item in postes) { <option value="@item">@item</option> }
+                        <label asp-for="SubDepartmentId" class="ey-label">Sous-département</label>
+                        <select asp-for="SubDepartmentId" class="ey-input js-subdept-select" id="SubDepartmentId">
+                            <option value="">— Sélectionnez d'abord un département —</option>
+                            @foreach (var s in subDepartments) {
+                                <option value="@s.Id" data-dept="@s.DepartmentId">@s.Department?.Name / @s.Name</option>
+                            }
                         </select>
                     </div>
+
                     <div class="col-md-4">
-                        <label asp-for="Grade" class="ey-label">Grade</label>
-                        <select asp-for="Grade" class="ey-input"><option value="">Selectionnez</option><option>Junior</option><option>Senior</option><option>Manager</option><option>Senior Manager</option><option>Director</option><option>Partner</option></select>
+                        <label asp-for="PositionId" class="ey-label">Poste</label>
+                        <select asp-for="PositionId" class="ey-input">
+                            <option value="">Selectionnez</option>
+                            @foreach (var p in positions) { <option value="@p.Id">@p.Name</option> }
+                        </select>
                     </div>
+
                     <div class="col-md-4">
-                        <label asp-for="BusinessUnit" class="ey-label">Business Unit</label>
-                        <select asp-for="BusinessUnit" class="ey-input"><option value="">Selectionnez</option>@foreach (var item in businessUnits) { <option value="@item">@item</option> }</select>
+                        <label asp-for="GradeId" class="ey-label">Grade</label>
+                        <select asp-for="GradeId" class="ey-input">
+                            <option value="">Selectionnez</option>
+                            @foreach (var g in gradeEntities) { <option value="@g.Id">@g.Name</option> }
+                        </select>
                     </div>
+
+                    <div class="col-md-4">
+                        <label asp-for="BusinessUnitId" class="ey-label">Business Unit</label>
+                        <select asp-for="BusinessUnitId" class="ey-input">
+                            <option value="">Selectionnez</option>
+                            @foreach (var b in buEntities) { <option value="@b.Id">@b.Name</option> }
+                        </select>
+                    </div>
+
                     <div class="col-md-4">
                         <label asp-for="ManagerId" class="ey-label">Manager direct</label>
-                        <select asp-for="ManagerId" class="ey-input"><option value="">Aucun manager</option>@foreach (var manager in managers) { <option value="@manager.Id">@manager.Prenom @manager.Nom</option> }</select>
+                        <select asp-for="ManagerId" class="ey-input">
+                            <option value="">Aucun manager</option>
+                            @foreach (var m in managers) { <option value="@m.Id">@m.Prenom @m.Nom</option> }
+                        </select>
                     </div>
+
                     <div class="col-md-4">
                         <label asp-for="NiveauHierarchique" class="ey-label">Niveau hierarchique</label>
-                        <select asp-for="NiveauHierarchique" class="ey-input"><option value="">Selectionnez</option>@foreach (var item in niveauxHierarchiques) { <option value="@item">@item</option> }</select>
+                        <select asp-for="NiveauHierarchique" class="ey-input">
+                            <option value="">Selectionnez</option>
+                            @foreach (var n in niveauxH) { <option value="@n">@n</option> }
+                        </select>
                     </div>
+
                     <div class="col-md-4">
-                        <label asp-for="Localisation" class="ey-label">Localisation</label>
-                        <select asp-for="Localisation" class="ey-input"><option value="">Selectionnez</option>@foreach (var item in localisations) { <option value="@item">@item</option> }</select>
+                        <label asp-for="LocationId" class="ey-label">Localisation</label>
+                        <select asp-for="LocationId" class="ey-input">
+                            <option value="">Selectionnez</option>
+                            @foreach (var l in locationEntities) { <option value="@l.Id">@l.Name</option> }
+                        </select>
                     </div>
+
                     <div class="col-md-4"><label asp-for="DatePrisePoste" class="ey-label">Date de prise de poste</label><input asp-for="DatePrisePoste" class="ey-input" type="date" /></div>
                 </div>
             </div>
 
+            <!-- Contrat et données RH -->
             <div class="ey-form-section">
                 <div class="ey-section-title">Contrat et donnees RH</div>
                 <div class="row g-3">
                     <div class="col-md-4">
-                        <label asp-for="TypeContrat" class="ey-label">Type de contrat</label>
-                        <select asp-for="TypeContrat" class="ey-input"><option value="">Selectionnez</option>@foreach (var item in typesContrat) { <option value="@item">@item</option> }</select>
+                        <label asp-for="ContractTypeId" class="ey-label">Type de contrat</label>
+                        <select asp-for="ContractTypeId" class="ey-input">
+                            <option value="">Selectionnez</option>
+                            @foreach (var ct in contractTypes) { <option value="@ct.Id">@ct.Name</option> }
+                        </select>
                     </div>
                     <div class="col-md-4"><label asp-for="DateEmbauche" class="ey-label">Date d'embauche</label><input asp-for="DateEmbauche" class="ey-input" type="date" /></div>
                     <div class="col-md-4">
                         <label asp-for="Statut" class="ey-label">Statut employe</label>
-                        <select asp-for="Statut" asp-items="Html.GetEnumSelectList<SIRH.EY.Models.StatutCollaborateur>()" class="ey-input"></select>
+                        <select asp-for="Statut" asp-items="Html.GetEnumSelectList<StatutCollaborateur>()" class="ey-input"></select>
                     </div>
                     <div class="col-md-4"><label asp-for="NiveauPreparationSuccession" class="ey-label">Preparation succession (%)</label><input asp-for="NiveauPreparationSuccession" class="ey-input" type="number" min="0" max="100" /></div>
                     <div class="col-md-4">
                         <label asp-for="PotentielCarriere" class="ey-label">Potentiel carriere</label>
-                        <select asp-for="PotentielCarriere" class="ey-input"><option value="">Selectionnez</option>@foreach (var item in potentielsCarriere) { <option value="@item">@item</option> }</select>
+                        <select asp-for="PotentielCarriere" class="ey-input">
+                            <option value="">Selectionnez</option>
+                            @foreach (var p in potentiels) { <option value="@p">@p</option> }
+                        </select>
                     </div>
                     <div class="col-md-4">
                         <label class="ey-checkbox-modern ey-mt-4">
@@ -137,6 +182,25 @@
 </div>
 
 @section Scripts {
-    <script src="~/js/rh-dynamic-forms.js" asp-append-version="true"></script>
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        // Filter SubDepartment dropdown based on Department selection
+        (function () {
+            const deptSel = document.getElementById('DepartmentId');
+            const subSel  = document.getElementById('SubDepartmentId');
+            if (!deptSel || !subSel) return;
+
+            const allOpts = Array.from(subSel.options).filter(o => o.value);
+
+            function filter() {
+                const deptId = deptSel.value;
+                subSel.innerHTML = '<option value="">— Sélectionnez un sous-département —</option>';
+                allOpts.filter(o => !deptId || o.dataset.dept === deptId)
+                       .forEach(o => subSel.appendChild(o.cloneNode(true)));
+            }
+
+            deptSel.addEventListener('change', filter);
+            filter();
+        })();
+    </script>
 }

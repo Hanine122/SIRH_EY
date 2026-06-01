@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using SIRH.EY.Authorization;
 using SIRH.EY.Data;
 using SIRH.EY.Models;
+using SIRH.EY.Services;
 // using Rotativa.AspNetCore;
 
 namespace SIRH.EY.Controllers;
@@ -9,10 +11,12 @@ namespace SIRH.EY.Controllers;
 public class CertificatsController : Controller
 {
     private readonly ApplicationDbContext _context;
+    private readonly ITeamAccessService _teamAccess;
 
-    public CertificatsController(ApplicationDbContext context)
+    public CertificatsController(ApplicationDbContext context, ITeamAccessService teamAccess)
     {
         _context = context;
+        _teamAccess = teamAccess;
     }
     [HttpGet]
 // public async Task<IActionResult> DownloadCertificat(int inscriptionId)
@@ -44,14 +48,22 @@ public class CertificatsController : Controller
 
     public async Task<IActionResult> Index(int? collaborateurId)
     {
+        // Default to current user's own profile
         if (collaborateurId == null)
-        {
+            collaborateurId = await _teamAccess.GetCurrentCollaborateurIdAsync(User);
+
+        if (collaborateurId == null)
             return View(new List<Inscription>());
-        }
+
+        // IDOR guard: verify the caller may access this collaborateur's certificates
+        if (!await _teamAccess.CanAccessCollaborateurAsync(User, collaborateurId.Value))
+            return Forbid();
+
         var inscriptions = await _context.Inscriptions
             .Include(i => i.Formation)
             .Where(i => i.CollaborateurId == collaborateurId && i.Terminee)
             .ToListAsync();
+
         var collaborateur = await _context.Collaborateurs.FindAsync(collaborateurId);
         ViewBag.CollaborateurNom = collaborateur?.Prenom + " " + collaborateur?.Nom;
         return View(inscriptions);

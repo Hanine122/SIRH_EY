@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace SIRH.EY.Models;
 
-public class BusinessUnitEntity
+public class BusinessUnitEntity : AuditableEntity
 {
     public int Id { get; set; }
 

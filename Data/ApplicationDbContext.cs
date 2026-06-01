@@ -36,7 +36,13 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<GradeEntity> Grades { get; set; }
     public DbSet<BusinessUnitEntity> BusinessUnits { get; set; }
     public DbSet<LocationEntity> Locations { get; set; }
+    public DbSet<ContractType> ContractTypes { get; set; }
     public DbSet<SystemParameter> SystemParameters { get; set; }
+
+    // ── Position relationships ─────────────────────────────────────────────────
+    public DbSet<PositionRequiredCompetence> PositionRequiredCompetences { get; set; }
+    public DbSet<PositionMandatoryFormation> PositionMandatoryFormations { get; set; }
+    public DbSet<PositionGradeEligibility> PositionGradeEligibilities { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -111,6 +117,57 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             .WithMany(l => l.Collaborateurs)
             .HasForeignKey(c => c.LocationId)
             .OnDelete(DeleteBehavior.SetNull);
+
+        // ── ContractType → Collaborateurs ─────────────────────────────────────
+        modelBuilder.Entity<Collaborateur>()
+            .HasOne(c => c.ContractTypeRef)
+            .WithMany(ct => ct.Collaborateurs)
+            .HasForeignKey(c => c.ContractTypeId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        // ── Position → RequiredCompetences ────────────────────────────────────
+        modelBuilder.Entity<PositionRequiredCompetence>()
+            .HasOne(prc => prc.Position)
+            .WithMany(p => p.RequiredCompetences)
+            .HasForeignKey(prc => prc.PositionId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // ── Position → MandatoryFormations ────────────────────────────────────
+        modelBuilder.Entity<PositionMandatoryFormation>()
+            .HasOne(pmf => pmf.Position)
+            .WithMany(p => p.MandatoryFormations)
+            .HasForeignKey(pmf => pmf.PositionId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<PositionMandatoryFormation>()
+            .HasOne(pmf => pmf.Formation)
+            .WithMany()
+            .HasForeignKey(pmf => pmf.FormationId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // ── Position → GradeEligibilities ─────────────────────────────────────
+        modelBuilder.Entity<PositionGradeEligibility>()
+            .HasOne(pge => pge.Position)
+            .WithMany(p => p.GradeEligibilities)
+            .HasForeignKey(pge => pge.PositionId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<PositionGradeEligibility>()
+            .HasOne(pge => pge.GradeEntity)
+            .WithMany(g => g.PositionEligibilities)
+            .HasForeignKey(pge => pge.GradeEntityId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // ── Audit fields: default CreatedAt for existing rows ─────────────────
+        foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+        {
+            if (typeof(AuditableEntity).IsAssignableFrom(entityType.ClrType))
+            {
+                modelBuilder.Entity(entityType.ClrType)
+                    .Property(nameof(AuditableEntity.CreatedAt))
+                    .HasDefaultValueSql("GETUTCDATE()");
+            }
+        }
 
         // ── FormationCompetence composite key ─────────────────────────────────
         modelBuilder.Entity<FormationCompetence>()

@@ -413,74 +413,40 @@ public async Task<IActionResult> AskIA([FromBody] RecommendationRequest request)
     // GET: Collaborateurs/Create
 
     [Authorize(Roles = Roles.ITAdminOrRH)]
-    public IActionResult Create()
-
+    public async Task<IActionResult> Create()
     {
-
-        ViewBag.Managers = _context.Collaborateurs
-
+        ViewBag.Managers = await _context.Collaborateurs
             .Where(c => c.Actif && (c.Grade == "Manager" || (c.Poste ?? "").Contains("Manager")))
-
-            .ToList();
-
-
-
-        // Ajouter les listes déroulantes depuis le service
-
-        ViewBag.Departements = CompetenceCatalogService.Departements;
-
-        ViewBag.Postes = CompetenceCatalogService.Postes;
-
-        ViewBag.Grades = CompetenceCatalogService.Grades;
-        PrepareHrProfileViewData();
-
-
-
+            .OrderBy(c => c.Nom)
+            .ToListAsync();
+        await LoadMasterDataAsync();
         return View();
-
     }
-
-
 
     [HttpPost]
     [Authorize(Roles = Roles.ITAdminOrRH)]
     [ValidateAntiForgeryToken]
-
-    public async Task<IActionResult> Create([Bind("Id,Nom,Prenom,Email,DateNaissance,Genre,Nationalite,EtatCivil,Adresse,Ville,Pays,TelephonePersonnel,ContactUrgence,Matricule,Departement,Grade,Poste,ManagerId,TypeContrat,Statut,Localisation,BusinessUnit,NiveauHierarchique,DateEmbauche,DatePrisePoste,FormationsObligatoires,NiveauPreparationSuccession,PotentielCarriere,Actif")] Collaborateur collaborateur)
-
+    public async Task<IActionResult> Create(
+        [Bind("Id,Nom,Prenom,Email,DateNaissance,Genre,Nationalite,EtatCivil,Adresse,Ville,Pays," +
+              "TelephonePersonnel,ContactUrgence,Matricule,ManagerId,NiveauHierarchique,DateEmbauche," +
+              "DatePrisePoste,FormationsObligatoires,NiveauPreparationSuccession,PotentielCarriere,Actif,Statut," +
+              "DepartmentId,SubDepartmentId,PositionId,GradeId,BusinessUnitId,LocationId,ContractTypeId")]
+        Collaborateur collaborateur)
     {
-
         if (ModelState.IsValid)
-
         {
-
+            await SyncLegacyStringFieldsAsync(collaborateur);
             _context.Add(collaborateur);
-
             await _context.SaveChangesAsync();
-
             return RedirectToAction(nameof(Index));
-
         }
 
-        // Recharger les listes en cas d'erreur
-
         ViewBag.Managers = await _context.Collaborateurs
-
             .Where(c => c.Actif && (c.Grade == "Manager" || (c.Poste ?? "").Contains("Manager")))
-
             .OrderBy(c => c.Nom)
-
             .ToListAsync();
-
-        ViewBag.Departements = CompetenceCatalogService.Departements;
-
-        ViewBag.Postes = CompetenceCatalogService.Postes;
-
-        ViewBag.Grades = CompetenceCatalogService.Grades;
-        PrepareHrProfileViewData();
-
+        await LoadMasterDataAsync();
         return View(collaborateur);
-
     }
 
 
@@ -489,32 +455,17 @@ public async Task<IActionResult> AskIA([FromBody] RecommendationRequest request)
 
     [Authorize(Roles = Roles.ITAdminOrRH)]
     public async Task<IActionResult> Edit(int? id)
-
     {
-
         if (id == null) return NotFound();
-
         var collaborateur = await _context.Collaborateurs.FindAsync(id);
-
         if (collaborateur == null) return NotFound();
 
         ViewBag.Managers = await _context.Collaborateurs
-
             .Where(c => c.Actif && c.Id != id && (c.Grade == "Manager" || (c.Poste ?? "").Contains("Manager")))
-
             .OrderBy(c => c.Nom)
-
             .ToListAsync();
-
-        ViewBag.Departements = CompetenceCatalogService.Departements;
-
-        ViewBag.Postes = CompetenceCatalogService.Postes;
-
-        ViewBag.Grades = CompetenceCatalogService.Grades;
-        PrepareHrProfileViewData();
-
+        await LoadMasterDataAsync();
         return View(collaborateur);
-
     }
 
 
@@ -522,60 +473,37 @@ public async Task<IActionResult> AskIA([FromBody] RecommendationRequest request)
     [HttpPost]
     [Authorize(Roles = Roles.ITAdminOrRH)]
     [ValidateAntiForgeryToken]
-
-    public async Task<IActionResult> Edit(int id, [Bind("Id,Nom,Prenom,Email,DateNaissance,Genre,Nationalite,EtatCivil,Adresse,Ville,Pays,TelephonePersonnel,ContactUrgence,Matricule,Departement,Grade,Poste,ManagerId,TypeContrat,Statut,Localisation,BusinessUnit,NiveauHierarchique,DateEmbauche,DatePrisePoste,FormationsObligatoires,NiveauPreparationSuccession,PotentielCarriere,Actif")] Collaborateur collaborateur)
-
+    public async Task<IActionResult> Edit(int id,
+        [Bind("Id,Nom,Prenom,Email,DateNaissance,Genre,Nationalite,EtatCivil,Adresse,Ville,Pays," +
+              "TelephonePersonnel,ContactUrgence,Matricule,ManagerId,NiveauHierarchique,DateEmbauche," +
+              "DatePrisePoste,FormationsObligatoires,NiveauPreparationSuccession,PotentielCarriere,Actif,Statut," +
+              "DepartmentId,SubDepartmentId,PositionId,GradeId,BusinessUnitId,LocationId,ContractTypeId")]
+        Collaborateur collaborateur)
     {
-
         if (id != collaborateur.Id) return NotFound();
 
         if (ModelState.IsValid)
-
         {
-
             try
-
             {
-
+                await SyncLegacyStringFieldsAsync(collaborateur);
                 _context.Update(collaborateur);
-
                 await _context.SaveChangesAsync();
-
             }
-
             catch (DbUpdateConcurrencyException)
-
             {
-
                 if (!_context.Collaborateurs.Any(e => e.Id == id)) return NotFound();
-
                 throw;
-
             }
-
             return RedirectToAction(nameof(Index));
-
         }
 
-        // Recharger les listes en cas d'erreur
-
         ViewBag.Managers = await _context.Collaborateurs
-
             .Where(c => c.Actif && c.Id != id && (c.Grade == "Manager" || (c.Poste ?? "").Contains("Manager")))
-
             .OrderBy(c => c.Nom)
-
             .ToListAsync();
-
-        ViewBag.Departements = CompetenceCatalogService.Departements;
-
-        ViewBag.Postes = CompetenceCatalogService.Postes;
-
-        ViewBag.Grades = CompetenceCatalogService.Grades;
-        PrepareHrProfileViewData();
-
+        await LoadMasterDataAsync();
         return View(collaborateur);
-
     }
 
 
@@ -1344,15 +1272,67 @@ public async Task<IActionResult> AskIA([FromBody] RecommendationRequest request)
 
     }
 
-    private void PrepareHrProfileViewData()
+    // ── Master data ViewBag loader (replaces CompetenceCatalogService + PrepareHrProfileViewData) ──
+
+    private async Task LoadMasterDataAsync()
     {
-        ViewBag.Genres = new[] { "Femme", "Homme", "Non renseigne" };
-        ViewBag.EtatsCivils = new[] { "Celibataire", "Marie(e)", "Divorce(e)", "Veuf/Veuve" };
-        ViewBag.TypesContrat = new[] { "CDI", "CDD", "Stage", "Alternance", "Freelance", "Consultant externe" };
-        ViewBag.Localisations = new[] { "Tunis", "Lac 1", "Lac 2", "Sfax", "Remote", "Hybride" };
-        ViewBag.BusinessUnits = new[] { "Assurance", "Consulting", "Strategy & Transactions", "Tax", "CBS", "Talent Team" };
+        // Referential dropdowns from DB
+        ViewBag.Departments   = await _context.Departments.Where(d => d.IsActive).OrderBy(d => d.Name).ToListAsync();
+        ViewBag.SubDepartments= await _context.SubDepartments.Where(s => s.IsActive).Include(s => s.Department).OrderBy(s => s.Department.Name).ThenBy(s => s.Name).ToListAsync();
+        ViewBag.Positions     = await _context.Positions.Where(p => p.IsActive).OrderBy(p => p.Name).ToListAsync();
+        ViewBag.GradeEntities = await _context.Grades.Where(g => g.IsActive).OrderBy(g => g.Level).ToListAsync();
+        ViewBag.BusinessUnitEntities = await _context.BusinessUnits.Where(b => b.IsActive).OrderBy(b => b.Name).ToListAsync();
+        ViewBag.LocationEntities     = await _context.Locations.Where(l => l.IsActive).OrderBy(l => l.Name).ToListAsync();
+        ViewBag.ContractTypes = await _context.ContractTypes.Where(ct => ct.IsActive).OrderBy(ct => ct.Name).ToListAsync();
+
+        // Static enumerations (not in master data)
+        ViewBag.Genres             = new[] { "Femme", "Homme", "Non renseigne" };
+        ViewBag.EtatsCivils        = new[] { "Celibataire", "Marie(e)", "Divorce(e)", "Veuf/Veuve" };
         ViewBag.NiveauxHierarchiques = new[] { "Junior", "Senior", "Manager", "Senior Manager", "Director", "Partner" };
         ViewBag.PotentielsCarriere = new[] { "Emergent", "Solide", "Haut potentiel", "Succession prioritaire" };
+    }
+
+    /// <summary>
+    /// After saving a collaborateur with FK fields, sync the legacy string fields
+    /// so existing views/queries that read the strings still work.
+    /// </summary>
+    private async Task SyncLegacyStringFieldsAsync(Collaborateur collaborateur)
+    {
+        if (collaborateur.DepartmentId.HasValue)
+        {
+            var dept = await _context.Departments.FindAsync(collaborateur.DepartmentId);
+            collaborateur.Departement = dept?.Name;
+        }
+
+        if (collaborateur.PositionId.HasValue)
+        {
+            var pos = await _context.Positions.FindAsync(collaborateur.PositionId);
+            collaborateur.Poste = pos?.Name;
+        }
+
+        if (collaborateur.GradeId.HasValue)
+        {
+            var grade = await _context.Grades.FindAsync(collaborateur.GradeId);
+            collaborateur.Grade = grade?.Name;
+        }
+
+        if (collaborateur.BusinessUnitId.HasValue)
+        {
+            var bu = await _context.BusinessUnits.FindAsync(collaborateur.BusinessUnitId);
+            collaborateur.BusinessUnit = bu?.Name;
+        }
+
+        if (collaborateur.LocationId.HasValue)
+        {
+            var loc = await _context.Locations.FindAsync(collaborateur.LocationId);
+            collaborateur.Localisation = loc?.Name;
+        }
+
+        if (collaborateur.ContractTypeId.HasValue)
+        {
+            var ct = await _context.ContractTypes.FindAsync(collaborateur.ContractTypeId);
+            collaborateur.TypeContrat = ct?.Name;
+        }
     }
 
 }

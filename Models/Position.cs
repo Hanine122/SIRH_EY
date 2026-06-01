@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace SIRH.EY.Models;
 
-public class Position
+public class Position : AuditableEntity
 {
     public int Id { get; set; }
 
@@ -24,5 +24,9 @@ public class Position
     [Display(Name = "Actif")]
     public bool IsActive { get; set; } = true;
 
+    // ── Relationships ──────────────────────────────────────────────────────────
     public ICollection<Collaborateur> Collaborateurs { get; set; } = new List<Collaborateur>();
+    public ICollection<PositionRequiredCompetence> RequiredCompetences { get; set; } = new List<PositionRequiredCompetence>();
+    public ICollection<PositionMandatoryFormation> MandatoryFormations { get; set; } = new List<PositionMandatoryFormation>();
+    public ICollection<PositionGradeEligibility> GradeEligibilities { get; set; } = new List<PositionGradeEligibility>();
 }

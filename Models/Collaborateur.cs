@@ -66,6 +66,10 @@ public class Collaborateur
     public int? LocationId { get; set; }
     public LocationEntity? LocationRef { get; set; }
 
+    [Display(Name = "Type de contrat")]
+    public int? ContractTypeId { get; set; }
+    public ContractType? ContractTypeRef { get; set; }
+
     // ── Other HR fields ──
     public string? RoleRH { get; set; }
     public string? TypeContrat { get; set; }

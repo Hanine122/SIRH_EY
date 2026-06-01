@@ -1,0 +1,215 @@
+@model SIRH.EY.Models.Position
+@{
+    ViewData["Title"] = "Poste — " + Model.Name;
+    var availableFormations = ViewBag.AvailableFormations as List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> ?? new();
+    var availableGrades     = ViewBag.AvailableGrades     as List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> ?? new();
+}
+
+<div class="d-flex justify-content-between align-items-start mb-4">
+    <div>
+        <div class="ey-page-kicker">Référentiel RH — Postes</div>
+        <h1 class="ey-page-title">@Model.Name</h1>
+        <p class="ey-page-lead mb-0">
+            @(Model.SubDepartment?.Department?.Name) › @(Model.SubDepartment?.Name ?? "—")
+            @if (Model.IsActive) { <span class="badge bg-success bg-opacity-10 text-success ms-2">Actif</span> }
+            else { <span class="badge bg-secondary bg-opacity-10 text-secondary ms-2">Inactif</span> }
+        </p>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-secondary"><i class="fas fa-pen me-1"></i>Modifier</a>
+        <a asp-action="Index" class="btn btn-outline-secondary"><i class="fas fa-arrow-left me-1"></i>Retour</a>
+    </div>
+</div>
+
+@if (TempData["Success"] != null) { <div class="alert alert-success alert-dismissible fade show"><i class="fas fa-check-circle me-1"></i>@TempData["Success"]<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div> }
+@if (TempData["Error"]   != null) { <div class="alert alert-danger alert-dismissible fade show"><i class="fas fa-exclamation-triangle me-1"></i>@TempData["Error"]<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div> }
+
+<div class="row g-3">
+
+    <!-- ── Required Competences ──────────────────────────────────────────── -->
+    <div class="col-lg-6">
+        <div class="ey-card p-4 h-100">
+            <h5 class="fw-semibold mb-3"><i class="fas fa-chart-bar me-2 text-warning"></i>Compétences requises</h5>
+
+            <form asp-action="AddRequiredCompetence" method="post" class="mb-3">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="positionId" value="@Model.Id" />
+                <div class="row g-2">
+                    <div class="col-6">
+                        <input name="competenceName" class="form-control form-control-sm" placeholder="Nom de la compétence" required />
+                    </div>
+                    <div class="col-3">
+                        <input name="category" class="form-control form-control-sm" placeholder="Catégorie" />
+                    </div>
+                    <div class="col-2">
+                        <select name="requiredLevel" class="form-select form-select-sm">
+                            @for (int i = 1; i <= 5; i++) { <option value="@i" selected="@(i == 3)">N@i</option> }
+                        </select>
+                    </div>
+                    <div class="col-1 d-flex">
+                        <button type="submit" class="btn btn-sm btn-warning w-100"><i class="fas fa-plus"></i></button>
+                    </div>
+                    <div class="col-auto">
+                        <div class="form-check form-switch mt-1">
+                            <input name="isMandatory" type="checkbox" class="form-check-input" value="true" checked />
+                            <label class="form-check-label small">Obligatoire</label>
+                        </div>
+                    </div>
+                </div>
+            </form>
+
+            @if (Model.RequiredCompetences.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                        <thead class="table-light">
+                            <tr><th>Compétence</th><th>Catégorie</th><th>Niveau</th><th>Obligatoire</th><th></th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var rc in Model.RequiredCompetences.OrderBy(r => r.CompetenceName))
+                            {
+                                <tr>
+                                    <td class="fw-semibold">@rc.CompetenceName</td>
+                                    <td class="text-muted small">@(rc.Category ?? "—")</td>
+                                    <td><span class="badge bg-warning bg-opacity-10 text-warning">N@rc.RequiredLevel</span></td>
+                                    <td>@(rc.IsMandatory ? "✅" : "—")</td>
+                                    <td>
+                                        <form asp-action="RemoveRequiredCompetence" method="post" class="d-inline"
+                                              onsubmit="return confirm('Retirer cette compétence ?')">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@rc.Id" />
+                                            <input type="hidden" name="positionId" value="@Model.Id" />
+                                            <button type="submit" class="btn btn-sm btn-outline-danger py-0"><i class="fas fa-times"></i></button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <p class="text-muted small mb-0"><i class="fas fa-info-circle me-1"></i>Aucune compétence définie pour ce poste.</p>
+            }
+        </div>
+    </div>
+
+    <!-- ── Grade Eligibilities ───────────────────────────────────────────── -->
+    <div class="col-lg-6">
+        <div class="ey-card p-4 h-100">
+            <h5 class="fw-semibold mb-3"><i class="fas fa-medal me-2 text-warning"></i>Grades éligibles</h5>
+
+            <form asp-action="AddGradeEligibility" method="post" class="mb-3">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="positionId" value="@Model.Id" />
+                <div class="row g-2">
+                    <div class="col-7">
+                        <select name="gradeEntityId" class="form-select form-select-sm" required>
+                            <option value="">Sélectionner un grade</option>
+                            @foreach (var g in availableGrades) { <option value="@g.Value">@g.Text</option> }
+                        </select>
+                    </div>
+                    <div class="col-3">
+                        <div class="form-check form-switch mt-1">
+                            <input name="isMinimum" type="checkbox" class="form-check-input" value="true" />
+                            <label class="form-check-label small">Minimum requis</label>
+                        </div>
+                    </div>
+                    <div class="col-2">
+                        <button type="submit" class="btn btn-sm btn-warning w-100"><i class="fas fa-plus"></i></button>
+                    </div>
+                </div>
+            </form>
+
+            @if (Model.GradeEligibilities.Any())
+            {
+                <ul class="list-group list-group-flush">
+                    @foreach (var ge in Model.GradeEligibilities.OrderBy(g => g.GradeEntity?.Level))
+                    {
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <span>
+                                <span class="badge bg-warning bg-opacity-10 text-warning me-1">N@ge.GradeEntity?.Level</span>
+                                @ge.GradeEntity?.Name
+                                @if (ge.IsMinimum) { <span class="badge bg-info bg-opacity-10 text-info ms-1">Minimum</span> }
+                            </span>
+                            <form asp-action="RemoveGradeEligibility" method="post" class="d-inline"
+                                  onsubmit="return confirm('Retirer ce grade ?')">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@ge.Id" />
+                                <input type="hidden" name="positionId" value="@Model.Id" />
+                                <button type="submit" class="btn btn-sm btn-outline-danger py-0"><i class="fas fa-times"></i></button>
+                            </form>
+                        </li>
+                    }
+                </ul>
+            }
+            else
+            {
+                <p class="text-muted small mb-0"><i class="fas fa-info-circle me-1"></i>Aucun grade éligible défini.</p>
+            }
+        </div>
+    </div>
+
+    <!-- ── Mandatory Formations ──────────────────────────────────────────── -->
+    <div class="col-12">
+        <div class="ey-card p-4">
+            <h5 class="fw-semibold mb-3"><i class="fas fa-graduation-cap me-2 text-warning"></i>Formations obligatoires</h5>
+
+            <form asp-action="AddMandatoryFormation" method="post" class="mb-3">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="positionId" value="@Model.Id" />
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Formation</label>
+                        <select name="formationId" class="form-select form-select-sm" required>
+                            <option value="">Sélectionner une formation</option>
+                            @foreach (var f in availableFormations) { <option value="@f.Value">@f.Text</option> }
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small fw-semibold">Délai (mois)</label>
+                        <input name="deadlineMonths" type="number" class="form-control form-control-sm" min="1" max="60" placeholder="Optionnel" />
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-warning w-100"><i class="fas fa-plus me-1"></i>Ajouter</button>
+                    </div>
+                </div>
+            </form>
+
+            @if (Model.MandatoryFormations.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                        <thead class="table-light">
+                            <tr><th>Formation</th><th>Durée (h)</th><th>Délai de validation</th><th></th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var mf in Model.MandatoryFormations.OrderBy(m => m.Formation?.Titre))
+                            {
+                                <tr>
+                                    <td class="fw-semibold">@mf.Formation?.Titre</td>
+                                    <td class="text-muted small">@mf.Formation?.DureeHeures h</td>
+                                    <td class="text-muted small">@(mf.DeadlineMonths.HasValue ? $"{mf.DeadlineMonths} mois" : "Sans délai")</td>
+                                    <td>
+                                        <form asp-action="RemoveMandatoryFormation" method="post" class="d-inline"
+                                              onsubmit="return confirm('Retirer cette formation ?')">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@mf.Id" />
+                                            <input type="hidden" name="positionId" value="@Model.Id" />
+                                            <button type="submit" class="btn btn-sm btn-outline-danger py-0"><i class="fas fa-times"></i></button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <p class="text-muted small mb-0"><i class="fas fa-info-circle me-1"></i>Aucune formation obligatoire définie.</p>
+            }
+        </div>
+    </div>
+</div>

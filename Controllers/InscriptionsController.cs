@@ -2,14 +2,19 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using SIRH.EY.Authorization;
 using SIRH.EY.Data;
 using SIRH.EY.Models;
 
 namespace SIRH.EY.Controllers
 {
+    // Raw inscription management is an administrative operation — RH and ITAdmin only.
+    // Collaborateurs manage their own inscriptions through FormationsController.
+    [Authorize(Roles = Roles.ITAdminOrRH)]
     public class InscriptionsController : Controller
     {
         private readonly ApplicationDbContext _context;

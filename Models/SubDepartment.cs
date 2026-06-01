@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace SIRH.EY.Models;
 
-public class SubDepartment
+public class SubDepartment : AuditableEntity
 {
     public int Id { get; set; }
 

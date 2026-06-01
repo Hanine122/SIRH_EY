@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace SIRH.EY.Models;
 
-public class GradeEntity
+public class GradeEntity : AuditableEntity
 {
     public int Id { get; set; }
 
@@ -21,4 +21,5 @@ public class GradeEntity
     public bool IsActive { get; set; } = true;
 
     public ICollection<Collaborateur> Collaborateurs { get; set; } = new List<Collaborateur>();
+    public ICollection<PositionGradeEligibility> PositionEligibilities { get; set; } = new List<PositionGradeEligibility>();
 }
