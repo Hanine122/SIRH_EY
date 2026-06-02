@@ -1,4 +1,7 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using SIRH.EY.Data;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
@@ -11,10 +14,12 @@ namespace SIRH.EY.Controllers
     public class ChatbotController : ControllerBase
     {
         private readonly IHttpClientFactory _httpClientFactory;
+        private readonly ApplicationDbContext _context;
 
-        public ChatbotController(IHttpClientFactory httpClientFactory)
+        public ChatbotController(IHttpClientFactory httpClientFactory, ApplicationDbContext context)
         {
             _httpClientFactory = httpClientFactory;
+            _context = context;
         }
 
         public class ChatRequest
@@ -25,6 +30,55 @@ namespace SIRH.EY.Controllers
         public class ChatReply
         {
             public string Reply { get; set; }
+        }
+
+        // Called by n8n server-side — no browser session available.
+        [AllowAnonymous]
+        [HttpGet("stats")]
+        public async Task<IActionResult> GetRhStats()
+        {
+            var collaborateursActifs = await _context.Collaborateurs
+                .CountAsync(c => c.Actif);
+
+            var formationsEnCours = await _context.Inscriptions
+                .CountAsync(i => !i.Terminee);
+
+            var totalInscriptions = await _context.Inscriptions.CountAsync();
+            var terminees         = await _context.Inscriptions.CountAsync(i => i.Terminee);
+            var tauxCompletion    = totalInscriptions > 0
+                ? Math.Round(terminees * 100.0 / totalInscriptions, 1)
+                : 0.0;
+
+            var repartitionDept = await _context.Collaborateurs
+                .Where(c => c.Actif && c.Departement != null)
+                .GroupBy(c => c.Departement)
+                .Select(g => new { departement = g.Key, total = g.Count() })
+                .OrderByDescending(x => x.total)
+                .ToListAsync();
+
+            var topCompetences = await _context.Competences
+                .Where(c => c.Collaborateur != null && c.Collaborateur.Actif)
+                .GroupBy(c => c.Nom)
+                .Select(g => new
+                {
+                    nom              = g.Key,
+                    nbCollaborateurs = g.Count(),
+                    niveauMoyen      = Math.Round(g.Average(c => (double)c.NiveauActuel), 1)
+                })
+                .OrderByDescending(x => x.nbCollaborateurs)
+                .Take(5)
+                .ToListAsync();
+
+            return Ok(new
+            {
+                collaborateursActifs,
+                formationsEnCours,
+                totalInscriptions,
+                terminees,
+                tauxCompletion,
+                repartitionDept,
+                topCompetences
+            });
         }
 
         [HttpPost("ask")]

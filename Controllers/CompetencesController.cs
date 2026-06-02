@@ -448,7 +448,7 @@ public async Task<IActionResult> MatriceEquipe(int? collaborateurId)
         competence.DateEvaluation = DateTime.Now;
 
         await _context.SaveChangesAsync();
-        TempData["Success"] = "Auto-Ã©valuation enregistrÃ©e. Le manager pourra maintenant la valider ou l'ajuster.";
+        TempData["Success"] = "Auto-évaluation enregistrée. Le manager pourra maintenant la valider ou l'ajuster.";
         return RedirectToAction(nameof(Index), new { collaborateurId = competence.CollaborateurId });
     }
 
@@ -462,9 +462,20 @@ public async Task<IActionResult> MatriceEquipe(int? collaborateurId)
             .FirstOrDefaultAsync(c => c.Id == id);
         if (competence == null) return NotFound();
 
-        // Manager scope: can only validate for direct reports
+        // Manager scope: can only validate for direct reports, not own competences
         if (!await _ownership.OwnsCompetenceAsync(User, id))
             return Forbid();
+
+        // A Manager must not validate their own competences (4-eyes principle)
+        if (User.IsInRole(Roles.Manager) && !User.IsInRole(Roles.RH) && !User.IsInRole(Roles.ITAdmin))
+        {
+            var ownId = await _teamAccess.GetCurrentCollaborateurIdAsync(User);
+            if (ownId.HasValue && competence.CollaborateurId == ownId.Value)
+            {
+                TempData["Error"] = "Un manager ne peut pas valider sa propre auto-évaluation.";
+                return RedirectToAction(nameof(Index), new { collaborateurId = competence.CollaborateurId });
+            }
+        }
 
         var evaluation = competence.EvaluationCompetence;
         if (evaluation == null)
@@ -505,6 +516,17 @@ public async Task<IActionResult> MatriceEquipe(int? collaborateurId)
 
         if (!await _ownership.OwnsCompetenceAsync(User, vm.CompetenceId))
             return Forbid();
+
+        // A Manager must not validate their own competences (4-eyes principle)
+        if (User.IsInRole(Roles.Manager) && !User.IsInRole(Roles.RH) && !User.IsInRole(Roles.ITAdmin))
+        {
+            var ownId = await _teamAccess.GetCurrentCollaborateurIdAsync(User);
+            if (ownId.HasValue && competence.CollaborateurId == ownId.Value)
+            {
+                TempData["Error"] = "Un manager ne peut pas valider sa propre auto-évaluation.";
+                return RedirectToAction(nameof(Index), new { collaborateurId = competence.CollaborateurId });
+            }
+        }
         if (competence.EvaluationCompetence == null)
         {
             TempData["Error"] = "Aucune auto-Ã©valuation Ã  valider.";
@@ -527,8 +549,8 @@ public async Task<IActionResult> MatriceEquipe(int? collaborateurId)
 
         await _context.SaveChangesAsync();
         TempData["Success"] = vm.ValidationManager
-            ? "Ã‰valuation manager validÃ©e et enregistrÃ©e."
-            : "Correction manager enregistrÃ©e (validation non finalisÃ©e).";
+            ? "Évaluation manager validée et enregistrée."
+            : "Correction manager enregistrée (validation non finalisée).";
         return RedirectToAction(nameof(Index), new { collaborateurId = competence.CollaborateurId });
     }
 

@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using SIRH.EY.Authorization;
 using SIRH.EY.Data;
 using SIRH.EY.Models;
+using SIRH.EY.Services;
 
 namespace SIRH.EY.Controllers
 {
@@ -140,18 +141,43 @@ namespace SIRH.EY.Controllers
             inscription.Terminee = true;
             await _context.SaveChangesAsync();
 
-            // Incrémenter la compétence visée
-            var competence = await _context.Competences
-                .FirstOrDefaultAsync(c => c.CollaborateurId == inscription.CollaborateurId && c.Nom == inscription.Formation.CompetenceVisee);
-            if (competence != null && competence.NiveauActuel < competence.NiveauCible)
+            var formation = inscription.Formation;
+            if (formation != null && !string.IsNullOrEmpty(formation.CompetenceVisee))
             {
-                competence.NiveauActuel = Math.Min(competence.NiveauActuel + 1, competence.NiveauCible);
-                await _context.SaveChangesAsync();
-                TempData["Success"] = $"Félicitations ! Niveau {competence.Nom} augmenté à {competence.NiveauActuel}/5.";
+                var competence = await _context.Competences
+                    .FirstOrDefaultAsync(c => c.CollaborateurId == inscription.CollaborateurId && c.Nom == formation.CompetenceVisee);
+
+                if (competence == null)
+                {
+                    var collaborateur = await _context.Collaborateurs.FindAsync(inscription.CollaborateurId);
+                    int niveauCible = CompetenceRules.GetNiveauCibleParGrade(collaborateur?.Grade ?? "Junior");
+                    competence = new Competence
+                    {
+                        Nom = formation.CompetenceVisee,
+                        CategorieCompetenceId = null,
+                        NiveauActuel = 1,
+                        NiveauCible = niveauCible,
+                        DateEvaluation = DateTime.Now,
+                        CollaborateurId = inscription.CollaborateurId
+                    };
+                    _context.Competences.Add(competence);
+                    await _context.SaveChangesAsync();
+                    TempData["Success"] = $"Formation terminée ! La compétence '{competence.Nom}' a été créée (niveau 1/{competence.NiveauCible}).";
+                }
+                else if (competence.NiveauActuel < competence.NiveauCible)
+                {
+                    competence.NiveauActuel = Math.Min(competence.NiveauActuel + 1, competence.NiveauCible);
+                    await _context.SaveChangesAsync();
+                    TempData["Success"] = $"Félicitations ! Niveau {competence.Nom} augmenté à {competence.NiveauActuel}/5.";
+                }
+                else
+                {
+                    TempData["Success"] = "Formation terminée. La compétence visée a déjà atteint son objectif.";
+                }
             }
             else
             {
-                TempData["Success"] = "Formation terminée, mais la compétence visée a déjà atteint son objectif.";
+                TempData["Success"] = "Formation terminée (aucune compétence associée).";
             }
             return RedirectToAction("Index", "Collaborateurs");
         }
@@ -163,7 +189,7 @@ public async Task<IActionResult> PlanifierExamen(int inscriptionId, DateTime dat
     inscription.DateExamen = dateExamen;
     await _context.SaveChangesAsync();
     TempData["Success"] = "Examen planifié.";
-    return RedirectToAction(nameof(Index), new { collaborateurId = inscription.CollaborateurId });
+    return RedirectToAction("Index", "Formations", new { collaborateurId = inscription.CollaborateurId });
 }
         private bool InscriptionExists(int id)
         {

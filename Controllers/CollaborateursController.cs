@@ -1258,20 +1258,6 @@ public async Task<IActionResult> AskIA([FromBody] RecommendationRequest request)
         return Json(result);
     }
 
-    // Classe interne pour la demande d'entretien
-
-    public class DemandeEntretienRequest
-
-    {
-
-        public int PartantId { get; set; }
-
-        public List<int> CandidatsIds { get; set; }
-
-        public string Commentaire { get; set; }
-
-    }
-
     // ── Master data ViewBag loader (replaces CompetenceCatalogService + PrepareHrProfileViewData) ──
 
     private async Task LoadMasterDataAsync()

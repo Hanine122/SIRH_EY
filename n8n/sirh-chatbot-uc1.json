@@ -1,0 +1,94 @@
+{
+  "name": "SIRH-EY Chatbot UC1 — Statistiques RH",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "hr-chatbot",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "node-webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "hr-chatbot"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ── Intent Detection ─────────────────────────────────────────────────────\n// Input:  { body: { message: \"...\" } }\n// Output: { message: string, intent: string }\n\nconst msg = ($input.first().json.body?.message || '').toLowerCase().trim();\n\nconst INTENTS = [\n  {\n    intent: 'COLLAB_ACTIFS',\n    keywords: ['actif', 'actifs', 'collaborateur', 'collaborateurs', 'effectif', 'combien']\n  },\n  {\n    intent: 'FORMATIONS_EN_COURS',\n    keywords: ['formation', 'formations', 'cours', 'en cours', 'suivi', 'inscrit', 'inscrits']\n  },\n  {\n    intent: 'REPARTITION_DEPT',\n    keywords: ['departement', 'département', 'repartition', 'répartition', 'service', 'equipe']\n  },\n  {\n    intent: 'COMPETENCES',\n    keywords: ['competence', 'compétence', 'competences', 'compétences', 'skill', 'niveau', 'top']\n  },\n  {\n    intent: 'TAUX_COMPLETION',\n    keywords: ['taux', 'completion', 'complétion', 'terminé', 'terminee', 'acheve', 'achevé', 'fini']\n  }\n];\n\nlet detectedIntent = 'UNKNOWN';\nfor (const { intent, keywords } of INTENTS) {\n  if (keywords.some(kw => msg.includes(kw))) {\n    detectedIntent = intent;\n    break;\n  }\n}\n\nreturn [{ json: { message: msg, intent: detectedIntent } }];"
+      },
+      "id": "node-detect-intent",
+      "name": "Detect Intent",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "http://localhost:5000/api/chatbot/stats",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "node-get-stats",
+      "name": "Get RH Stats",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ── Format Reply ─────────────────────────────────────────────────────────\n// Reads intent from 'Detect Intent' node, stats from 'Get RH Stats' node.\n\nconst intent = $('Detect Intent').first().json.intent;\nconst s      = $input.first().json; // stats payload\n\nlet reply = '';\n\nswitch (intent) {\n\n  case 'COLLAB_ACTIFS':\n    reply = `👥 Il y a actuellement **${s.collaborateursActifs}** collaborateurs actifs dans le SIRH EY.`;\n    break;\n\n  case 'FORMATIONS_EN_COURS':\n    reply = `📚 **${s.formationsEnCours}** formation(s) sont actuellement en cours sur un total de **${s.totalInscriptions}** inscription(s).`;\n    break;\n\n  case 'REPARTITION_DEPT': {\n    const lines = (s.repartitionDept || [])\n      .slice(0, 5)\n      .map(d => `  • ${d.departement} : ${d.total} collaborateur(s)`)\n      .join('\\n');\n    reply = `🏢 Répartition par département :\\n${lines || 'Aucune donnée.'}`;\n    break;\n  }\n\n  case 'COMPETENCES': {\n    const lines = (s.topCompetences || [])\n      .map(c => `  • ${c.nom} — ${c.nbCollaborateurs} collab. (niveau moy. ${c.niveauMoyen}/5)`)\n      .join('\\n');\n    reply = `🎯 Top compétences :\\n${lines || 'Aucune compétence enregistrée.'}`;\n    break;\n  }\n\n  case 'TAUX_COMPLETION':\n    reply = `✅ Taux de complétion des formations : **${s.tauxCompletion}%** (${s.terminees} terminée(s) sur ${s.totalInscriptions} inscription(s)).`;\n    break;\n\n  default:\n    reply = `Je peux vous renseigner sur :\\n• Les collaborateurs actifs\\n• Les formations en cours\\n• La répartition par département\\n• Les compétences\\n• Le taux de complétion\\n\\nPosez votre question !`;\n    break;\n}\n\nreturn [{ json: { reply } }];"
+      },
+      "id": "node-format-reply",
+      "name": "Format Reply",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ reply: $json.reply }) }}",
+        "options": {}
+      },
+      "id": "node-respond",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1120, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [{ "node": "Detect Intent", "type": "main", "index": 0 }]
+      ]
+    },
+    "Detect Intent": {
+      "main": [
+        [{ "node": "Get RH Stats", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get RH Stats": {
+      "main": [
+        [{ "node": "Format Reply", "type": "main", "index": 0 }]
+      ]
+    },
+    "Format Reply": {
+      "main": [
+        [{ "node": "Respond to Webhook", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}

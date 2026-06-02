@@ -256,7 +256,7 @@ namespace SIRH.EY.Controllers
             var formation = inscription.Formation;
             if (formation != null)
             {
-                formation.PlacesPrises--;
+                formation.PlacesPrises = Math.Max(0, formation.PlacesPrises - 1);
                 _context.Update(formation);
             }
             _context.Inscriptions.Remove(inscription);
