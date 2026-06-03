@@ -61,40 +61,135 @@
 }
 
 <div class="formations-container container-fluid px-0">
-    <!-- Hero / Progression Section -->
-    <div class="mes-formations-hero p-4 mb-4 shadow-sm">
-        <div class="row align-items-center g-4">
-            <div class="col-lg-8">
-                <div class="text-warning fw-bold mb-1" style="font-size: 0.8rem; letter-spacing: 0.1em;">PROGRESSION DE COMPÉTENCES</div>
-                <h2 class="mb-2 fw-bold text-white">Centre de Formation & Learning Experience</h2>
-                <p class="mb-4 text-white-50" style="max-width: 600px;">
-                    Développez vos aptitudes et visez l'excellence professionnelle. Suivez vos parcours en cours, explorez de nouvelles compétences clés et pilotez votre progression de carrière chez EY.
-                </p>
-                @{
-                    var totalInscriptions = inscriptions.Count;
-                    var terminees = inscriptions.Count(i => i.Terminee);
-                    var progress = totalInscriptions == 0 ? 0 : (int)((double)terminees / totalInscriptions * 100);
-                }
-                <div class="d-flex align-items-center justify-content-between mb-1">
-                    <span class="small fw-semibold">OBJECTIF DE FORMATION COMPLÉTÉ</span>
-                    <span class="small fw-bold">@progress%</span>
+    @{
+        var totalInscriptions = inscriptions.Count;
+        var terminees         = inscriptions.Count(i => i.Terminee);
+        var actives           = inscriptions.Count(i => !i.Terminee);
+        var progress          = totalInscriptions == 0 ? 0 : (int)((double)terminees / totalInscriptions * 100);
+
+        // Urgency: nearest upcoming exam
+        var prochaineEchéance = inscriptions
+            .Where(i => !i.Terminee && i.DateExamen.HasValue && i.DateExamen.Value >= DateTime.Today)
+            .OrderBy(i => i.DateExamen)
+            .FirstOrDefault();
+        var joursAvantExamen  = prochaineEchéance != null
+            ? (int)(prochaineEchéance.DateExamen!.Value - DateTime.Today).TotalDays
+            : (int?)null;
+
+        // Urgency: formation starting soon (within 7 days)
+        var prochaineFormation = inscriptions
+            .Where(i => !i.Terminee && i.Formation != null && i.Formation.DateDebut >= DateTime.Today)
+            .OrderBy(i => i.Formation!.DateDebut)
+            .FirstOrDefault();
+    }
+
+    <!-- ── Formation Dashboard Hero ────────────────────────────────────────── -->
+    <div class="mes-formations-hero p-4 mb-4">
+        <div class="row g-4 align-items-center">
+
+            <!-- Left: identity + master progress -->
+            <div class="col-lg-6">
+                <div class="mb-1" style="font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,230,0,.7);">
+                    CENTRE DE FORMATION EY
                 </div>
-                <div class="progress rounded-pill bg-dark" style="height: 8px;">
-                    <div class="progress-bar rounded-pill" style="width: @progress%; background: linear-gradient(90deg, #ffd600, #ffe600);" role="progressbar" aria-valuenow="@progress" aria-valuemin="0" aria-valuemax="100"></div>
-                </div>
-            </div>
-            <div class="col-lg-4">
-                <div class="card p-3 border-0 bg-white bg-opacity-10 backdrop-blur" style="border: 1px solid rgba(255,255,255,0.15) !important;">
-                    <div class="d-flex align-items-center gap-2 mb-2">
-                        <i class="fas fa-award text-warning fs-5"></i>
-                        <div class="fw-semibold text-white">CERTIFICATIONS ACQUISES</div>
+                <h2 class="fw-bold text-white mb-1 lh-sm">
+                    @(collaborateur != null ? $"{collaborateur.Prenom} {collaborateur.Nom}" : "Mon parcours de formation")
+                </h2>
+                @if (collaborateur != null)
+                {
+                    <div class="mb-3">
+                        <span class="badge text-dark fw-bold" style="background:var(--ey-yellow);">
+                            @((collaborateur.Grade ?? "Junior").ToUpperInvariant())
+                        </span>
+                        <span class="text-white-50 small ms-2">@(collaborateur.Poste ?? "")</span>
                     </div>
-                    <div class="display-5 fw-bold text-white mb-2">@certifications.Count</div>
-                    <button type="button" class="ey-btn-premium-gold w-100 py-2 border-0" id="btn-feuille-route">
-                        <i class="fas fa-stream me-1"></i>Feuille de route
-                    </button>
+                }
+                else
+                {
+                    <div class="mb-3"></div>
+                }
+
+                <!-- Urgency banner -->
+                @if (joursAvantExamen.HasValue)
+                {
+                    <div class="d-flex align-items-center gap-2 mb-3 px-3 py-2 rounded-3"
+                         style="background:@(joursAvantExamen <= 7 ? "rgba(229,72,77,.25)" : "rgba(255,230,0,.15)");
+                                border:1px solid @(joursAvantExamen <= 7 ? "rgba(229,72,77,.4)" : "rgba(255,230,0,.3)");">
+                        <i class="@(joursAvantExamen <= 7 ? "fas fa-exclamation-triangle text-danger" : "far fa-calendar-check text-warning")"></i>
+                        <span class="@(joursAvantExamen <= 7 ? "text-danger" : "text-warning") fw-semibold small">
+                            Examen dans <strong>@joursAvantExamen jour@(joursAvantExamen != 1 ? "s" : "")</strong>
+                            — @prochaineEchéance?.Formation?.Titre
+                        </span>
+                    </div>
+                }
+                else if (actives > 0)
+                {
+                    <div class="d-flex align-items-center gap-2 mb-3 px-3 py-2 rounded-3"
+                         style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);">
+                        <i class="fas fa-info-circle text-white-50"></i>
+                        <span class="text-white-50 small">
+                            @actives formation@(actives > 1 ? "s" : "") active@(actives > 1 ? "s" : "") — aucun examen planifié
+                        </span>
+                    </div>
+                }
+
+                <!-- Master progress bar -->
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <span class="text-white-50 small fw-semibold" style="letter-spacing:.05em;">
+                        TAUX DE COMPLÉTION ANNUEL
+                    </span>
+                    <span class="fw-black text-white">@progress%</span>
+                </div>
+                <div class="progress rounded-pill" style="height:8px;background:rgba(255,255,255,.12);">
+                    <div class="progress-bar rounded-pill" role="progressbar"
+                         style="width:@progress%;background:linear-gradient(90deg,#d4c000,var(--ey-yellow));"
+                         aria-valuenow="@progress" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
             </div>
+
+            <!-- Right: 4 KPIs -->
+            <div class="col-lg-6">
+                <div class="row g-2">
+                    <div class="col-6">
+                        <div class="rounded-3 p-3 text-center" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);">
+                            <div class="fw-black text-white" style="font-size:1.9rem;line-height:1.1;">
+                                @totalInscriptions
+                            </div>
+                            <div class="text-white-50 small fw-semibold">Inscriptions</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="rounded-3 p-3 text-center" style="background:rgba(18,185,129,.14);border:1px solid rgba(18,185,129,.3);">
+                            <div class="fw-black text-success" style="font-size:1.9rem;line-height:1.1;">
+                                @terminees
+                            </div>
+                            <div class="text-white-50 small fw-semibold">Terminées</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="rounded-3 p-3 text-center" style="background:rgba(255,230,0,.1);border:1px solid rgba(255,230,0,.2);">
+                            <div class="fw-black text-warning" style="font-size:1.9rem;line-height:1.1;">
+                                @actives
+                            </div>
+                            <div class="text-white-50 small fw-semibold">En cours</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="rounded-3 p-3 text-center"
+                             style="background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.2);">
+                            <div class="fw-black" style="font-size:1.9rem;line-height:1.1;color:#fbbf24;">
+                                @certifications.Count
+                            </div>
+                            <div class="text-white-50 small fw-semibold">Certifications</div>
+                            <button type="button" class="btn btn-link p-0 text-warning small fw-semibold text-decoration-none"
+                                    id="btn-feuille-route" style="font-size:.7rem;">
+                                Voir →
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
 
@@ -124,13 +219,15 @@
         <div class="tab-pane fade show active" id="mes-formations" role="tabpanel">
             <div class="row g-4">
                 <div class="col-lg-8">
-                    <!-- Internal Search -->
-                    <div class="card p-3 mb-3 border-0 bg-light">
-                        <div class="d-flex gap-2">
-                            <div class="input-group input-group-sm flex-grow-1">
-                                <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
-                                <input id="formationSearchInput" class="form-control form-control-sm border-start-0 bg-white" placeholder="Rechercher dans mes parcours actifs..." />
-                            </div>
+                    <!-- Search -->
+                    <div class="ey-form-shell p-3 mb-3">
+                        <div class="input-group">
+                            <span class="input-group-text border-0 bg-transparent">
+                                <i class="fas fa-search text-muted"></i>
+                            </span>
+                            <input id="formationSearchInput"
+                                   class="form-control border-0 bg-transparent"
+                                   placeholder="Rechercher dans mes parcours actifs..." />
                         </div>
                     </div>
 
@@ -155,10 +252,36 @@
                             var progression = insc.Terminee ? 100 : Math.Clamp(insc.Progression, 0, 100);
                             if (!insc.Terminee && progression == 0 && statut != "Non commencée")
                                 progression = Math.Min(95, Math.Max(15, (DateTime.Today - insc.DateInscription.Date).Days * 5));
-                            
+
                             var statusBadgeClass = insc.Terminee ? "bg-success text-white" : (statut == "Non commencée" ? "bg-secondary text-white" : "bg-warning text-dark");
 
-                            <div class="card ey-premium-card mb-3 p-3 formation-item" data-search="@(formation.Titre) @(formation.Formateur) @(formation.Categorie)">
+                            // Urgency computation
+                            var joursExamen = insc.DateExamen.HasValue && insc.DateExamen.Value >= DateTime.Today
+                                ? (int)(insc.DateExamen.Value - DateTime.Today).TotalDays : (int?)null;
+                            var isUrgent    = joursExamen.HasValue && joursExamen <= 7;
+
+                            <div class="card ey-premium-card mb-3 p-3 formation-item @(isUrgent ? "" : "")"
+                                 data-search="@(formation.Titre) @(formation.Formateur) @(formation.Categorie)"
+                                 style="@(isUrgent ? "border-left:4px solid var(--ey-danger) !important;" : joursExamen.HasValue ? "border-left:4px solid var(--ey-warning) !important;" : "")">
+
+                                @* Exam urgency banner *@
+                                @if (joursExamen.HasValue && !insc.Terminee)
+                                {
+                                    <div class="d-flex align-items-center gap-2 mb-3 px-3 py-2 rounded-2 small"
+                                         style="background:@(isUrgent ? "rgba(229,72,77,.08)" : "rgba(244,197,66,.08)");
+                                                border:1px solid @(isUrgent ? "rgba(229,72,77,.25)" : "rgba(244,197,66,.25)");">
+                                        <i class="@(isUrgent ? "fas fa-bell text-danger" : "far fa-calendar-check text-warning")"></i>
+                                        <span class="@(isUrgent ? "text-danger" : "text-warning") fw-semibold">
+                                            Examen dans @joursExamen jour@(joursExamen != 1 ? "s" : "")
+                                            — @insc.DateExamen!.Value.ToString("dd/MM/yyyy")
+                                        </span>
+                                        @if (isUrgent)
+                                        {
+                                            <span class="badge bg-danger ms-auto">URGENT</span>
+                                        }
+                                    </div>
+                                }
+
                                 <div class="d-flex align-items-start justify-content-between flex-wrap gap-2">
                                     <div class="d-flex align-items-start gap-3 flex-grow-1">
                                         <div class="course-icon d-flex align-items-center justify-content-center flex-shrink-0">

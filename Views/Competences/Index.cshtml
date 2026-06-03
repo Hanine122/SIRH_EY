@@ -2,175 +2,542 @@
 
 @{
     ViewData["Title"] = "Compétences";
-    var collaborateurNom = ViewBag.CollaborateurNom;
-    var grade = ViewBag.GradeCollaborateur as string;
-    var categories = ViewBag.Categories as List<string> ?? new List<string>();
+    var collaborateurNom  = ViewBag.CollaborateurNom;
+    var grade             = ViewBag.GradeCollaborateur as string;
+    var categories        = ViewBag.Categories as List<string> ?? new List<string>();
     var categorieCourante = ViewBag.CategorieCourante as string;
+    var plans             = ViewBag.PlanDeveloppement as List<SIRH.EY.Models.PlanDeveloppement>
+                            ?? new List<SIRH.EY.Models.PlanDeveloppement>();
+    var seuilRequis       = SIRH.EY.Services.CompetenceRules.GetSeuilRequis(grade ?? "Junior");
+
+    // ── Priority groups ──────────────────────────────────────────────────────
+    var all            = Model.ToList();
+    var total          = all.Count;
+    var criticalList   = all.Where(c => c.NiveauCible - c.NiveauActuel >= 2)
+                            .OrderByDescending(c => c.NiveauCible - c.NiveauActuel).ToList();
+    var progressList   = all.Where(c => c.NiveauCible - c.NiveauActuel == 1).ToList();
+    var validatedList  = all.Where(c => c.NiveauActuel >= c.NiveauCible).ToList();
+
+    // ── Dashboard metrics ────────────────────────────────────────────────────
+    var avgScore      = total > 0 ? Math.Round(all.Average(c => (double)c.NiveauActuel), 1) : 0.0;
+    var completionPct = total > 0 ? (int)(validatedList.Count * 100.0 / total) : 0;
+    var avgPct        = (int)(avgScore / 5.0 * 100);
+
+    // ── Plan lookup helper ────────────────────────────────────────────────────
+    SIRH.EY.Models.PlanDeveloppement? PlanFor(string nom) =>
+        plans.FirstOrDefault(p =>
+            p.Formation?.CompetenceVisee != null &&
+            string.Equals(p.Formation.CompetenceVisee, nom, StringComparison.OrdinalIgnoreCase));
 }
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h1 class="h3">Compétences de @collaborateurNom</h1>
-        <p class="text-muted">Grade actuel : <strong>@(grade ?? "Non défini")</strong></p>
+@* ── Flash messages ────────────────────────────────────────────────────────── *@
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success d-flex align-items-center gap-2 mb-3">
+        <i class="fas fa-check-circle flex-shrink-0"></i>
+        <span>@TempData["Success"]</span>
     </div>
+}
+
+@* ── Context breadcrumb + primary action ────────────────────────────────────── *@
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
     <div>
-        <a asp-action="Create" asp-route-collaborateurId="@ViewBag.CollaborateurId" class="btn btn-primary">
-            <i class="fas fa-plus"></i> Nouvelle compétence
+        <div class="ey-page-kicker">Développement professionnel</div>
+        <h1 class="ey-page-title">Compétences de @collaborateurNom</h1>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        <a asp-action="Catalogue" asp-route-collaborateurId="@ViewBag.CollaborateurId"
+           class="ey-btn-ghost text-decoration-none">
+            <i class="fas fa-th me-1"></i>Catalogue EY
+        </a>
+        <a asp-action="Create" asp-route-collaborateurId="@ViewBag.CollaborateurId"
+           class="ey-btn-main text-decoration-none">
+            <i class="fas fa-plus me-1"></i>Ajouter
         </a>
     </div>
 </div>
 
-<div class="ey-form-shell p-3 mb-4">
-    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
-        <div class="small fw-semibold text-muted">Filtrer et explorer</div>
-        <div class="small text-muted">@Model.Count() compétence(s)</div>
+@if (total == 0)
+{
+    @* ── Onboarding empty state ────────────────────────────────────────────── *@
+    <div class="ey-dark-hero p-5 text-center mb-4">
+        <i class="fas fa-chart-radar fa-3x mb-3 d-block" style="color:rgba(255,230,0,.6);"></i>
+        <h2 class="fw-bold text-white mb-2">Aucune compétence enregistrée</h2>
+        <p class="text-white-50 mb-4" style="max-width:520px;margin:0 auto;">
+            Construisez le profil de compétences de <strong class="text-white">@collaborateurNom</strong>
+            en ajoutant des compétences manuellement ou en explorant le catalogue EY.
+        </p>
+        <div class="d-flex justify-content-center gap-3 flex-wrap">
+            <a asp-action="Catalogue" asp-route-collaborateurId="@ViewBag.CollaborateurId"
+               class="ey-btn-yellow text-decoration-none px-4">
+                <i class="fas fa-th me-2"></i>Explorer le catalogue EY
+            </a>
+            <a asp-action="Create" asp-route-collaborateurId="@ViewBag.CollaborateurId"
+               class="ey-btn-ghost text-decoration-none px-4">
+                <i class="fas fa-plus me-2"></i>Ajouter manuellement
+            </a>
+        </div>
     </div>
-    <div class="card-body p-0">
-        <form method="get" class="row g-3">
-            <input type="hidden" name="collaborateurId" value="@ViewBag.CollaborateurId" />
-            <div class="col-md-8">
-                <label class="form-label">Filtrer par catégorie</label>
-                <select name="categorie" class="form-select ey-select">
-                    <option value="">Toutes les catégories</option>
-                    @foreach (var cat in categories)
-                    {
-                        if (cat == categorieCourante)
-                        {
-                            <option value="@cat" selected>@cat</option>
-                        }
-                        else
-                        {
-                            <option value="@cat">@cat</option>
-                        }
-                    }
-                </select>
-            </div>
-            <div class="col-md-4 d-flex align-items-end">
-                <button type="submit" class="ey-btn-main w-100">Filtrer</button>
-            </div>
-        </form>
-    </div>
-</div>
+}
+else
+{
+    @* ══════════════════════════════════════════════════════════════════════════
+       1. SKILLS DASHBOARD HERO
+       ══════════════════════════════════════════════════════════════════════════ *@
+    <div class="ey-dark-hero p-4 mb-4">
+        <div class="row g-4 align-items-center">
 
-<div class="row g-4">
-    @foreach (var comp in Model)
-    {
-        var seuilRequis = SIRH.EY.Services.CompetenceRules.GetSeuilRequis(grade ?? "Junior");
-        bool sousSeuil = comp.NiveauActuel < seuilRequis;
-        var evaluation = comp.EvaluationCompetence;
-        var seuilRhPourcent = evaluation?.SeuilRh ?? (comp.NiveauCible * 20);
-        var autoEvalPourcent = evaluation?.AutoEvaluationCollaborateur;
-        var managerPourcent = evaluation?.EvaluationManager;
-        var gap = comp.NiveauCible - comp.NiveauActuel;
-        
-        string rhBadgeClass = "bg-secondary";
-        string rhBadgeText = "En attente";
-        if (managerPourcent.HasValue) {
-            if (comp.NiveauActuel >= comp.NiveauCible) { rhBadgeClass = "bg-success"; rhBadgeText = "Conforme"; }
-            else if (gap == 1) { rhBadgeClass = "bg-warning text-dark"; rhBadgeText = "Progression"; }
-            else { rhBadgeClass = "bg-danger"; rhBadgeText = "Critique"; }
-        }
-        if (sousSeuil) { rhBadgeClass = "bg-danger"; rhBadgeText = "Niveau insuffisant"; }
-
-        <div class="col-md-6 col-xl-4">
-            <div class="ey-card ey-competence-card p-4 h-100 position-relative ey-card-hover border-0 shadow-sm bg-white" style="border-radius: 12px; transition: all 0.3s ease;">
-                <!-- Overlay highlight -->
-                <div class="position-absolute top-0 start-0 w-100 bg-warning" style="height: 4px; border-radius: 12px 12px 0 0;"></div>
-                
-                <div class="d-flex justify-content-between align-items-start mb-3 mt-1">
+            @* Left: identity + overall progress ring *@
+            <div class="col-lg-4">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="flex-shrink-0 d-flex align-items-center justify-content-center rounded-3"
+                         style="width:72px;height:72px;background:rgba(255,230,0,.12);border:2px solid rgba(255,230,0,.3);">
+                        <span class="fw-black text-white" style="font-size:1.5rem;letter-spacing:-.02em;">@avgScore</span>
+                    </div>
                     <div>
-                        <h5 class="fw-bold mb-1 text-dark" style="letter-spacing: -0.5px;">@comp.Nom</h5>
-                        <div class="d-flex gap-2">
-                            <span class="badge border border-secondary text-secondary bg-transparent fw-normal" style="font-size: 0.7rem;">@(comp.CategorieCompetence?.Nom ?? "Hard Skill")</span>
+                        <div style="font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.5);">
+                            Score moyen
+                        </div>
+                        <div class="text-white fw-bold mb-1">@avgPct% du plafond</div>
+                        <div class="progress" style="height:5px;width:120px;background:rgba(255,255,255,.1);">
+                            <div class="progress-bar" style="width:@avgPct%;background:var(--ey-yellow);"></div>
+                        </div>
+                        <div class="mt-2">
+                            <span class="badge text-dark fw-bold" style="background:var(--ey-yellow);">
+                                @((grade ?? "Junior").ToUpperInvariant())
+                            </span>
                         </div>
                     </div>
-                    <span class="badge @rhBadgeClass rounded-pill px-3 py-2 shadow-sm" style="font-size: 0.75rem;">@rhBadgeText</span>
                 </div>
+            </div>
 
-                <div class="mt-4">
-                    <div class="d-flex justify-content-between small fw-bold mb-1">
-                        <span class="text-muted">Niveau Actuel</span>
-                        <span class="text-dark">@comp.NiveauActuel / 5</span>
+            @* Right: 4-metric row *@
+            <div class="col-lg-8">
+                <div class="row g-3 text-center">
+
+                    @* Completed *@
+                    <div class="col-6 col-md-3">
+                        <div class="px-3 py-2 rounded-3" style="background:rgba(18,185,129,.12);border:1px solid rgba(18,185,129,.25);">
+                            <div class="fw-black text-success" style="font-size:1.9rem;line-height:1.1;">
+                                @validatedList.Count
+                            </div>
+                            <div style="font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:rgba(255,255,255,.55);">
+                                Objectifs atteints
+                            </div>
+                            <div class="text-success small fw-semibold">@completionPct% du profil</div>
+                        </div>
                     </div>
-                    <div class="progress mb-3 rounded-pill" style="height: 8px;">
-                        @{ string couleur = comp.NiveauActuel >= comp.NiveauCible ? "bg-success" : (gap <= 1 ? "bg-warning" : "bg-danger"); }
-                        <div class="progress-bar @couleur" style="width: @((comp.NiveauActuel/5.0)*100)%"></div>
+
+                    @* Critical *@
+                    <div class="col-6 col-md-3">
+                        <div class="px-3 py-2 rounded-3"
+                             style="background:@(criticalList.Count > 0 ? "rgba(229,72,77,.14)" : "rgba(18,185,129,.12)");
+                                    border:1px solid @(criticalList.Count > 0 ? "rgba(229,72,77,.3)" : "rgba(18,185,129,.25)");">
+                            <div class="fw-black @(criticalList.Count > 0 ? "text-danger" : "text-success")"
+                                 style="font-size:1.9rem;line-height:1.1;">
+                                @criticalList.Count
+                            </div>
+                            <div style="font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:rgba(255,255,255,.55);">
+                                Écarts critiques
+                            </div>
+                            <div class="@(criticalList.Count > 0 ? "text-danger" : "text-success") small fw-semibold">
+                                @(criticalList.Count > 0 ? "⚠ Action requise" : "✓ Aucun")
+                            </div>
+                        </div>
                     </div>
-                    
-                    <div class="d-flex justify-content-between small fw-bold mb-1">
-                        <span class="text-muted">Niveau Cible</span>
-                        <span class="text-dark">@comp.NiveauCible / 5</span>
+
+                    @* In progress *@
+                    <div class="col-6 col-md-3">
+                        <div class="px-3 py-2 rounded-3" style="background:rgba(244,197,66,.1);border:1px solid rgba(244,197,66,.25);">
+                            <div class="fw-black text-warning" style="font-size:1.9rem;line-height:1.1;">
+                                @progressList.Count
+                            </div>
+                            <div style="font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:rgba(255,255,255,.55);">
+                                En progression
+                            </div>
+                            <div class="text-warning small fw-semibold">À consolider</div>
+                        </div>
                     </div>
-                    <div class="progress rounded-pill mb-4" style="height: 6px;">
-                        <div class="progress-bar bg-light border border-secondary" style="width: @((comp.NiveauCible/5.0)*100)%"></div>
+
+                    @* Total *@
+                    <div class="col-6 col-md-3">
+                        <div class="px-3 py-2 rounded-3" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);">
+                            <div class="fw-black text-white" style="font-size:1.9rem;line-height:1.1;">
+                                @total
+                            </div>
+                            <div style="font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:rgba(255,255,255,.55);">
+                                Compétences
+                            </div>
+                            <div class="text-white-50 small fw-semibold">dans le profil</div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    @* ── Category filter (compact, secondary) ────────────────────────────────── *@
+    @if (categories.Any())
+    {
+        <div class="d-flex align-items-center gap-2 mb-4 flex-wrap">
+            <span class="small text-muted fw-semibold me-1">Catégorie :</span>
+            <form method="get" class="d-contents">
+                <input type="hidden" name="collaborateurId" value="@ViewBag.CollaborateurId" />
+                <a asp-action="Index" asp-route-collaborateurId="@ViewBag.CollaborateurId"
+                   class="ey-pill @(string.IsNullOrEmpty(categorieCourante) ? "active" : "") text-decoration-none">
+                    Toutes
+                </a>
+                @foreach (var cat in categories)
+                {
+                    <a asp-action="Index" asp-route-collaborateurId="@ViewBag.CollaborateurId"
+                       asp-route-categorie="@cat"
+                       class="ey-pill @(cat == categorieCourante ? "active" : "") text-decoration-none">
+                        @cat
+                    </a>
+                }
+            </form>
+        </div>
+    }
+
+    @* ══════════════════════════════════════════════════════════════════════════
+       2. CRITICAL GAPS — ACTIONS REQUISES
+       ══════════════════════════════════════════════════════════════════════════ *@
+    @if (criticalList.Any())
+    {
+        <div class="mb-4">
+            <div class="d-flex align-items-center gap-3 mb-3 px-4 py-3 rounded-3"
+                 style="background:rgba(229,72,77,.08);border:1px solid rgba(229,72,77,.2);border-left:4px solid var(--ey-danger);">
+                <i class="fas fa-exclamation-triangle text-danger fa-lg flex-shrink-0"></i>
+                <div>
+                    <span class="fw-bold text-danger">ACTIONS REQUISES</span>
+                    <span class="text-muted ms-2 small">
+                        @criticalList.Count compétence@(criticalList.Count > 1 ? "s" : "") avec un écart de 2 niveaux ou plus
+                    </span>
+                </div>
+                <span class="badge bg-danger ms-auto">@criticalList.Count</span>
+            </div>
+
+            @foreach (var comp in criticalList)
+            {
+                var gap        = comp.NiveauCible - comp.NiveauActuel;
+                var evalData   = comp.EvaluationCompetence;
+                var planForComp = PlanFor(comp.Nom);
+                var hasAutoEval = evalData?.DateAutoEvaluation.HasValue == true;
+
+                <div class="ey-card mb-3" style="border-left:4px solid var(--ey-danger);">
+                    <div class="p-4">
+                        <div class="row g-4 align-items-center">
+
+                            @* ── Skill identity + level visualization ─── *@
+                            <div class="col-lg-5">
+                                <div class="d-flex gap-2 mb-2">
+                                    <span class="badge bg-danger rounded-pill">CRITIQUE</span>
+                                    @if (comp.CategorieCompetence != null)
+                                    {
+                                        <span class="badge bg-light border text-muted fw-normal">@comp.CategorieCompetence.Nom</span>
+                                    }
+                                </div>
+                                <h4 class="fw-bold text-dark mb-3 fs-5">@comp.Nom</h4>
+
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <div class="text-muted mb-1" style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;">
+                                            Niveau actuel
+                                        </div>
+                                        <div class="d-flex align-items-center gap-1">
+                                            @for (int i = 1; i <= 5; i++)
+                                            {
+                                                <span class="@(i <= comp.NiveauActuel ? "text-dark" : "text-muted opacity-25")"
+                                                      style="font-size:1.1rem;line-height:1;">●</span>
+                                            }
+                                            <span class="small fw-bold text-dark ms-1">@comp.NiveauActuel/5</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="text-muted mb-1" style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;">
+                                            Objectif grade
+                                        </div>
+                                        <div class="d-flex align-items-center gap-1">
+                                            @for (int i = 1; i <= 5; i++)
+                                            {
+                                                <span class="@(i <= comp.NiveauCible ? "text-danger" : "text-muted opacity-25")"
+                                                      style="font-size:1.1rem;line-height:1;">●</span>
+                                            }
+                                            <span class="small fw-bold text-danger ms-1">@comp.NiveauCible/5</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                @* Analytics RH inline *@
+                                @if (evalData != null)
+                                {
+                                    <div class="d-flex gap-3 mt-3 small">
+                                        @if (evalData.DateAutoEvaluation.HasValue)
+                                        {
+                                            <span class="text-muted">
+                                                <i class="fas fa-user-edit text-primary me-1"></i>
+                                                Auto-éval : <strong>@evalData.AutoEvaluationCollaborateur%</strong>
+                                            </span>
+                                        }
+                                        @if (evalData.EvaluationManager.HasValue)
+                                        {
+                                            <span class="text-muted">
+                                                <i class="fas fa-check-double text-success me-1"></i>
+                                                Manager : <strong>@evalData.EvaluationManager.Value%</strong>
+                                            </span>
+                                        }
+                                    </div>
+                                }
+                            </div>
+
+                            @* ── Gap metric ─── *@
+                            <div class="col-lg-2 text-center">
+                                <div class="d-inline-flex flex-column align-items-center justify-content-center rounded-3 p-3"
+                                     style="background:rgba(229,72,77,.08);border:2px solid rgba(229,72,77,.2);min-width:80px;">
+                                    <span class="fw-black text-danger" style="font-size:2rem;line-height:1;">@gap</span>
+                                    <span class="text-danger fw-bold" style="font-size:0.6rem;letter-spacing:.08em;text-transform:uppercase;">
+                                        niveau@(gap > 1 ? "x" : "")<br/>à combler
+                                    </span>
+                                </div>
+                            </div>
+
+                            @* ── Action panel ─── *@
+                            <div class="col-lg-5">
+                                @if (planForComp?.Formation != null)
+                                {
+                                    <div class="p-3 rounded-3 mb-3"
+                                         style="background:rgba(59,130,246,.07);border:1px solid rgba(59,130,246,.2);">
+                                        <div class="mb-1" style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#2563eb;">
+                                            <i class="fas fa-graduation-cap me-1"></i>Formation recommandée
+                                        </div>
+                                        <div class="fw-semibold small text-dark lh-sm">@planForComp.Formation.Titre</div>
+                                        @if (!string.IsNullOrWhiteSpace(planForComp.Commentaire))
+                                        {
+                                            <div class="text-muted small mt-1">@planForComp.Commentaire</div>
+                                        }
+                                    </div>
+                                }
+                                <div class="d-flex flex-column gap-2">
+                                    <a asp-action="AutoEvaluation" asp-route-id="@comp.Id"
+                                       class="ey-btn-main text-decoration-none text-center">
+                                        <i class="fas fa-user-edit me-1"></i>
+                                        @(evalData?.DateAutoEvaluation.HasValue == true
+                                            ? "Mettre à jour l'auto-évaluation"
+                                            : "Démarrer l'auto-évaluation")
+                                    </a>
+                                    <a asp-action="ValidationManager" asp-route-id="@comp.Id"
+                                       class="ey-btn-ghost text-decoration-none text-center small">
+                                        <i class="fas fa-check-double me-1"></i>Validation manager
+                                    </a>
+                                    <div class="d-flex gap-2">
+                                        <a asp-action="Edit" asp-route-id="@comp.Id"
+                                           class="ey-btn-ghost btn-sm flex-grow-1 text-decoration-none text-center">
+                                            <i class="fas fa-pen me-1"></i>Modifier
+                                        </a>
+                                        <a asp-action="Delete" asp-route-id="@comp.Id"
+                                           class="btn btn-sm btn-outline-danger flex-grow-1 text-decoration-none text-center">
+                                            <i class="fas fa-trash me-1"></i>Supprimer
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
                     </div>
                 </div>
+            }
+        </div>
+    }
 
-                <div class="ey-meta-panel p-3 bg-light rounded border border-light mt-auto">
-                    <div class="small text-muted fw-bold mb-3 border-bottom pb-2 text-uppercase" style="font-size: 0.7rem; letter-spacing: 0.5px;">Analytics RH</div>
-                    
-                    <div class="d-flex justify-content-between align-items-center small mb-2">
-                        <span class="text-muted"><i class="fas fa-bullseye me-2 text-warning"></i>Objectif RH</span>
-                        <strong class="text-dark">@seuilRhPourcent%</strong>
+    @* ══════════════════════════════════════════════════════════════════════════
+       3. EN PROGRESSION (gap == 1)
+       ══════════════════════════════════════════════════════════════════════════ *@
+    @if (progressList.Any())
+    {
+        <div class="mb-4">
+            <div class="d-flex align-items-center gap-3 mb-3 px-4 py-2 rounded-3"
+                 style="background:rgba(244,197,66,.08);border:1px solid rgba(244,197,66,.2);border-left:4px solid var(--ey-warning);">
+                <i class="fas fa-chart-line text-warning fa-lg flex-shrink-0"></i>
+                <span class="fw-bold text-dark">EN PROGRESSION</span>
+                <span class="text-muted small">
+                    @progressList.Count compétence@(progressList.Count > 1 ? "s" : "") à 1 niveau de l'objectif
+                </span>
+                <span class="badge bg-warning text-dark ms-auto">@progressList.Count</span>
+            </div>
+
+            <div class="row g-3">
+                @foreach (var comp in progressList)
+                {
+                    var evalData = comp.EvaluationCompetence;
+                    var planForComp = PlanFor(comp.Nom);
+
+                    <div class="col-md-6 col-xl-4">
+                        <div class="ey-card h-100" style="border-left:3px solid var(--ey-warning);">
+                            <div class="p-3">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div class="flex-grow-1 me-2">
+                                        <h6 class="fw-bold mb-1 text-dark lh-sm">@comp.Nom</h6>
+                                        @if (comp.CategorieCompetence != null)
+                                        {
+                                            <span class="badge bg-light border text-secondary fw-normal small">
+                                                @comp.CategorieCompetence.Nom
+                                            </span>
+                                        }
+                                    </div>
+                                    <span class="badge bg-warning text-dark rounded-pill flex-shrink-0">+1</span>
+                                </div>
+
+                                <div class="d-flex gap-1 align-items-center mb-1">
+                                    @for (int i = 1; i <= 5; i++)
+                                    {
+                                        <span class="@(i <= comp.NiveauActuel ? "text-warning" : "text-muted opacity-25")"
+                                              style="font-size:1rem;line-height:1;">●</span>
+                                    }
+                                    <span class="small text-muted ms-1">@comp.NiveauActuel → @comp.NiveauCible</span>
+                                </div>
+
+                                <div class="progress rounded-pill mb-3" style="height:5px;">
+                                    <div class="progress-bar bg-warning" style="width:@(comp.NiveauActuel / 5.0 * 100)%;"></div>
+                                </div>
+
+                                @if (planForComp?.Formation != null)
+                                {
+                                    <div class="small text-muted mb-2">
+                                        <i class="fas fa-graduation-cap text-primary me-1"></i>@planForComp.Formation.Titre
+                                    </div>
+                                }
+
+                                <div class="d-flex gap-2 mt-auto">
+                                    <a asp-action="AutoEvaluation" asp-route-id="@comp.Id"
+                                       class="ey-btn-main btn-sm flex-grow-1 text-decoration-none text-center">
+                                        <i class="fas fa-user-edit me-1"></i>Auto-éval
+                                    </a>
+                                    <a asp-action="ValidationManager" asp-route-id="@comp.Id"
+                                       class="ey-btn-ghost btn-sm flex-grow-1 text-decoration-none text-center">
+                                        Manager
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="d-flex justify-content-between align-items-center small mb-2">
-                        <span class="text-muted"><i class="fas fa-user-edit me-2 text-primary"></i>Auto-éval.</span>
-                        <strong class="text-dark">@(autoEvalPourcent.HasValue ? $"{autoEvalPourcent.Value}%" : "—")</strong>
-                    </div>
-                    <div class="d-flex justify-content-between align-items-center small">
-                        <span class="text-muted"><i class="fas fa-check-double me-2 text-success"></i>Manager</span>
-                        <strong>
-                            @if (managerPourcent.HasValue) {
-                                <span class="badge bg-success text-white rounded-pill px-2">@managerPourcent.Value%</span>
-                            } else {
-                                <span class="badge bg-secondary text-white rounded-pill px-2">En attente</span>
+                }
+            </div>
+        </div>
+    }
+
+    @* ══════════════════════════════════════════════════════════════════════════
+       4. OBJECTIFS ATTEINTS — compact list, collapsible
+       ══════════════════════════════════════════════════════════════════════════ *@
+    @if (validatedList.Any())
+    {
+        <div class="mb-4">
+            <div class="d-flex align-items-center gap-3 mb-3 px-4 py-2 rounded-3 cursor-pointer"
+                 style="background:rgba(18,185,129,.07);border:1px solid rgba(18,185,129,.2);border-left:4px solid var(--ey-success);"
+                 data-bs-toggle="collapse" data-bs-target="#validated-section" role="button"
+                 aria-expanded="@(criticalList.Any() || progressList.Any() ? "false" : "true")">
+                <i class="fas fa-check-circle text-success fa-lg flex-shrink-0"></i>
+                <span class="fw-bold text-dark">OBJECTIFS ATTEINTS</span>
+                <span class="text-muted small">
+                    @validatedList.Count compétence@(validatedList.Count > 1 ? "s" : "") maîtrisée@(validatedList.Count > 1 ? "s" : "")
+                </span>
+                <span class="badge bg-success ms-auto me-2">@validatedList.Count</span>
+                <i class="fas fa-chevron-down text-muted small"></i>
+            </div>
+
+            @* Collapse open only if there are no higher-priority items *@
+            <div class="collapse @(criticalList.Any() || progressList.Any() ? "" : "show")"
+                 id="validated-section">
+                <div class="ey-card overflow-hidden">
+                    @foreach (var comp in validatedList)
+                    {
+                        var evalData = comp.EvaluationCompetence;
+
+                        <div class="d-flex align-items-center gap-3 px-4 py-3 border-bottom border-light"
+                             style="transition:background .15s ease;">
+                            <i class="fas fa-check-circle text-success flex-shrink-0"></i>
+                            <div class="flex-grow-1 min-width-0">
+                                <span class="fw-semibold text-dark">@comp.Nom</span>
+                                @if (comp.CategorieCompetence != null)
+                                {
+                                    <span class="text-muted small ms-2">@comp.CategorieCompetence.Nom</span>
+                                }
+                            </div>
+                            <div class="d-flex gap-1 align-items-center flex-shrink-0">
+                                @for (int i = 1; i <= 5; i++)
+                                {
+                                    <span class="@(i <= comp.NiveauActuel ? "text-success" : "text-muted opacity-25")"
+                                          style="font-size:.9rem;line-height:1;">●</span>
+                                }
+                            </div>
+                            @if (evalData?.ValidationManager == true)
+                            {
+                                <span class="ey-pill active flex-shrink-0">Validé manager</span>
                             }
-                        </strong>
-                    </div>
-                </div>
-
-                <div class="d-flex gap-2 mt-4">
-                    <a asp-action="AutoEvaluation" asp-route-id="@comp.Id" class="btn btn-outline-dark btn-sm flex-grow-1 rounded-pill fw-bold">
-                        Auto-éval
-                    </a>
-                    <a asp-action="ValidationManager" asp-route-id="@comp.Id" class="ey-btn-main btn-sm flex-grow-1 text-center text-decoration-none rounded-pill py-1">
-                        Manager
-                    </a>
+                            else
+                            {
+                                <span class="ey-pill active flex-shrink-0">@comp.NiveauActuel/@comp.NiveauCible</span>
+                            }
+                            <div class="d-flex gap-1 flex-shrink-0">
+                                <a asp-action="AutoEvaluation" asp-route-id="@comp.Id"
+                                   class="btn btn-sm btn-link text-muted text-decoration-none p-1" title="Auto-évaluation">
+                                    <i class="fas fa-user-edit"></i>
+                                </a>
+                                <a asp-action="Edit" asp-route-id="@comp.Id"
+                                   class="btn btn-sm btn-link text-muted text-decoration-none p-1" title="Modifier">
+                                    <i class="fas fa-pen"></i>
+                                </a>
+                            </div>
+                        </div>
+                    }
                 </div>
             </div>
         </div>
     }
-</div>
 
-<!-- Plan de développement -->
-<div class="mt-5">
-    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-        <form asp-action="GenererPlanDeveloppement" method="post" class="ms-auto">
+    @* ══════════════════════════════════════════════════════════════════════════
+       5. PLAN DE DÉVELOPPEMENT — only if there are plans not already shown inline
+       ══════════════════════════════════════════════════════════════════════════ *@
+
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3 mt-2">
+        <div>
+            <div class="ey-page-kicker">Parcours personnalisé</div>
+            <h4 class="fw-bold text-dark mb-0">Plan de développement</h4>
+        </div>
+        <form asp-action="GenererPlanDeveloppement" method="post" class="m-0">
             @Html.AntiForgeryToken()
             <input type="hidden" name="collaborateurId" value="@ViewBag.CollaborateurId" />
-            <button type="submit" class="ey-btn-main">
-                <i class="fas fa-wand-magic-sparkles"></i> Generer les recommandations
+            <button type="submit" class="ey-btn-yellow">
+                <i class="fas fa-wand-magic-sparkles me-1"></i>Générer les recommandations
             </button>
         </form>
     </div>
-    <h4>Plan de développement personnalisé</h4>
-    @if (ViewBag.PlanDeveloppement != null && ((List<SIRH.EY.Models.PlanDeveloppement>)ViewBag.PlanDeveloppement).Any())
+
+    @if (plans.Any())
     {
-        <div class="row">
-            @foreach (var plan in ViewBag.PlanDeveloppement)
+        <div class="row g-3 mb-4">
+            @foreach (var plan in plans)
             {
                 <div class="col-md-4">
-                    <div class="card mb-3">
-                        <div class="card-body">
-                            <h6 class="card-title">@plan.Formation?.Titre</h6>
-                            <p class="card-text small">Statut : @plan.Statut</p>
-                            @if (!string.IsNullOrWhiteSpace(plan.Commentaire))
-                            {
-                                <p class="card-text small text-muted">@plan.Commentaire</p>
-                            }
-                            <p class="card-text small">Recommandé le : @plan.DateRecommandation.ToString("dd/MM/yyyy")</p>
-                            <button class="btn btn-sm btn-outline-primary" onclick="alert('Détails à venir')">Détails</button>
+                    <div class="ey-card p-3 h-100">
+                        <div class="d-flex align-items-start gap-3 mb-2">
+                            <div class="report-kpi-icon report-kpi-icon--dark flex-shrink-0">
+                                <i class="fas fa-graduation-cap"></i>
+                            </div>
+                            <div class="flex-grow-1 min-width-0">
+                                <h6 class="fw-bold mb-1 lh-sm text-dark">@plan.Formation?.Titre</h6>
+                                <span class="ey-pill pending">@plan.Statut</span>
+                            </div>
                         </div>
+                        @if (!string.IsNullOrWhiteSpace(plan.Commentaire))
+                        {
+                            <p class="small text-muted mb-2">@plan.Commentaire</p>
+                        }
+                        <p class="small text-muted mb-0">
+                            <i class="far fa-calendar-alt me-1"></i>
+                            Recommandé le @plan.DateRecommandation.ToString("dd/MM/yyyy")
+                        </p>
                     </div>
                 </div>
             }
@@ -178,23 +545,23 @@
     }
     else
     {
-        <p class="text-muted">Aucune formation recommandée pour le moment.</p>
+        <div class="ey-card p-4 text-center text-muted mb-4">
+            <i class="fas fa-route fa-2x d-block mb-3 opacity-50"></i>
+            <p class="mb-1 fw-semibold text-dark">Aucune recommandation générée</p>
+            <p class="small mb-0">
+                Cliquez sur <strong>Générer les recommandations</strong> pour créer un parcours de développement personnalisé.
+            </p>
+        </div>
     }
-</div>
+}
 
-@if (!Model.Any())
-{
-    <div class="alert alert-info mt-4">Aucune compétence trouvée pour ce collaborateur.</div>
-}
-@if (TempData["Success"] != null)
-{
-    <div class="alert alert-success mt-4"><i class="fas fa-check-circle me-1"></i> @TempData["Success"]</div>
-}
-<div class="mt-4 d-flex gap-2 flex-wrap">
-    <a asp-action="MatriceEquipe" asp-route-collaborateurId="@ViewBag.CollaborateurId" class="ey-btn-ghost text-decoration-none">
-        Matrice équipe
+@* ── Footer navigation ─────────────────────────────────────────────────────── *@
+<div class="d-flex gap-2 flex-wrap mt-2">
+    <a asp-action="MatriceEquipe" asp-route-collaborateurId="@ViewBag.CollaborateurId"
+       class="ey-btn-ghost text-decoration-none">
+        <i class="fas fa-th me-1"></i>Matrice équipe
     </a>
-    <a asp-controller="Collaborateurs" asp-action="Index" class="btn btn-secondary">
-        <i class="fas fa-arrow-left"></i> Retour au Core RH
+    <a asp-controller="Collaborateurs" asp-action="Index" class="ey-btn-ghost text-decoration-none">
+        <i class="fas fa-arrow-left me-1"></i>Retour au répertoire
     </a>
 </div>

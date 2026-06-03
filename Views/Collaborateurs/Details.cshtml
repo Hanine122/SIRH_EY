@@ -58,7 +58,7 @@
         </div>
 
         <div class="ey-card p-3">
-            <div class="text-uppercase small text-muted fw-semibold mb-2" style="letter-spacing:.12em;">Reporting line</div>
+            <div class="ey-page-kicker mb-2">Reporting line</div>
             @if (manager != null)
             {
                 <div class="d-flex align-items-center gap-2">
@@ -120,8 +120,8 @@
                                 @Html.AntiForgeryToken()
                                 <input type="hidden" name="collaborateurId" value="@Model.Id" />
                                 <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
-                                <button type="submit" class="btn btn-sm btn-outline-dark rounded-pill">
-                                    <i class="fas fa-route me-1"></i> Générer le plan
+                                <button type="submit" class="ey-btn-ghost btn-sm">
+                                    <i class="fas fa-route me-1"></i>Générer le plan
                                 </button>
                             </form>
                             <a asp-controller="Competences" asp-action="Create" asp-route-collaborateurId="@Model.Id" class="text-decoration-none fw-semibold text-muted small">+ Ajouter</a>
@@ -139,7 +139,7 @@
                             var pct = (int)Math.Min(100, (comp.NiveauActuel / 5.0) * 100);
                             var target = (int)Math.Min(100, (comp.NiveauCible / 5.0) * 100);
                             var ecart = comp.NiveauCible - comp.NiveauActuel;
-                            var progressionColor = ecart >= 2 ? "#e5484d" : (ecart == 1 ? "#f4c542" : "#12b981");
+                            var fillClass = ecart >= 2 ? "bg-danger" : (ecart == 1 ? "bg-warning" : "bg-success");
                             <div class="skill-analyse-row border-bottom">
                                 <div class="d-flex justify-content-between align-items-baseline flex-wrap gap-2">
                                     <div class="fw-semibold fs-6">@comp.Nom</div>
@@ -150,7 +150,7 @@
                                 </div>
                                 <div class="skill-progress-wrap">
                                     <div class="skill-progress-track">
-                                        <span class="skill-progress-fill" style="width:@pct%;background:@progressionColor;"></span>
+                                        <span class="skill-progress-fill @fillClass" style="width:@pct%;"></span>
                                         <span class="skill-progress-marker" style="left:@(target)%"></span>
                                     </div>
                                 </div>
@@ -185,7 +185,7 @@
                                 @foreach (var plan in plansDeveloppement.Take(6))
                                 {
                                     <div class="col-md-6">
-                                        <div class="border rounded-3 p-3 h-100">
+                                        <div class="ey-card p-3 h-100">
                                             <div class="fw-semibold">@plan.Formation?.Titre</div>
                                             <div class="small text-muted mt-1">@plan.Commentaire</div>
                                             <span class="ey-pill in-progress mt-2">@plan.Statut</span>

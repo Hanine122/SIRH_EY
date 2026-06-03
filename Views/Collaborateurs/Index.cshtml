@@ -2,7 +2,15 @@
 
 @{
     ViewData["Title"] = "Répertoire";
-    var total = Model.Count();
+    var total    = Model.Count();
+    var actifs   = Model.Count(c => c.Actif);
+    var inactifs = total - actifs;
+    var managers = Model.Count(c =>
+        c.Grade == "Manager" || (c.Poste ?? "").Contains("Manager", StringComparison.OrdinalIgnoreCase));
+    var seniors  = Model.Count(c => c.Grade == "Senior");
+    var juniors  = Model.Count(c => c.Grade == "Junior");
+    var filtered = !string.IsNullOrEmpty(ViewBag.Search as string)
+                   || !string.IsNullOrEmpty(ViewBag.DepartementFilter as string);
 }
 
 @if (TempData["Success"] != null)
@@ -14,18 +22,94 @@
     <div class="alert alert-danger"><i class="fas fa-exclamation-triangle me-1"></i> @TempData["Error"]</div>
 }
 
+@* ── Page header ─────────────────────────────────────────────────────────── *@
 <div class="directory-page-header d-flex flex-column flex-lg-row justify-content-between align-items-lg-start gap-3">
-    
     <div>
         <div class="ey-page-kicker">Gestion des collaborateurs</div>
-        <h1 class="ey-page-title">Répertoire</h1>
-        <p class="ey-page-lead mb-0">Gestion de <strong>@total</strong> collaborateurs EY répartis sur <strong>8</strong> bureaux internationaux.</p>
+        <h1 class="ey-page-title">Répertoire EY</h1>
+        <p class="ey-page-lead mb-0">
+            @if (filtered)
+            {
+                <span>
+                    <strong>@total</strong> résultat@(total > 1 ? "s" : "")
+                    <span class="text-muted">sur @(actifs + inactifs) collaborateur@(actifs + inactifs > 1 ? "s" : "") — filtre actif</span>
+                </span>
+            }
+            else
+            {
+                <span>
+                    <strong>@total</strong> collaborateur@(total > 1 ? "s" : "") EY
+                </span>
+            }
+        </p>
     </div>
-    <a asp-action="Create" class="ey-btn-main text-decoration-none align-self-lg-center">
-        <i class="fas fa-plus me-1"></i> Ajouter un collaborateur
+    <a asp-action="Create" class="ey-btn-main text-decoration-none align-self-lg-start flex-shrink-0">
+        <i class="fas fa-plus me-1"></i>Ajouter un collaborateur
     </a>
 </div>
 
+@* ── Team composition KPIs ──────────────────────────────────────────────────── *@
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3 col-xl-2">
+        <div class="ey-card p-3 text-center h-100">
+            <div class="report-kpi-icon report-kpi-icon--dark mx-auto mb-2">
+                <i class="fas fa-users"></i>
+            </div>
+            <div class="report-kpi-value">@total</div>
+            <div class="report-kpi-label">Total</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3 col-xl-2">
+        <div class="ey-card p-3 text-center h-100">
+            <div class="report-kpi-icon report-kpi-icon--green mx-auto mb-2">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <div class="report-kpi-value text-success">@actifs</div>
+            <div class="report-kpi-label">Actifs</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3 col-xl-2">
+        <div class="ey-card p-3 text-center h-100">
+            <div class="report-kpi-icon report-kpi-icon--yellow mx-auto mb-2">
+                <i class="fas fa-user-tie"></i>
+            </div>
+            <div class="report-kpi-value">@managers</div>
+            <div class="report-kpi-label">Managers</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3 col-xl-2">
+        <div class="ey-card p-3 text-center h-100">
+            <div class="report-kpi-icon mx-auto mb-2" style="background:#f0f4ff;border:1px solid #c7d7ff;">
+                <i class="fas fa-star" style="color:#4f6fff;"></i>
+            </div>
+            <div class="report-kpi-value">@seniors</div>
+            <div class="report-kpi-label">Seniors</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3 col-xl-2">
+        <div class="ey-card p-3 text-center h-100">
+            <div class="report-kpi-icon mx-auto mb-2" style="background:#f3f4f6;border:1px solid #e5e7eb;">
+                <i class="fas fa-user-graduate text-muted"></i>
+            </div>
+            <div class="report-kpi-value text-muted">@juniors</div>
+            <div class="report-kpi-label">Juniors</div>
+        </div>
+    </div>
+    @if (inactifs > 0)
+    {
+        <div class="col-6 col-md-3 col-xl-2">
+            <div class="ey-card p-3 text-center h-100">
+                <div class="report-kpi-icon report-kpi-icon--red mx-auto mb-2">
+                    <i class="fas fa-user-slash"></i>
+                </div>
+                <div class="report-kpi-value text-danger">@inactifs</div>
+                <div class="report-kpi-label">Inactifs</div>
+            </div>
+        </div>
+    }
+</div>
+
+@* ── Filter toolbar ─────────────────────────────────────────────────────────── *@
 <div class="ey-card p-3 p-md-4 mb-4 directory-toolbar">
     <form method="get" class="row g-3 align-items-end">
         <div class="col-lg-4 col-md-6">
@@ -98,8 +182,9 @@
                     <a asp-action="Details" asp-route-id="@item.Id" class="directory-btn-profile text-decoration-none w-100 text-center">Consulter le profil <i class="fas fa-arrow-right ms-1"></i></a>
                     @if (item.Actif)
                     {
-                        <a asp-action="ChoisirRemplacant" asp-route-id="@item.Id" class="btn btn-sm w-100 rounded-pill text-decoration-none text-center" style="background:#111827;color:#fbbf24;border:1px solid rgba(251,191,36,.5);">
-                            <i class="fas fa-people-arrows me-1"></i> Départ / choisir un remplaçant
+                        <a asp-action="ChoisirRemplacant" asp-route-id="@item.Id"
+                           class="btn btn-sm btn-dark w-100 rounded-pill text-decoration-none text-center text-warning border-warning border-opacity-50">
+                            <i class="fas fa-people-arrows me-1"></i>Départ / remplaçant
                         </a>
                     }
                 </div>

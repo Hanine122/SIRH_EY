@@ -44,10 +44,19 @@
 <body>
     @{
         var currentController = ViewContext.RouteData.Values["Controller"]?.ToString();
-        var currentAction = ViewContext.RouteData.Values["Action"]?.ToString();
+        var currentAction     = ViewContext.RouteData.Values["Action"]?.ToString();
+
+        // Submenu auto-expand: computed once, drives sidebar open state on server render
+        bool openCoreRh      = currentController == "Collaborateurs";
+        bool openFormations  = currentController is "Formations" or "Inscriptions" or "Certificats";
+        bool openCompetences = currentController is "Competences" or "Talent";
+        bool openAnalytics   = currentController is "RhInsights" or "Reporting";
+        bool openAdminIt     = new[] { "AdminHome", "Departments", "SubDepartments", "Positions",
+                                       "Grades", "BusinessUnits", "Locations", "ContractTypes",
+                                       "SystemParameters" }.Contains(currentController);
     }
-    <div class="ey-app">
-        <aside class="ey-sidebar">
+    <div class="ey-app" id="ey-app-root">
+        <aside class="ey-sidebar" role="navigation" aria-label="Navigation principale">
             <div class="ey-sidebar-content">
                 <div class="ey-logo-wrap">
                     <div class="d-flex align-items-center gap-2 mb-2">
@@ -87,7 +96,7 @@
                             </div>
                             <i class="fas fa-chevron-down ey-chevron" id="chevron-core-rh"></i>
                         </div>
-                        <ul class="ey-submenu" id="submenu-core-rh">
+                        <ul class="ey-submenu @(openCoreRh ? "expanded" : "")" id="submenu-core-rh">
                             <li>
                                 <a class="nav-link @((currentController == "Collaborateurs" && currentAction == "Index") ? "active" : "")" asp-controller="Collaborateurs" asp-action="Index">
                                     <i class="fas fa-users"></i>
@@ -116,7 +125,7 @@
                             </div>
                             <i class="fas fa-chevron-down ey-chevron" id="chevron-formations"></i>
                         </div>
-                        <ul class="ey-submenu" id="submenu-formations">
+                        <ul class="ey-submenu @(openFormations ? "expanded" : "")" id="submenu-formations">
                             <li>
                                 <a class="nav-link @(currentController == "Formations" ? "active" : "")" asp-controller="Formations" asp-action="Index">
                                     <i class="fas fa-book"></i><span class="nav-link-label">Catalogue</span>
@@ -144,7 +153,7 @@
                             </div>
                             <i class="fas fa-chevron-down ey-chevron" id="chevron-competences"></i>
                         </div>
-                        <ul class="ey-submenu" id="submenu-competences">
+                        <ul class="ey-submenu @(openCompetences ? "expanded" : "")" id="submenu-competences">
                             @if (ownCollabId.HasValue)
                             {
                                 <li>
@@ -185,7 +194,7 @@
                                 </div>
                                 <i class="fas fa-chevron-down ey-chevron" id="chevron-analytics"></i>
                             </div>
-                            <ul class="ey-submenu" id="submenu-analytics">
+                            <ul class="ey-submenu @(openAnalytics ? "expanded" : "")" id="submenu-analytics">
                                 <li>
                                     <a class="nav-link @(currentController == "RhInsights" ? "active" : "")" asp-controller="RhInsights" asp-action="Index">
                                         <i class="fas fa-brain"></i><span class="nav-link-label">RH Insights</span>
@@ -211,7 +220,7 @@
                                 </div>
                                 <i class="fas fa-chevron-down ey-chevron" id="chevron-admin-it"></i>
                             </div>
-                            <ul class="ey-submenu" id="submenu-admin-it">
+                            <ul class="ey-submenu @(openAdminIt ? "expanded" : "")" id="submenu-admin-it">
                                 <li>
                                     <a class="nav-link @(currentController == "AdminHome" ? "active" : "")"
                                        asp-area="Admin" asp-controller="AdminHome" asp-action="Index">
@@ -270,24 +279,6 @@
                         </div>
                     }
 
-                    <!-- Chatbot IA -->
-                    <div class="ey-menu-item">
-                        <div class="ey-menu-header"">
-                            @* <div class="ey-menu-title">
-                                <i class="fas fa-robot"></i>
-                                <span>Chatbot IA</span>
-                                <span class="ey-badge ey-badge-info">Bientôt</span>
-                            </div> *@
-                            @* <i class="fas fa-chevron-down ey-chevron" id="chevron-chatbot"></i> *@
-                        </div>
-                        @* <ul class="ey-submenu" id="submenu-chatbot">
-                            <li>
-                                <a class="nav-link" href="javascript:void(0)" onclick="toggleChatbot()">
-                                    <i class="fas fa-comment-dots"></i><span class="nav-link-label">Assistant IA</span>
-                                </a>
-                            </li>
-                        </ul> *@
-                    </div>
                 </nav>
             </div>
 
@@ -303,8 +294,8 @@
             </div>
         </aside>
 
-        <div class="ey-main">
-            <div class="ey-topbar">
+        <div class="ey-main" role="main">
+            <div class="ey-topbar" role="banner">
                 <div class="ey-topbar-brand fw-semibold text-dark">Portail RH EY</div>
                 <div class="ey-search flex-grow-1 mx-3">
                     <input class="form-control form-control-sm ey-search-input" placeholder="Rechercher un collaborateur, une formation, une compétence..." />
