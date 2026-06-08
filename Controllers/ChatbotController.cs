@@ -32,6 +32,35 @@ namespace SIRH.EY.Controllers
             public string Reply { get; set; }
         }
 
+
+[AllowAnonymous]
+[HttpGet("hr-talent")]
+public async Task<IActionResult> GetHighPotentials()
+{
+    var collaborateurs = await _context.Collaborateurs
+        .Include(c => c.Competences)
+        .Include(c => c.Inscriptions)
+        .Where(c => c.Actif)
+        .ToListAsync();
+
+    var highPotentials = collaborateurs
+        .Select(c => new
+        {
+            Nom = $"{c.Prenom} {c.Nom}",
+            Grade = c.Grade,
+            Departement = c.Departement,
+            MoyenneCompetences = c.Competences.Any()
+                ? Math.Round(c.Competences.Average(x => x.NiveauActuel), 1)
+                : 0
+        })
+        .Where(x => x.MoyenneCompetences >= 4)
+        .OrderByDescending(x => x.MoyenneCompetences)
+        .Take(10)
+        .ToList();
+
+    return Ok(highPotentials);
+}
+
         // Called by n8n server-side — no browser session available.
         [AllowAnonymous]
         [HttpGet("stats")]
@@ -81,56 +110,129 @@ namespace SIRH.EY.Controllers
             });
         }
 
-        [HttpPost("ask")]
-        public async Task<IActionResult> Ask([FromBody] ChatRequest request)
-        {
-            if (request == null || string.IsNullOrWhiteSpace(request.Message))
-            {
-                return BadRequest("Message cannot be empty.");
-            }
+[AllowAnonymous]
+[HttpGet("ai/talent-summary")]
+public async Task<IActionResult> GetTalentSummary()
+{
+    var collaborateurs = await _context.Collaborateurs
+        .Include(c => c.Competences)
+        .Include(c => c.Inscriptions)
+        .Where(c => c.Actif)
+        .ToListAsync();
 
+    var topTalents = collaborateurs
+        .Select(c => new
+        {
+            Nom = $"{c.Prenom} {c.Nom}",
+            Grade = c.Grade,
+            Departement = c.Departement,
+            Score = c.Competences.Any()
+                ? Math.Round(c.Competences.Average(x => x.NiveauActuel), 1)
+                : 0
+        })
+        .Where(x => x.Score >= 4)
+        .OrderByDescending(x => x.Score)
+        .Take(10)
+        .ToList();
+
+    var atRisk = collaborateurs
+        .Select(c => new
+        {
+            Nom = $"{c.Prenom} {c.Nom}",
+            Score = c.Competences.Any()
+                ? Math.Round(c.Competences.Average(x => x.NiveauActuel), 1)
+                : 0
+        })
+        .Where(x => x.Score > 0 && x.Score < 2)
+        .ToList();
+
+    var successionReady = collaborateurs.Count(c =>
+        c.Grade == "Senior" ||
+        c.Grade == "Manager");
+
+    var departmentDistribution = collaborateurs
+        .GroupBy(c => c.Departement)
+        .Select(g => new
+        {
+            Departement = g.Key,
+            Total = g.Count()
+        })
+        .OrderByDescending(x => x.Total)
+        .ToList();
+
+    return Ok(new
+    {
+        totalCollaborateurs = collaborateurs.Count,
+        successionReady,
+        topTalents,
+        atRisk,
+        departmentDistribution
+    });
+}
+
+
+
+
+       [HttpPost("ask")]
+public async Task<IActionResult> Ask([FromBody] ChatRequest request)
+{
+    if (request == null || string.IsNullOrWhiteSpace(request.Message))
+        return BadRequest("Message cannot be empty.");
+
+    try
+    {
+        var client = _httpClientFactory.CreateClient();
+        
+        // Détection d'intent côté MVC
+        var msg = request.Message.ToLower();
+        
+        var isTalent =
+            msg.Contains("haut potentiel") ||
+            msg.Contains("hauts potentiels") ||
+            msg.Contains("top talent") ||
+            msg.Contains("talent") ||
+            msg.Contains("potentiel") ||
+            msg.Contains("succession") ||
+            msg.Contains("risque") ||
+            msg.Contains("promotion") ||
+            msg.Contains("meilleur") ||
+            msg.Contains("qui peut");
+
+        var webhookUrl = isTalent
+            ? "http://localhost:5678/webhook/hr-talent"
+            : "http://localhost:5678/webhook/hr-stats";
+
+        var jsonContent = JsonSerializer.Serialize(new { message = request.Message });
+        var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
+
+        var response = await client.PostAsync(webhookUrl, content);
+
+        if (response.IsSuccessStatusCode)
+        {
+            var responseString = await response.Content.ReadAsStringAsync();
             try
             {
-                var client = _httpClientFactory.CreateClient();
-                var webhookUrl = "http://localhost:5678/webhook/hr-chatbot";
-
-                var jsonContent = JsonSerializer.Serialize(new { message = request.Message });
-                var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
-
-                var response = await client.PostAsync(webhookUrl, content);
-                
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseString = await response.Content.ReadAsStringAsync();
-                    // Attempt to parse the response as JSON. If the n8n webhook returns {"reply": "..."}
-                    // we can just forward the JSON.
-                    
-                    try 
-                    {
-                        var jsonResponse = JsonSerializer.Deserialize<JsonElement>(responseString);
-                        // Check if the reply field exists
-                        if (jsonResponse.TryGetProperty("reply", out var replyElement))
-                        {
-                            return Ok(new { reply = replyElement.GetString() });
-                        }
-                        return Ok(new { reply = responseString }); // Fallback if no specific "reply" field
-                    }
-                    catch (JsonException)
-                    {
-                        // Fallback if the response is not JSON
-                        return Ok(new { reply = responseString });
-                    }
-                }
-                else
-                {
-                    return StatusCode((int)response.StatusCode, new { reply = "Erreur de connexion avec l'assistant IA." });
-                }
+                var jsonResponse = JsonSerializer.Deserialize<JsonElement>(responseString);
+                if (jsonResponse.TryGetProperty("reply", out var replyElement))
+                    return Ok(new { reply = replyElement.GetString() });
+                return Ok(new { reply = responseString });
             }
-            catch (System.Exception ex)
+            catch (JsonException)
             {
-                // In production, log the exception.
-                return StatusCode(500, new { reply = "Le service est temporairement indisponible." });
+                return Ok(new { reply = responseString });
             }
         }
+        else
+        {
+            return StatusCode((int)response.StatusCode, 
+                new { reply = "Erreur de connexion avec l'assistant IA." });
+        }
+    }
+    catch (Exception ex)
+    {
+        return StatusCode(500, 
+            new { reply = "Le service est temporairement indisponible." });
+    }
+}
     }
 }

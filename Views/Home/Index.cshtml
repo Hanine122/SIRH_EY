@@ -9,23 +9,37 @@
     <!-- LEFT COLUMN: Workspace -->
     <div class="col-lg-8 portal-left">
         
-        <!-- 1. Hero Section -->
+        <!-- 1. Smart Welcome Banner -->
         <div class="hero-banner glass-panel p-4 mb-2">
             <div class="hero-content">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h1 class="h3 fw-bold mb-0">Bonjour, @(ViewBag.PrenomConnecte ?? "Collaborateur")</h1>
-                    <div class="small opacity-75">
-                        @DateTime.Now.ToString("dd MMMM", new System.Globalization.CultureInfo("fr-FR"))
+                <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start gap-2 mb-3">
+                    <div>
+                        <div class="ai-hero-kicker">
+                            <span class="ai-status-dot"></span>Assistant RH Intelligent actif
+                        </div>
+                        <h1 class="h2 fw-bold mb-0"> Bonjour, @(ViewBag.PrenomConnecte ?? "Collaborateur")</h1>
+                    </div>
+                    <div class="small text-muted flex-shrink-0 d-none d-sm-block" style="padding-top:2px;text-transform:capitalize;">
+                        @DateTime.Now.ToString("dddd dd MMMM", new System.Globalization.CultureInfo("fr-FR"))
                     </div>
                 </div>
-                <p class="mb-4 opacity-75" style="max-width: 500px;">
-                    Bienvenue sur votre espace SIRH EY. Consultez vos activités récentes, suivez vos objectifs et développez vos compétences.
-                </p>
-                <div class="d-flex flex-wrap gap-2 mt-2">
-                    <span class="chip"><i class="fas fa-book-open"></i> @(ViewBag.NbFormationsSuivies ?? 0) Formations en cours</span>
-                    <span class="chip"><i class="fas fa-check-circle"></i> @(ViewBag.TauxCompletion ?? 0)% Compétences</span>
-                    <span class="chip"><i class="fas fa-bolt"></i> Actions RH</span>
+                <div class="d-flex flex-wrap gap-2 mb-4">
+                    <span class="ai-insight-chip ai-insight-chip--green">
+                        <i class="fas fa-graduation-cap"></i>
+                        <strong>@formations.Count</strong>&thinsp;formation@(formations.Count != 1 ? "s" : "") en cours
+                    </span>
+                    <span class="ai-insight-chip ai-insight-chip--amber">
+                        <i class="fas fa-star"></i>
+                        <span id="hero-chip-talent-txt" class="ai-chip-loading">Talents…</span>
+                    </span>
+                    <span class="ai-insight-chip ai-insight-chip--blue">
+                        <i class="fas fa-chart-line"></i>
+                        <span id="hero-chip-perf-txt" class="ai-chip-loading">Performance…</span>
+                    </span>
                 </div>
+                <button class="ai-hero-cta-btn" onclick="document.getElementById('chatbot-launcher')?.click()" type="button">
+                    ✨ Consulter l'assistant IA
+                </button>
             </div>
         </div>
 
@@ -111,6 +125,28 @@
     <div class="col-lg-4 portal-right">
         <div class="portal-right-panel p-4 h-100">
             <h5 class="panel-title">Mon espace</h5>
+
+            <!-- AI Smart Insights Widget -->
+            <div class="ai-smart-card mb-3">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span class="fw-bold" style="font-size:.88rem;">🤖 AI Smart Insights</span>
+                    <span class="ai-analyse-badge">Analyse IA</span>
+                </div>
+                <div>
+                    <div class="ai-smart-item">
+                        <span class="ai-smart-dot ai-smart-dot--green"></span>
+                        <span id="si-talent" class="ai-chip-loading">Analyse talent…</span>
+                    </div>
+                    <div class="ai-smart-item">
+                        <span class="ai-smart-dot ai-smart-dot--yellow"></span>
+                        <span id="si-formations" class="ai-chip-loading">Analyse formations…</span>
+                    </div>
+                    <div class="ai-smart-item">
+                        <span class="ai-smart-dot ai-smart-dot--red"></span>
+                        <span id="si-skills" class="ai-chip-loading">Analyse compétences…</span>
+                    </div>
+                </div>
+            </div>
 
             <!-- AI Widget -->
             <div class="ai-insight-card mb-4">
@@ -205,4 +241,77 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+<script>
+(function () {
+    'use strict';
+
+    function setText(id, txt, removeLoading) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        el.textContent = txt;
+        if (removeLoading !== false) el.classList.remove('ai-chip-loading');
+    }
+
+    // ── Stats endpoint (Q1 + Q2 insights) ────────────────────────────────────
+    fetch('/api/chatbot/stats')
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (s) {
+            if (!s) return;
+
+            // Hero chip 2: collaborateurs actifs
+            var actifs = s.collaborateursActifs || 0;
+            setText('hero-chip-talent-txt',
+                actifs + ' collaborateur' + (actifs > 1 ? 's' : '') + ' actif' + (actifs > 1 ? 's' : ''));
+
+            // Hero chip 3: taux de complétion
+            var tc = s.tauxCompletion || 0;
+            setText('hero-chip-perf-txt', tc + '% taux de complétion global');
+
+            // Smart insight 2: formations en cours
+            var fec = s.formationsEnCours || 0;
+            setText('si-formations',
+                fec + ' formation' + (fec > 1 ? 's' : '') + ' en attente de clôture');
+
+            // Smart insight 3: compétence clé
+            if (s.topCompetences && s.topCompetences.length > 0) {
+                var top = s.topCompetences[0];
+                setText('si-skills',
+                    '"' + top.nom + '" — compétence clé (' + top.niveauMoyen + '/5 moy.)');
+            } else {
+                setText('si-skills', 'Aucune donnée compétence disponible');
+            }
+        })
+        .catch(function () {
+            setText('hero-chip-perf-txt', 'Données RH disponibles');
+        });
+
+    // ── Talent endpoint (Smart insight 1) ────────────────────────────────────
+    fetch('/api/chatbot/hr-talent')
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (data) {
+            if (!data || !Array.isArray(data)) {
+                setText('si-talent', 'Analyse talent indisponible');
+                return;
+            }
+            var n = data.length;
+            setText('si-talent',
+                n + ' talent' + (n > 1 ? 's' : '') +
+                ' à fort potentiel identifié' + (n > 1 ? 's' : ''));
+
+            // Also update hero chip 2 with talent count if available
+            if (n > 0) {
+                var talentEl = document.getElementById('hero-chip-talent-txt');
+                if (talentEl && !talentEl.classList.contains('ai-chip-loading')) return;
+                setText('hero-chip-talent-txt',
+                    n + ' talent' + (n > 1 ? 's' : '') + ' à fort potentiel');
+            }
+        })
+        .catch(function () {
+            setText('si-talent', 'Analyse talent indisponible');
+        });
+})();
+</script>
+}
  
