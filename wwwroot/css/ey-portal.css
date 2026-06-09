@@ -37,7 +37,7 @@
     width: 95% !important;
     max-width: 1400px !important;
     margin: 0 auto !important;
-    padding: 24px 0 48px !important;
+    padding: 24px 0 28px !important;
     background: transparent !important;
 }
 
@@ -56,9 +56,8 @@
     margin-bottom: 0.5rem;
 }
 
-/* Uniform card heights */
+/* Card layout: content-driven height, no fixed minimum */
 .kpi-card, .quick-action-card {
-    min-height: 180px;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -66,14 +65,9 @@
     text-align: center;
 }
 
-/* Adjust spacing */
-.row.g-3 > .col-md-4, .row.g-3 > .col-6 {
-    padding: 1rem;
-}
-
 /* Ensure cards have consistent padding */
 .glass-panel {
-    padding: 1.5rem;
+    padding: 1.25rem;
 }
 
 
@@ -1148,7 +1142,9 @@
     transform:     none                             !important;
 }
 
-/* Full-height cards in grid columns */
+/* Full-height cards in grid columns — equal-height peers within the same row.
+   .formation-item and .course-progress-card are list items (one per row),
+   not grid peers, so they must NOT stretch. */
 .row > [class*="col"] > .ey-card,
 .row > [class*="col"] > .report-kpi,
 .row > [class*="col"] > .directory-card,
@@ -1156,10 +1152,25 @@
 .row > [class*="col"] > .course-card {
     height: 100%;
 }
+.formation-item,
+.course-progress-card {
+    height: auto !important;
+}
 
 /* Profile panel */
 .profile-side {
     overflow: hidden !important;
+}
+
+/* Reduce the dark header band height — 88px in ey-modern-overrides wastes
+   vertical space. 64px keeps the visual accent while recovering ~24px. */
+.profile-side-header {
+    height: 64px !important;
+}
+
+/* Avatar overlap: center visually with the smaller header */
+.profile-avatar {
+    margin-top: -46px !important;
 }
 
 /* Toolbar shell */
@@ -1963,7 +1974,75 @@ body.modal-open { overflow: hidden !important; }
 }
 
 
-/* ── Q24. Detail field typography (Formations/Details, Inscriptions/Details) ─ */
+/* ── Q24. Density & Whitespace Corrections ───────────────────────────────────
+   Targets every class that was creating fixed-height or oversized empty areas.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+/* Empty states: reduce from p-5 (30px) to content-driven padding */
+.ey-card.p-5.text-center,
+.alert.p-5.text-center,
+.alert.py-5,
+.p-5.text-center {
+    padding: 2rem !important;
+}
+
+/* Profile mini-KPI row: tighter, uniform height */
+.profile-mini-kpi {
+    min-height: 0    !important;
+    padding:    8px  !important;
+}
+.profile-mini-kpi .fw-bold.fs-5 {
+    font-size: 1.15rem !important;
+    margin-top: 4px  !important;
+}
+.profile-mini-kpi > div:last-child {
+    font-size:      0.62rem !important;
+    letter-spacing: 0.08em  !important;
+    text-transform: uppercase !important;
+    color:          #6b7280  !important;
+}
+
+/* Remove hover lift from AI insight card — enterprise SaaS cards don't jump */
+.ai-insight-card:hover {
+    transform:  none !important;
+    box-shadow: 0 12px 32px rgba(168,85,247,0.08) !important;
+}
+
+/* Table head: ensure text is visible on light bg (overrides dark-theme rgba ghost) */
+.table thead th,
+.table thead td {
+    color:      #374151 !important;
+    background: #f8f9fb !important;
+    font-size:  0.75rem !important;
+    font-weight: 700    !important;
+}
+
+/* Directory add-card: match peer card height via padding, no fixed min-height */
+.directory-card[style*="dashed"] {
+    min-height: 0 !important;
+}
+
+/* Right sidebar panel: content-height, no forced stretch */
+.portal-right-panel {
+    height: auto !important;
+}
+
+/* col-lg-4 portal-right: don't force the column height onto the panel */
+.portal-right {
+    align-self: flex-start !important;
+}
+
+/* panel-section-title vertical rhythm */
+.panel-section-title {
+    font-size:      0.7rem   !important;
+    font-weight:    700      !important;
+    letter-spacing: 0.09em   !important;
+    text-transform: uppercase !important;
+    margin-bottom:  10px     !important;
+    opacity:        0.5      !important;
+}
+
+/* ── Q26. Detail field typography (Formations/Details, Inscriptions/Details) ─ */
 .detail-field-label {
     font-size:      0.67rem;
     font-weight:    700;
