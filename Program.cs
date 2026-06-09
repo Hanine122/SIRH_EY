@@ -247,6 +247,9 @@ using (var scope = app.Services.CreateScope())
 
     // 7. Demo data (competences, formations, etc.)
     await DemoDataSeeder.SeedAsync(context);
+
+    // 8. Enterprise demo — Big Four Tunisia office profile (30 collaborateurs, NineBox, plans)
+    await EnterpriseDemoSeeder.SeedAsync(context);
 }
 
 // ── MIDDLEWARE ────────────────────────────────────────────────────────────────
