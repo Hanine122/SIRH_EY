@@ -2,18 +2,45 @@
 
 @{
     ViewData["Title"] = "Mes certificats";
-    var collaborateurNom = ViewBag.CollaborateurNom ?? "Collaborateur";
+    var collaborateurNom = ViewBag.CollaborateurNom as string ?? "Collaborateur";
+    var count = Model.Count();
 }
 
-<h1>Certificats de @collaborateurNom</h1>
-<p class="text-muted mb-4">Formations que vous avez terminées avec succès.</p>
+@* ── Page header ──────────────────────────────────────────────────────────── *@
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-start gap-3 mb-4">
+    <div>
+        <div class="ey-page-kicker">
+            <a asp-controller="Collaborateurs" asp-action="Index" class="text-decoration-none text-muted">Collaborateurs</a>
+            <span class="mx-1 opacity-40">/</span>
+            <span>Certificats</span>
+        </div>
+        <h1 class="ey-page-title">Certificats de @collaborateurNom</h1>
+        <p class="ey-page-lead mb-0">
+            @if (count == 0)
+            {
+                <span>Aucune formation certifiante terminée pour le moment.</span>
+            }
+            else
+            {
+                <span>@count certificat@(count > 1 ? "s" : "") obtenu@(count > 1 ? "s" : "") avec succès.</span>
+            }
+        </p>
+    </div>
+    <a asp-controller="Collaborateurs" asp-action="Index" class="ey-btn-ghost text-decoration-none flex-shrink-0 align-self-md-start">
+        <i class="fas fa-arrow-left me-1"></i>Retour
+    </a>
+</div>
 
+@* ── Empty state ───────────────────────────────────────────────────────────── *@
 @if (!Model.Any())
 {
-    <div class="card text-center p-5">
-        <i class="fas fa-certificate fa-4x text-muted mb-3"></i>
-        <h5>Aucun certificat pour le moment</h5>
-        <p>Terminez une formation pour générer votre certificat.</p>
+    <div class="ey-card p-5 text-center">
+        <i class="fas fa-certificate fa-3x mb-3" style="color:rgba(17,24,39,.15);"></i>
+        <h5 class="fw-semibold mb-2">Aucun certificat pour le moment</h5>
+        <p class="text-muted mb-4 small">Terminez une formation certifiante pour générer votre certificat.</p>
+        <a asp-controller="Formations" asp-action="Index" class="ey-btn-main text-decoration-none">
+            <i class="fas fa-graduation-cap me-1"></i>Voir le catalogue
+        </a>
     </div>
 }
 else
@@ -21,26 +48,45 @@ else
     <div class="row g-4">
         @foreach (var inscription in Model)
         {
+            var formation = inscription.Formation;
             <div class="col-md-6 col-lg-4">
-                <div class="card h-100 border-success">
-                    <div class="card-body text-center">
-                        <i class="fas fa-certificate fa-3x text-warning mb-3"></i>
-                        <h5 class="card-title">@inscription.Formation?.Titre</h5>
-                        <p class="card-text">
-                            <strong>Date d'obtention :</strong> @inscription.DateInscription.ToString("dd/MM/yyyy")<br />
-                            <strong>Durée :</strong> @inscription.Formation?.DureeHeures h<br />
-                            <strong>Organisme :</strong> @inscription.Formation?.Organisme
-                        </p>
-                        <span class="badge bg-success">Certifié</span>
+                <div class="ey-card p-0 d-flex flex-column h-100" style="overflow:hidden;">
+
+                    @* Dark header band *@
+                    <div class="p-4 text-center"
+                         style="background:linear-gradient(135deg,#111827 0%,#1e2535 100%);border-bottom:1px solid rgba(255,230,0,.14);">
+                        <i class="fas fa-certificate mb-2" style="color:#ffe600;font-size:2rem;display:block;"></i>
+                        <div class="fw-bold text-white" style="font-size:.9rem;">@(formation?.Titre ?? "Formation")</div>
                     </div>
+
+                    @* Body *@
+                    <div class="p-4 flex-grow-1">
+                        <div class="row g-3 mb-3">
+                            <div class="col-6">
+                                <div class="detail-field-label">Date d'obtention</div>
+                                <div class="detail-field-value" style="font-size:.85rem;">
+                                    @inscription.DateInscription.ToString("dd/MM/yyyy")
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="detail-field-label">Durée</div>
+                                <div class="detail-field-value" style="font-size:.85rem;">
+                                    @(formation?.DureeHeures ?? 0) h
+                                </div>
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(formation?.Organisme))
+                            {
+                                <div class="col-12">
+                                    <div class="detail-field-label">Organisme</div>
+                                    <div class="detail-field-value" style="font-size:.85rem;">@formation.Organisme</div>
+                                </div>
+                            }
+                        </div>
+                        <span class="ey-pill active"><i class="fas fa-check-circle me-1"></i>Certifié</span>
+                    </div>
+
                 </div>
             </div>
         }
     </div>
 }
-
-<div class="mt-4">
-    <a asp-controller="Collaborateurs" asp-action="Index" class="btn btn-secondary">
-        <i class="fas fa-arrow-left"></i> Retour
-    </a>
-</div>

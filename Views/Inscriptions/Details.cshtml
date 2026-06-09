@@ -1,42 +1,146 @@
 @model SIRH.EY.Models.Inscription
 
 @{
-    ViewData["Title"] = "Details";
+    ViewData["Title"] = "Détails inscription";
+    var progression = Model.Terminee ? 100 : Math.Clamp(Model.Progression, 0, 100);
+    var progressColor = Model.Terminee ? "#10b981" : (progression >= 60 ? "#ffe600" : "#94a3b8");
 }
 
-<h1>Details</h1>
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success border-0 shadow-sm rounded-3 mb-3"><i class="fas fa-check-circle me-1"></i> @TempData["Success"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger border-0 shadow-sm rounded-3 mb-3"><i class="fas fa-exclamation-triangle me-1"></i> @TempData["Error"]</div>
+}
 
-<div>
-    <h4>Inscription</h4>
-    <hr />
-    <dl class="row">
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.DateInscription)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.DateInscription)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Terminee)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Terminee)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Collaborateur)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Collaborateur.Nom)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Formation)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Formation.Titre)
-        </dd>
-    </dl>
+@* ── Page header ──────────────────────────────────────────────────────────── *@
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-start gap-3 mb-4">
+    <div>
+        <div class="ey-page-kicker">
+            <a asp-action="Index" class="text-decoration-none text-muted">Inscriptions</a>
+            <span class="mx-1 opacity-40">/</span>
+            <span>Détails</span>
+        </div>
+        <h1 class="ey-page-title">@(Model.Formation?.Titre ?? "Inscription")</h1>
+        <div class="mt-2">
+            @if (Model.Terminee)
+            {
+                <span class="ey-pill active"><i class="fas fa-check-circle me-1"></i>Terminée</span>
+            }
+            else
+            {
+                <span class="ey-pill in-progress"><i class="fas fa-circle-notch me-1"></i>En cours</span>
+            }
+        </div>
+    </div>
+    <div class="d-flex gap-2 flex-shrink-0 align-self-md-start">
+        <a asp-action="Edit" asp-route-id="@Model.Id" class="ey-btn-ghost text-decoration-none">
+            <i class="fas fa-pen me-1"></i>Modifier
+        </a>
+        <a asp-action="Index" class="ey-btn-main text-decoration-none">
+            <i class="fas fa-arrow-left me-1"></i>Retour
+        </a>
+    </div>
 </div>
-<div>
-    <a asp-action="Edit" asp-route-id="@Model?.Id">Edit</a> |
-    <a asp-action="Index">Back to List</a>
+
+<div class="row g-4">
+
+    @* ── Left: inscription info ───────────────────────────────────────────── *@
+    <div class="col-lg-8">
+        <div class="ey-card p-4">
+            <h5 class="fw-semibold mb-4">Informations de l'inscription</h5>
+
+            <div class="row g-4">
+                <div class="col-sm-6">
+                    <div class="detail-field-label">Collaborateur</div>
+                    <div class="detail-field-value">
+                        <i class="far fa-user me-2 text-muted"></i>@(Model.Collaborateur?.Nom ?? "—")
+                    </div>
+                </div>
+                <div class="col-sm-6">
+                    <div class="detail-field-label">Formation</div>
+                    <div class="detail-field-value">
+                        <i class="fas fa-book-open me-2 text-muted"></i>@(Model.Formation?.Titre ?? "—")
+                    </div>
+                </div>
+                <div class="col-sm-6">
+                    <div class="detail-field-label">Date d'inscription</div>
+                    <div class="detail-field-value">
+                        <i class="far fa-calendar-alt me-2 text-muted"></i>@Model.DateInscription.ToString("dd MMMM yyyy", new System.Globalization.CultureInfo("fr-FR"))
+                    </div>
+                </div>
+                <div class="col-sm-6">
+                    <div class="detail-field-label">Statut</div>
+                    <div class="mt-1">
+                        @if (Model.Terminee)
+                        {
+                            <span class="ey-pill active"><i class="fas fa-check-circle me-1"></i>Terminée</span>
+                        }
+                        else
+                        {
+                            <span class="ey-pill in-progress"><i class="fas fa-circle-notch me-1"></i>En cours</span>
+                        }
+                    </div>
+                </div>
+                @if (Model.DateExamen.HasValue)
+                {
+                    <div class="col-sm-6">
+                        <div class="detail-field-label">Date d'examen planifiée</div>
+                        <div class="detail-field-value">
+                            <i class="fas fa-clipboard-check me-2 text-muted"></i>@Model.DateExamen.Value.ToString("dd MMMM yyyy", new System.Globalization.CultureInfo("fr-FR"))
+                        </div>
+                    </div>
+                }
+                @if (!string.IsNullOrWhiteSpace(Model.Formation?.Formateur))
+                {
+                    <div class="col-sm-6">
+                        <div class="detail-field-label">Formateur</div>
+                        <div class="detail-field-value">
+                            <i class="far fa-user me-2 text-muted"></i>@Model.Formation.Formateur
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    @* ── Right: progression ───────────────────────────────────────────────── *@
+    <div class="col-lg-4">
+        <div class="ey-card p-4">
+            <h5 class="fw-semibold mb-4">Progression</h5>
+
+            <div class="text-center mb-3">
+                <div class="fw-black lh-1 mb-1" style="font-size:2.8rem;color:@progressColor;">@progression<span style="font-size:1.2rem;font-weight:700;">%</span></div>
+                <div class="text-muted small">avancement</div>
+            </div>
+
+            <div class="progress rounded-2 mb-4" style="height:8px;background:rgba(17,24,39,.07);">
+                <div class="progress-bar rounded-2" role="progressbar"
+                     style="width:@progression%;background:@progressColor;"
+                     aria-valuenow="@progression" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+
+            @if (Model.Terminee)
+            {
+                <div class="p-3 rounded-2 text-center" style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);">
+                    <i class="fas fa-check-circle text-success mb-1 d-block fs-5"></i>
+                    <div class="fw-semibold text-success small">Formation terminée</div>
+                </div>
+            }
+            else if (Model.DateExamen.HasValue)
+            {
+                var joursExamen = (int)(Model.DateExamen.Value - DateTime.Today).TotalDays;
+                var isUrgent = joursExamen <= 7 && joursExamen >= 0;
+                <div class="p-3 rounded-2 text-center"
+                     style="background:@(isUrgent ? "rgba(229,72,77,.08)" : "rgba(255,230,0,.08)");border:1px solid @(isUrgent ? "rgba(229,72,77,.25)" : "rgba(255,230,0,.25)");">
+                    <i class="@(isUrgent ? "fas fa-exclamation-triangle text-danger" : "far fa-calendar-check text-warning") mb-1 d-block fs-5"></i>
+                    <div class="fw-semibold small @(isUrgent ? "text-danger" : "text-warning")">
+                        Examen dans @joursExamen jour@(joursExamen != 1 ? "s" : "")
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
 </div>

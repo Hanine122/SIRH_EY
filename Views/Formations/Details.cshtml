@@ -1,60 +1,167 @@
 @model SIRH.EY.Models.Formation
 
 @{
-    ViewData["Title"] = "Details";
+    ViewData["Title"] = Model.Titre ?? "Détails formation";
+    var placesDisponibles = Model.CapaciteMax - Model.PlacesPrises;
+    var tauxRemplissage   = Model.CapaciteMax > 0 ? (int)((double)Model.PlacesPrises / Model.CapaciteMax * 100) : 0;
 }
 
-<h1>Details</h1>
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success border-0 shadow-sm rounded-3 mb-3"><i class="fas fa-check-circle me-1"></i> @TempData["Success"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger border-0 shadow-sm rounded-3 mb-3"><i class="fas fa-exclamation-triangle me-1"></i> @TempData["Error"]</div>
+}
 
-<div>
-    <h4>Formation</h4>
-    <hr />
-    <dl class="row">
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Titre)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Titre)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Formateur)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Formateur)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.DureeHeures)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.DureeHeures)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.CapaciteMax)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.CapaciteMax)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.PlacesPrises)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.PlacesPrises)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Categorie)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Categorie)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.DateDebut)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.DateDebut)
-        </dd>
-    </dl>
+@* ── Page header ──────────────────────────────────────────────────────────── *@
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-start gap-3 mb-4">
+    <div>
+        <div class="ey-page-kicker">
+            <a asp-action="Index" class="text-decoration-none text-muted">Formations</a>
+            <span class="mx-1 opacity-40">/</span>
+            <span>Détails</span>
+        </div>
+        <h1 class="ey-page-title">@Model.Titre</h1>
+        <div class="d-flex flex-wrap gap-2 mt-2">
+            @if (Model.EstCertifiante)
+            {
+                <span class="ey-pill active"><i class="fas fa-certificate me-1"></i>Certifiante</span>
+            }
+            @if (!string.IsNullOrWhiteSpace(Model.NiveauDifficulte))
+            {
+                <span class="ey-pill"><i class="fas fa-signal me-1"></i>@Model.NiveauDifficulte</span>
+            }
+            @if (!string.IsNullOrWhiteSpace(Model.Categorie))
+            {
+                <span class="ey-pill">@Model.Categorie</span>
+            }
+        </div>
+    </div>
+    <div class="d-flex gap-2 flex-shrink-0 align-self-md-start">
+        <a asp-action="Edit" asp-route-id="@Model.Id" class="ey-btn-ghost text-decoration-none">
+            <i class="fas fa-pen me-1"></i>Modifier
+        </a>
+        <a asp-action="Index" class="ey-btn-main text-decoration-none">
+            <i class="fas fa-arrow-left me-1"></i>Retour
+        </a>
+    </div>
 </div>
-<div>
-    <a asp-action="Edit" asp-route-id="@Model?.Id">Edit</a> |
-    <a asp-action="Index">Back to List</a>
+
+<div class="row g-4">
+
+    @* ── Left col: main info ─────────────────────────────────────────────── *@
+    <div class="col-lg-8">
+        <div class="ey-card p-4 mb-3">
+            <h5 class="fw-semibold mb-4">Informations</h5>
+
+            <div class="row g-4">
+                <div class="col-sm-6">
+                    <div class="detail-field-label">Formateur</div>
+                    <div class="detail-field-value">
+                        <i class="far fa-user me-2 text-muted"></i>@(string.IsNullOrWhiteSpace(Model.Formateur) ? "À confirmer" : Model.Formateur)
+                    </div>
+                </div>
+                <div class="col-sm-6">
+                    <div class="detail-field-label">Organisme</div>
+                    <div class="detail-field-value">
+                        <i class="fas fa-building me-2 text-muted"></i>@(string.IsNullOrWhiteSpace(Model.Organisme) ? "EY Internal" : Model.Organisme)
+                    </div>
+                </div>
+                <div class="col-sm-6">
+                    <div class="detail-field-label">Date de début</div>
+                    <div class="detail-field-value">
+                        <i class="far fa-calendar-alt me-2 text-muted"></i>@Model.DateDebut.ToString("dd MMMM yyyy", new System.Globalization.CultureInfo("fr-FR"))
+                    </div>
+                </div>
+                <div class="col-sm-6">
+                    <div class="detail-field-label">Durée</div>
+                    <div class="detail-field-value">
+                        <i class="far fa-clock me-2 text-muted"></i>@Model.DureeHeures heure@(Model.DureeHeures > 1 ? "s" : "")
+                    </div>
+                </div>
+                @if (!string.IsNullOrWhiteSpace(Model.DepartementCible))
+                {
+                    <div class="col-sm-6">
+                        <div class="detail-field-label">Département cible</div>
+                        <div class="detail-field-value">
+                            <i class="fas fa-sitemap me-2 text-muted"></i>@Model.DepartementCible
+                        </div>
+                    </div>
+                }
+                @if (!string.IsNullOrWhiteSpace(Model.PosteCible))
+                {
+                    <div class="col-sm-6">
+                        <div class="detail-field-label">Poste cible</div>
+                        <div class="detail-field-value">
+                            <i class="fas fa-briefcase me-2 text-muted"></i>@Model.PosteCible
+                        </div>
+                    </div>
+                }
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(Model.CompetenceVisee))
+            {
+                <div class="pt-4 border-top mt-4">
+                    <div class="detail-field-label mb-2">Compétence visée</div>
+                    <div class="d-flex flex-wrap gap-2">
+                        <span class="ey-pill in-progress"><i class="fas fa-chart-bar me-1"></i>@Model.CompetenceVisee</span>
+                        @if (!string.IsNullOrWhiteSpace(Model.DomaineCompetence) && Model.DomaineCompetence != Model.CompetenceVisee)
+                        {
+                            <span class="ey-pill"><i class="fas fa-folder me-1"></i>@Model.DomaineCompetence</span>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    @* ── Right col: capacity + cert badge ────────────────────────────────── *@
+    <div class="col-lg-4">
+        <div class="ey-card p-4 mb-3">
+            <h5 class="fw-semibold mb-4">Capacité</h5>
+
+            <div class="d-flex justify-content-between align-items-baseline mb-1">
+                <span class="text-muted small">Taux de remplissage</span>
+                <span class="fw-bold">@tauxRemplissage%</span>
+            </div>
+            <div class="progress rounded-2 mb-4" style="height:6px;background:rgba(17,24,39,.07);">
+                <div class="progress-bar rounded-2" role="progressbar"
+                     style="width:@tauxRemplissage%;background:@(tauxRemplissage >= 90 ? "#ef4444" : tauxRemplissage >= 60 ? "#f59e0b" : "#10b981");"
+                     aria-valuenow="@tauxRemplissage" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+
+            <div class="row g-2">
+                <div class="col-6">
+                    <div class="p-3 rounded-2 text-center" style="background:#f0fdf4;border:1px solid rgba(16,185,129,.2);">
+                        <div class="fw-bold fs-3 lh-1 mb-1" style="color:#10b981;">@placesDisponibles</div>
+                        <div class="text-muted" style="font-size:.65rem;letter-spacing:.08em;text-transform:uppercase;">Disponibles</div>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="p-3 rounded-2 text-center" style="background:#f8f9fb;border:1px solid rgba(17,24,39,.08);">
+                        <div class="fw-bold fs-3 lh-1 mb-1">@Model.PlacesPrises</div>
+                        <div class="text-muted" style="font-size:.65rem;letter-spacing:.08em;text-transform:uppercase;">Inscrits</div>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <div class="p-2 rounded-2 text-center" style="background:#f8f9fb;border:1px solid rgba(17,24,39,.08);">
+                        <div class="text-muted" style="font-size:.65rem;letter-spacing:.08em;text-transform:uppercase;">Capacité maximale</div>
+                        <div class="fw-bold">@Model.CapaciteMax places</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @if (Model.EstCertifiante)
+        {
+            <div class="ey-card p-3 text-center"
+                 style="background:linear-gradient(135deg,#111827 0%,#1e2535 100%);border:1px solid rgba(255,230,0,.2);">
+                <i class="fas fa-certificate mb-2" style="color:#ffe600;font-size:1.5rem;display:block;"></i>
+                <div class="fw-bold text-white small">Formation certifiante</div>
+                <div class="mt-1" style="font-size:.72rem;color:rgba(255,255,255,.5);">Examen de validation inclus</div>
+            </div>
+        }
+    </div>
 </div>

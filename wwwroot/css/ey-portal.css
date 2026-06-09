@@ -1961,3 +1961,20 @@ body.modal-open { overflow: hidden !important; }
 @media (prefers-reduced-motion: reduce) {
     .ai-status-dot::before { animation: none; }
 }
+
+
+/* ── Q24. Detail field typography (Formations/Details, Inscriptions/Details) ─ */
+.detail-field-label {
+    font-size:      0.67rem;
+    font-weight:    700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color:          #6b7280;
+    margin-bottom:  4px;
+}
+
+.detail-field-value {
+    font-weight: 600;
+    color:       #111827;
+    line-height: 1.4;
+}

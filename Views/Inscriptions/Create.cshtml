@@ -1,44 +1,85 @@
 @model SIRH.EY.Models.Inscription
 
 @{
-    ViewData["Title"] = "Create";
+    ViewData["Title"] = "Nouvelle inscription";
 }
 
-<h1>Create</h1>
-
-<h4>Inscription</h4>
-<hr />
-<div class="row">
-    <div class="col-md-4">
-        <form asp-action="Create">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            <div class="form-group">
-                <label asp-for="DateInscription" class="control-label"></label>
-                <input asp-for="DateInscription" class="form-control" />
-                <span asp-validation-for="DateInscription" class="text-danger"></span>
-            </div>
-            <div class="form-group form-check">
-                <label class="form-check-label">
-                    <input class="form-check-input" asp-for="Terminee" /> @Html.DisplayNameFor(model => model.Terminee)
-                </label>
-            </div>
-            <div class="form-group">
-                <label asp-for="CollaborateurId" class="control-label"></label>
-                <select asp-for="CollaborateurId" class ="form-control" asp-items="ViewBag.CollaborateurId"></select>
-            </div>
-            <div class="form-group">
-                <label asp-for="FormationId" class="control-label"></label>
-                <select asp-for="FormationId" class ="form-control" asp-items="ViewBag.FormationId"></select>
-            </div>
-            <div class="form-group">
-                <input type="submit" value="Create" class="btn btn-primary" />
-            </div>
-        </form>
+@* ── Page header ──────────────────────────────────────────────────────────── *@
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-start gap-3 mb-4">
+    <div>
+        <div class="ey-page-kicker">
+            <a asp-action="Index" class="text-decoration-none text-muted">Inscriptions</a>
+            <span class="mx-1 opacity-40">/</span>
+            <span>Créer</span>
+        </div>
+        <h1 class="ey-page-title">Nouvelle inscription</h1>
+        <p class="ey-page-lead mb-0">Inscrire un collaborateur à une formation du catalogue EY.</p>
     </div>
+    <a asp-action="Index" class="ey-btn-ghost text-decoration-none flex-shrink-0 align-self-md-start">
+        <i class="fas fa-arrow-left me-1"></i>Retour
+    </a>
 </div>
 
-<div>
-    <a asp-action="Index">Back to List</a>
+<div class="row g-4 justify-content-center">
+    <div class="col-lg-7 col-xl-6">
+        <div class="ey-card ey-form-shell p-4">
+
+            <form asp-action="Create">
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger rounded-3 mb-3 small"></div>
+
+                <div class="row g-3">
+
+                    @* Collaborateur *@
+                    <div class="col-12">
+                        <label asp-for="CollaborateurId" class="form-label fw-semibold small">
+                            Collaborateur <span class="text-danger">*</span>
+                        </label>
+                        <select asp-for="CollaborateurId" class="form-select" asp-items="ViewBag.CollaborateurId">
+                            <option value="">Sélectionner un collaborateur…</option>
+                        </select>
+                        <span asp-validation-for="CollaborateurId" class="text-danger small"></span>
+                    </div>
+
+                    @* Formation *@
+                    <div class="col-12">
+                        <label asp-for="FormationId" class="form-label fw-semibold small">
+                            Formation <span class="text-danger">*</span>
+                        </label>
+                        <select asp-for="FormationId" class="form-select" asp-items="ViewBag.FormationId">
+                            <option value="">Sélectionner une formation…</option>
+                        </select>
+                        <span asp-validation-for="FormationId" class="text-danger small"></span>
+                    </div>
+
+                    @* Date *@
+                    <div class="col-sm-6">
+                        <label asp-for="DateInscription" class="form-label fw-semibold small">
+                            Date d'inscription <span class="text-danger">*</span>
+                        </label>
+                        <input asp-for="DateInscription" type="date" class="form-control" />
+                        <span asp-validation-for="DateInscription" class="text-danger small"></span>
+                    </div>
+
+                    @* Terminée *@
+                    <div class="col-sm-6 d-flex align-items-end pb-1">
+                        <div class="form-check">
+                            <input class="form-check-input" asp-for="Terminee" type="checkbox" />
+                            <label class="form-check-label fw-semibold small" asp-for="Terminee">
+                                Marquer comme terminée
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-3 mt-4 pt-3 border-top">
+                    <button type="submit" class="ey-btn-main">
+                        <i class="fas fa-plus me-1"></i>Créer l'inscription
+                    </button>
+                    <a asp-action="Index" class="ey-btn-ghost text-decoration-none">Annuler</a>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 
 @section Scripts {
