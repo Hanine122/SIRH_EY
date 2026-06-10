@@ -13,14 +13,17 @@
                 <div class="chatbot-avatar">
                     <i class="fas fa-robot"></i>
                 </div>
-                <div>
-                    <h5 class="chatbot-title mb-0">Assistant RH IA</h5>
-                    <small class="chatbot-status">En ligne</small>
+                <div class="chatbot-header-text">
+                    <div class="chatbot-title">Assistant RH IA</div>
+                    <div class="chatbot-status">En ligne</div>
                 </div>
             </div>
-            <button id="chatbot-close-btn" class="chatbot-close-btn" aria-label="Fermer">
-                <i class="fas fa-times"></i>
-            </button>
+            <div class="chatbot-header-actions">
+                <span class="ey-ai-tag">EY IA</span>
+                <button id="chatbot-close-btn" class="chatbot-close-btn" aria-label="Fermer">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
         </div>
 
         <!-- Messages Area -->
@@ -34,12 +37,12 @@
             
             <!-- Quick Prompts (Visible initially) -->
             <div id="chatbot-quick-prompts" class="chatbot-quick-prompts">
-                <button class="quick-prompt-btn" data-prompt="Qui peut remplacer Smiai Nour ?">Qui peut remplacer Ibtissem Besrour ?</button>
+                <button class="quick-prompt-btn" data-prompt="Qui peut remplacer ?">Qui peut remplacer Ibtissem Besrour ?</button>
                 <button class="quick-prompt-btn" data-prompt="Quelles compétences me manquent ?">Quelles compétences me manquent ?</button>
                 <button class="quick-prompt-btn" data-prompt="Montre les formations recommandées">Montre les formations recommandées</button>
             </div>
         </div>
-
+        
         <!-- Input Area -->
         <div class="chatbot-input-area">
             <input type="text" id="chatbot-input" class="chatbot-input form-control" placeholder="Posez votre question..." autocomplete="off" />

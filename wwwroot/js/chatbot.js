@@ -101,7 +101,94 @@ document.addEventListener('DOMContentLoaded', function () {
             indicator.remove();
         }
     }
+function appendCopilotResponse(data) {
 
+    const wrapper = document.createElement('div');
+    wrapper.className = 'chat-message bot-message';
+
+    let html = '';
+
+    if (data.answer) {
+        html += `
+            <div class="copilot-answer">
+                ${data.answer}
+            </div>
+        `;
+    }
+
+    if (data.analysis) {
+        html += `
+            <div class="copilot-analysis">
+                <span class="copilot-icon">💡</span>
+                <div>${data.analysis}</div>
+            </div>
+        `;
+    }
+
+    if (data.actions && data.actions.length > 0) {
+
+        html += `
+            <div class="copilot-section-label">
+                Actions recommandées
+            </div>
+
+            <div class="copilot-actions">
+        `;
+
+        data.actions.forEach(action => {
+
+            html += `
+                <div class="copilot-action-item">
+                    → ${action}
+                </div>
+            `;
+        });
+
+        html += `</div>`;
+    }
+
+    if (data.suggestions && data.suggestions.length > 0) {
+
+        html += `
+            <div class="copilot-section-label">
+                Approfondir
+            </div>
+
+            <div class="copilot-suggestions">
+        `;
+
+        data.suggestions.forEach(suggestion => {
+
+            html += `
+                <button
+                    class="copilot-suggestion-btn"
+                    data-prompt="${suggestion}">
+                    ${suggestion}
+                </button>
+            `;
+        });
+
+        html += `</div>`;
+    }
+
+    wrapper.innerHTML = html;
+
+    messagesContainer.appendChild(wrapper);
+
+    wrapper
+        .querySelectorAll('.copilot-suggestion-btn')
+        .forEach(btn => {
+
+            btn.addEventListener('click', () => {
+
+                inputArea.value = btn.dataset.prompt;
+                sendBtn.disabled = false;
+                sendMessage();
+            });
+        });
+
+    scrollToBottom();
+}
     async function sendMessage() {
         const messageText = inputArea.value.trim();
         if (!messageText) return;
@@ -136,7 +223,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             if (response.ok) {
                 const data = await response.json();
-                appendMessage(data.reply || 'Désolé, aucune réponse reçue.', false);
+              appendCopilotResponse(data);
             } else {
                 appendMessage('Erreur lors de la communication avec le serveur.', false);
             }

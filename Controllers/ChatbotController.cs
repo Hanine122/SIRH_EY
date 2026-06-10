@@ -22,10 +22,12 @@ namespace SIRH.EY.Controllers
             _context = context;
         }
 
-        public class ChatRequest
-        {
-            public string Message { get; set; }
-        }
+       public class ChatRequest
+{
+    public string Message { get; set; }
+    public string? Page { get; set; }
+    public string? ContextId { get; set; }
+}
 
         public class ChatReply
         {
@@ -171,7 +173,48 @@ public async Task<IActionResult> GetTalentSummary()
 }
 
 
+[AllowAnonymous]
+[HttpGet("hr-copilot-data")]
+public async Task<IActionResult> GetHrCopilotData()
+{
+    var collaborateurs = await _context.Collaborateurs
+        .Include(c => c.Competences)
+        .Where(c => c.Actif)
+        .ToListAsync();
 
+    var topTalents = collaborateurs
+        .Select(c => new
+        {
+            Nom = $"{c.Prenom} {c.Nom}",
+            Poste = c.Poste,
+            Grade = c.Grade,
+            Score = c.Competences.Any()
+                ? Math.Round(c.Competences.Average(x => x.NiveauActuel), 1)
+                : 0
+        })
+        .Where(x => x.Score >= 4)
+        .OrderByDescending(x => x.Score)
+        .Take(10)
+        .ToList();
+
+    var promotionReady = topTalents.Take(5).ToList();
+
+    return Ok(new
+    {
+        totalTalents = collaborateurs.Count,
+        topTalents,
+        promotionReady,
+        atRisk = new List<object>()
+    });
+}
+[HttpPost("test")]
+public IActionResult Test()
+{
+    return Ok(new
+    {
+        reply = "TEST OK"
+    });
+}
 
        [HttpPost("ask")]
 public async Task<IActionResult> Ask([FromBody] ChatRequest request)
@@ -182,56 +225,101 @@ public async Task<IActionResult> Ask([FromBody] ChatRequest request)
     try
     {
         var client = _httpClientFactory.CreateClient();
-        
-        // Détection d'intent côté MVC
+
         var msg = request.Message.ToLower();
-        
-        var isTalent =
-            msg.Contains("haut potentiel") ||
-            msg.Contains("hauts potentiels") ||
-            msg.Contains("top talent") ||
-            msg.Contains("talent") ||
-            msg.Contains("potentiel") ||
-            msg.Contains("succession") ||
-            msg.Contains("risque") ||
+
+        var isCopilot =
             msg.Contains("promotion") ||
-            msg.Contains("meilleur") ||
-            msg.Contains("qui peut");
+            msg.Contains("succession") ||
+            msg.Contains("successeur") ||
+            msg.Contains("remplacer") ||
+            msg.Contains("remplacement") ||
+            msg.Contains("risque") ||
+            msg.Contains("développement") ||
+            msg.Contains("plan");
 
-        var webhookUrl = isTalent
-            ? "http://localhost:5678/webhook/hr-talent"
-            : "http://localhost:5678/webhook/hr-stats";
+        var webhookUrl = isCopilot
+            ? "http://localhost:5678/webhook/hr-copilot"
+            : "http://localhost:5678/webhook/hr-talent";
 
-        var jsonContent = JsonSerializer.Serialize(new { message = request.Message });
-        var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
+        var jsonContent = JsonSerializer.Serialize(new
+        {
+            message = request.Message
+        });
+
+        var content = new StringContent(
+            jsonContent,
+            Encoding.UTF8,
+            "application/json"
+        );
 
         var response = await client.PostAsync(webhookUrl, content);
 
-        if (response.IsSuccessStatusCode)
+        if (!response.IsSuccessStatusCode)
         {
-            var responseString = await response.Content.ReadAsStringAsync();
-            try
+            return StatusCode((int)response.StatusCode, new
             {
-                var jsonResponse = JsonSerializer.Deserialize<JsonElement>(responseString);
-                if (jsonResponse.TryGetProperty("reply", out var replyElement))
-                    return Ok(new { reply = replyElement.GetString() });
-                return Ok(new { reply = responseString });
-            }
-            catch (JsonException)
-            {
-                return Ok(new { reply = responseString });
-            }
+                answer = "Erreur de connexion.",
+                analysis = "",
+                actions = new List<string>(),
+                suggestions = new List<string>()
+            });
         }
-        else
+
+        var responseString = await response.Content.ReadAsStringAsync();
+
+        try
         {
-            return StatusCode((int)response.StatusCode, 
-                new { reply = "Erreur de connexion avec l'assistant IA." });
+            var json = JsonSerializer.Deserialize<JsonElement>(responseString);
+
+            var answer = json.TryGetProperty("answer", out var a)
+                ? a.GetString()
+                : responseString;
+
+            var analysis = json.TryGetProperty("analysis", out var an)
+                ? an.GetString()
+                : "";
+
+            var actions = json.TryGetProperty("actions", out var ac)
+                ? ac.EnumerateArray()
+                    .Select(x => x.GetString()!)
+                    .ToList()
+                : new List<string>();
+
+            var suggestions = json.TryGetProperty("suggestions", out var s)
+                ? s.EnumerateArray()
+                    .Select(x => x.GetString()!)
+                    .ToList()
+                : new List<string>();
+
+            return Ok(new
+            {
+                answer,
+                analysis,
+                actions,
+                suggestions
+            });
+        }
+        catch
+        {
+            return Ok(new
+            {
+                answer = responseString,
+                analysis = "",
+                actions = new List<string>(),
+                suggestions = new List<string>()
+            });
         }
     }
-    catch (Exception ex)
+    catch
     {
-        return StatusCode(500, 
-            new { reply = "Le service est temporairement indisponible." });
+        return StatusCode(500, new
+        {
+            answer = "Service temporairement indisponible.",
+            analysis = "",
+            actions = new List<string>(),
+            suggestions = new List<string>()
+        });
     }
 }
     }
