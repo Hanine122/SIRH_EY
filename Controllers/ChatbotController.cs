@@ -207,14 +207,259 @@ public async Task<IActionResult> GetHrCopilotData()
         atRisk = new List<object>()
     });
 }
-[HttpPost("test")]
-public IActionResult Test()
+[AllowAnonymous]
+[HttpGet("promotables")]
+public async Task<IActionResult> GetPromotables([FromQuery] string dept = null)
 {
+    var collaborateurs = await _context.Collaborateurs
+        .Include(c => c.Competences)
+        .Where(c => c.Actif)
+        .ToListAsync();
+
+    var query = collaborateurs
+        .Select(c => new
+        {
+            id          = c.Id,
+            nom         = $"{c.Prenom} {c.Nom}",
+            poste       = c.Poste,
+            grade       = c.Grade,
+            departement = c.Departement,
+            score       = c.Competences.Any()
+                ? Math.Round(c.Competences.Average(x => (double)x.NiveauActuel), 1)
+                : 0
+        })
+        .Where(x => x.score >= 4);
+
+    if (!string.IsNullOrWhiteSpace(dept))
+        query = query.Where(x =>
+            x.departement != null &&
+            x.departement.ToLower().Contains(dept.ToLower()));
+
+    var result = query
+        .OrderByDescending(x => x.score)
+        .Take(10)
+        .ToList();
+
+    return Ok(new { total = result.Count, collaborateurs = result });
+}
+
+[AllowAnonymous]
+[HttpGet("postes-sans-successeur")]
+public async Task<IActionResult> GetPostesSansSuccesseur()
+{
+    var collaborateurs = await _context.Collaborateurs
+        .Include(c => c.Competences)
+        .Where(c => c.Actif)
+        .ToListAsync();
+
+    var result = new List<object>();
+
+    foreach (var c in collaborateurs)
+    {
+        var competencesRequises = c.Competences.Select(x => x.Nom).ToList();
+        if (!competencesRequises.Any()) continue;
+
+        var candidats = collaborateurs
+            .Where(x => x.Id != c.Id)
+            .Select(x => {
+                var communes = x.Competences
+                    .Select(y => y.Nom)
+                    .Intersect(competencesRequises)
+                    .Count();
+                return new { communes, score = Math.Round(communes * 100.0 / competencesRequises.Count, 0) };
+            })
+            .Where(x => x.score >= 50)
+            .ToList();
+
+        if (!candidats.Any())
+        {
+            result.Add(new
+            {
+                id          = c.Id,
+                nom         = $"{c.Prenom} {c.Nom}",
+                poste       = c.Poste,
+                grade       = c.Grade,
+                departement = c.Departement,
+                nbCompetencesRequises = competencesRequises.Count
+            });
+        }
+    }
+
     return Ok(new
     {
-        reply = "TEST OK"
+        total          = result.Count,
+        collaborateurs = result
+                            .OrderBy(x => ((dynamic)x).grade)
+                            .Take(10)
+                            .ToList()
     });
 }
+[AllowAnonymous]
+[HttpGet("collaborateur/{id}")]
+public async Task<IActionResult> GetCollaborateur(int id)
+{
+    var c = await _context.Collaborateurs
+        .Include(x => x.Competences)
+        .FirstOrDefaultAsync(x => x.Id == id);
+
+    if (c == null) return NotFound(new { error = "Collaborateur non trouvé." });
+
+    return Ok(new
+    {
+        id          = c.Id,
+        nom         = $"{c.Prenom} {c.Nom}",
+        poste       = c.Poste,
+        grade       = c.Grade,
+        departement = c.Departement,
+        competences = c.Competences.Select(x => new { x.Nom, x.NiveauActuel })
+    });
+}
+
+
+[AllowAnonymous]
+[HttpGet("find")]
+public async Task<IActionResult> FindCollaborateur(string nom)
+{
+    var collaborateur = await _context.Collaborateurs
+        .FirstOrDefaultAsync(c =>
+            (c.Prenom + " " + c.Nom)
+            .ToLower()
+            .Contains(nom.ToLower()));
+
+    if (collaborateur == null)
+        return NotFound();
+
+    return Ok(new
+    {
+        id = collaborateur.Id,
+        nom = collaborateur.Prenom + " " + collaborateur.Nom
+    });
+}
+
+[AllowAnonymous]
+[HttpGet("postes-a-risque")]
+public async Task<IActionResult> GetPostesARisque()
+{
+    var collaborateurs = await _context.Collaborateurs
+        .Include(c => c.Competences)
+        .Where(c => c.Actif)
+        .ToListAsync();
+
+    var seuilsParGrade = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase)
+    {
+        { "Junior",         2.0 },
+        { "Senior",         3.0 },
+        { "Manager",        3.5 },
+        { "Senior Manager", 4.0 },
+        { "Director",       4.0 },
+        { "Partner",        4.5 }
+    };
+
+    var postesARisque = collaborateurs
+        .Select(c => {
+            var scoreActuel = c.Competences.Any()
+                ? Math.Round(c.Competences.Average(x => (double)x.NiveauActuel), 1)
+                : 0;
+
+            var grade = c.Grade ?? "Junior";
+            var seuilAttendu = seuilsParGrade.ContainsKey(grade)
+                ? seuilsParGrade[grade]
+                : 3.0;
+
+            // DateEmbauche est DateTime non nullable
+            var anciennete = Math.Round(
+                (DateTime.Now - c.DateEmbauche).TotalDays / 365.25, 1);
+
+            var niveauRisque =
+                scoreActuel < seuilAttendu && anciennete > 2 ? "Élevé" :
+                scoreActuel < seuilAttendu                   ? "Moyen" :
+                anciennete < 1                               ? "Faible" : null;
+
+            return new
+            {
+                id           = c.Id,
+                nom          = $"{c.Prenom} {c.Nom}",
+                poste        = c.Poste,
+                grade        = grade,
+                departement  = c.Departement,
+                scoreActuel,
+                seuilAttendu,
+                anciennete,
+                niveauRisque,
+                ecart        = Math.Round(seuilAttendu - scoreActuel, 1)
+            };
+        })
+        .Where(x => x.niveauRisque != null)
+        .OrderByDescending(x =>
+            x.niveauRisque == "Élevé" ? 2 :
+            x.niveauRisque == "Moyen" ? 1 : 0)
+        .ThenByDescending(x => x.ecart)
+        .Take(10)
+        .ToList();
+
+    return Ok(new
+    {
+        total          = postesARisque.Count,
+        collaborateurs = postesARisque
+    });
+}
+
+
+[AllowAnonymous]
+[HttpGet("succession/{collaborateurId}")]
+public async Task<IActionResult> GetSuccessionData(int collaborateurId)
+{
+    var collaborateur = await _context.Collaborateurs
+        .Include(c => c.Competences)
+        .FirstOrDefaultAsync(c => c.Id == collaborateurId);
+
+    if (collaborateur == null)
+        return NotFound(new { error = "Collaborateur non trouvé." });
+
+    var competencesRequises = collaborateur.Competences
+        .Select(c => c.Nom)
+        .ToList();
+
+    var candidats = await _context.Collaborateurs
+        .Include(c => c.Competences)
+        .Where(c => c.Actif && c.Id != collaborateurId)
+        .ToListAsync();
+
+    var top3 = candidats
+        .Select(c => {
+            var communes = c.Competences
+                .Select(x => x.Nom)
+                .Intersect(competencesRequises)
+                .Count();
+            var manquantes = competencesRequises
+                .Except(c.Competences.Select(x => x.Nom))
+                .ToList();
+            var score = competencesRequises.Count > 0
+                ? Math.Round(communes * 100.0 / competencesRequises.Count, 0)
+                : 0;
+            return new {
+                nom            = $"{c.Prenom} {c.Nom}",
+                poste          = c.Poste,
+                grade          = c.Grade,
+                departement    = c.Departement,
+                scoreMatch     = score,
+                competencesCommunes  = communes,
+                competencesManquantes = manquantes
+            };
+        })
+        .Where(x => x.scoreMatch > 0)
+        .OrderByDescending(x => x.scoreMatch)
+        .Take(3)
+        .ToList();
+
+    return Ok(new {
+        collaborateurNom = $"{collaborateur.Prenom} {collaborateur.Nom}",
+        poste            = collaborateur.Poste,
+        competencesRequises,
+        top3
+    });
+}
+
 
        [HttpPost("ask")]
 public async Task<IActionResult> Ask([FromBody] ChatRequest request)
@@ -226,21 +471,38 @@ public async Task<IActionResult> Ask([FromBody] ChatRequest request)
     {
         var client = _httpClientFactory.CreateClient();
 
-        var msg = request.Message.ToLower();
+       var msg  = request.Message.ToLower();
+var page = request.Page?.ToLower() ?? "general";
 
-        var isCopilot =
-            msg.Contains("promotion") ||
-            msg.Contains("succession") ||
-            msg.Contains("successeur") ||
-            msg.Contains("remplacer") ||
-            msg.Contains("remplacement") ||
-            msg.Contains("risque") ||
-            msg.Contains("développement") ||
-            msg.Contains("plan");
+var isCopilot =
+    msg.Contains("haut potentiel")  || msg.Contains("hauts potentiels") ||
+    msg.Contains("top talent")      || msg.Contains("top talents") ||
+    msg.Contains("high potential")  || msg.Contains("hipo") ||
+    msg.Contains("9 box")           || msg.Contains("nine box") ||
+    msg.Contains("fort potentiel")  || msg.Contains("talent prêt") ||
+    msg.Contains("promotion")       || msg.Contains("promouv") ||
+    msg.Contains("mérite")          || msg.Contains("évolution") ||
+    msg.Contains("évoluer")         || msg.Contains("carrière") ||
+    msg.Contains("remplacer")       || msg.Contains("remplaçant") ||
+    msg.Contains("succession")      || msg.Contains("successeur") ||
+    msg.Contains("risque")          || msg.Contains("poste critique") ||
+    msg.Contains("sans successeur") || msg.Contains("poste vacant") ||
+    msg.Contains("profil")          || msg.Contains("voir") ||
+    msg.Contains("départ")          || msg.Contains("développement");
 
-        var webhookUrl = isCopilot
-            ? "http://localhost:5678/webhook/hr-copilot"
-            : "http://localhost:5678/webhook/hr-talent";
+var isTalent =
+    msg.Contains("talent") ||
+    msg.Contains("potentiel") ||
+    msg.Contains("meilleur");
+
+string webhookUrl;
+
+if (page == "succession" || isCopilot)
+    webhookUrl = "http://localhost:5678/webhook/hr-copilot";
+else if (isTalent)
+    webhookUrl = "http://localhost:5678/webhook/hr-talent";
+else
+    webhookUrl = "http://localhost:5678/webhook/hr-stats";
 
         var jsonContent = JsonSerializer.Serialize(new
         {
