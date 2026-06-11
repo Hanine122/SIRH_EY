@@ -404,62 +404,95 @@ public async Task<IActionResult> GetPostesARisque()
     });
 }
 
-
 [AllowAnonymous]
 [HttpGet("succession/{collaborateurId}")]
 public async Task<IActionResult> GetSuccessionData(int collaborateurId)
 {
-    var collaborateur = await _context.Collaborateurs
+    var partant = await _context.Collaborateurs
         .Include(c => c.Competences)
         .FirstOrDefaultAsync(c => c.Id == collaborateurId);
 
-    if (collaborateur == null)
+    if (partant == null)
         return NotFound(new { error = "Collaborateur non trouvé." });
 
-    var competencesRequises = collaborateur.Competences
-        .Select(c => c.Nom)
-        .ToList();
+    // ── Même logique que ChoisirRemplacant ──────────────────
+    var comparer = StringComparer.OrdinalIgnoreCase;
 
-    var candidats = await _context.Collaborateurs
-        .Include(c => c.Competences)
-        .Where(c => c.Actif && c.Id != collaborateurId)
+    var surProfil = partant.Competences?
+        .Where(c => !string.IsNullOrWhiteSpace(c.Nom))
+        .Select(c => c.Nom.Trim())
+        .Distinct(comparer)
+        .ToList() ?? new List<string>();
+
+    var surPoste = await _context.CompetencesRequisesParPoste
+        .AsNoTracking()
+        .Where(cr => cr.Poste == partant.Poste)
+        .Select(cr => cr.Competence.Trim())
+        .Distinct()
         .ToListAsync();
 
-    var top3 = candidats
-        .Select(c => {
-            var communes = c.Competences
-                .Select(x => x.Nom)
-                .Intersect(competencesRequises)
-                .Count();
-            var manquantes = competencesRequises
-                .Except(c.Competences.Select(x => x.Nom))
-                .ToList();
-            var score = competencesRequises.Count > 0
-                ? Math.Round(communes * 100.0 / competencesRequises.Count, 0)
-                : 0;
-            return new {
-                nom            = $"{c.Prenom} {c.Nom}",
-                poste          = c.Poste,
-                grade          = c.Grade,
-                departement    = c.Departement,
-                scoreMatch     = score,
-                competencesCommunes  = communes,
-                competencesManquantes = manquantes
-            };
-        })
-        .Where(x => x.scoreMatch > 0)
-        .OrderByDescending(x => x.scoreMatch)
-        .Take(3)
+    var requises = surProfil
+        .Union(surPoste, comparer)
+        .Distinct(comparer)
         .ToList();
 
-    return Ok(new {
-        collaborateurNom = $"{collaborateur.Prenom} {collaborateur.Nom}",
-        poste            = collaborateur.Poste,
-        competencesRequises,
-        top3
+    var autres = await _context.Collaborateurs
+        .Include(c => c.Competences)
+        .Where(c => c.Id != collaborateurId && c.Actif)
+        .ToListAsync();
+
+    var deptPartant = (partant.Departement ?? "").Trim();
+
+    var candidats = autres.Select(autre => {
+        var nomsAutre = autre.Competences?
+            .Where(c => !string.IsNullOrWhiteSpace(c.Nom))
+            .Select(c => c.Nom.Trim())
+            .Distinct(comparer)
+            .ToList() ?? new List<string>();
+
+        var communes   = requises.Count(r => nomsAutre.Any(a => comparer.Equals(a, r)));
+        var manquantes = requises.Where(r => !nomsAutre.Any(a => comparer.Equals(a, r))).ToList();
+
+        var deptAutre = (autre.Departement ?? "").Trim();
+        var autreDept = deptPartant.Length == 0 || deptAutre.Length == 0
+            ? !string.Equals(deptPartant, deptAutre, StringComparison.OrdinalIgnoreCase)
+            : !deptPartant.Equals(deptAutre, StringComparison.OrdinalIgnoreCase);
+
+        var profilTransversal = autreDept && communes > 0;
+
+        // Même calcul de pourcentage que la vue Razor
+        var possedes    = requises.Count > 0 ? (requises.Count - manquantes.Count) : communes;
+        var scoreMatch  = requises.Count == 0
+            ? Math.Min(100, communes * 25)
+            : (int)Math.Round(100.0 * Math.Max(0, possedes) / requises.Count);
+
+        return new
+        {
+            id                    = autre.Id,
+            nom                   = $"{autre.Prenom} {autre.Nom}",
+            poste                 = autre.Poste ?? "",
+            grade                 = autre.Grade ?? "",
+            departement           = autre.Departement ?? "",
+            scoreMatch,
+            competencesCommunes   = communes,
+            competencesManquantes = manquantes,
+            profilTransversal
+        };
+    })
+    .OrderByDescending(c => c.profilTransversal)
+    .ThenByDescending(c => c.competencesCommunes)
+    .ThenBy(c => c.competencesManquantes.Count)
+    .Take(3)
+    .ToList();
+
+    return Ok(new
+    {
+        collaborateurNom    = $"{partant.Prenom} {partant.Nom}",
+        poste               = partant.Poste,
+        competencesRequises = requises,
+        top3                = candidats
     });
 }
-
 
        [HttpPost("ask")]
 public async Task<IActionResult> Ask([FromBody] ChatRequest request)
