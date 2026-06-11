@@ -296,14 +296,22 @@
 
         <div class="ey-main" role="main">
             <div class="ey-topbar" role="banner">
-                <div class="ey-topbar-brand fw-semibold text-dark">Portail RH EY</div>
-                <div class="ey-search flex-grow-1 mx-3">
+                <!-- breadcrumb left -->
+                <nav class="d-flex align-items-center gap-1 flex-shrink-0 me-3" style="min-width:0;">
+                    <span class="fw-semibold text-dark" style="font-size:13px;white-space:nowrap;">Portail RH EY</span>
+                    <span style="color:#BDBDBD;font-size:11px;margin:0 5px;">/</span>
+                    <span style="font-size:12px;color:#6E6E79;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;">@ViewData["Title"]</span>
+                </nav>
+                <!-- search center -->
+                <div class="ey-search flex-grow-1 mx-2" style="max-width:420px;">
                     <input class="form-control form-control-sm ey-search-input" placeholder="Rechercher un collaborateur, une formation, une compétence..." />
                 </div>
+                <!-- user right -->
                 <div class="d-flex align-items-center gap-3 ey-topbar-actions">
                     <span class="ey-icon-btn position-relative"><i class="far fa-bell"></i><span class="ey-dot-alert"></span></span>
                     <span class="ey-icon-btn"><i class="far fa-question-circle"></i></span>
                     <span class="ey-icon-btn"><i class="fas fa-cog"></i></span>
+                    <div style="width:1px;height:24px;background:#E8E8EE;flex-shrink:0;"></div>
                     <div class="text-end lh-sm d-none d-md-block">
                         <div class="fw-semibold small mb-0">@User.Identity?.Name</div>
                         <div class="text-muted" style="font-size:10px;letter-spacing:.04em;">@role.ToUpper()</div>
