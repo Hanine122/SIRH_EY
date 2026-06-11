@@ -31,21 +31,26 @@
             <!-- Welcome Message -->
             <div class="chat-message bot-message">
                 <div class="message-content">
-                    Bonjour, je suis votre assistant RH IA. Comment puis-je vous aider aujourd'hui ?
+                    <p class="ey-answer-text">
+                        <strong>Bonjour !</strong> Je suis votre assistant RH IA EY.<br>
+                        Je peux analyser vos <strong>talents</strong>, <strong>successions</strong>,
+                        <strong>promotions</strong> et <strong>effectifs</strong> en temps réel.
+                    </p>
                 </div>
             </div>
-            
-            <!-- Quick Prompts (Visible initially) -->
+
+            <!-- Quick Prompts -->
             <div id="chatbot-quick-prompts" class="chatbot-quick-prompts">
-                <button class="quick-prompt-btn" data-prompt="Qui peut remplacer ?">Qui peut remplacer Ibtissem Besrour ?</button>
-                <button class="quick-prompt-btn" data-prompt="Quelles compétences me manquent ?">Quelles compétences me manquent ?</button>
-                <button class="quick-prompt-btn" data-prompt="Montre les formations recommandées">Montre les formations recommandées</button>
+                <button class="quick-prompt-btn" data-prompt="Quels sont les top talents ?">🏆 Top talents &amp; hauts potentiels</button>
+                <button class="quick-prompt-btn" data-prompt="Qui est prêt pour une promotion ?">📈 Candidats à la promotion</button>
+                <button class="quick-prompt-btn" data-prompt="Montre la répartition par département">🏢 Répartition des effectifs</button>
             </div>
         </div>
-        
+
         <!-- Input Area -->
         <div class="chatbot-input-area">
-            <input type="text" id="chatbot-input" class="chatbot-input form-control" placeholder="Posez votre question..." autocomplete="off" />
+            <input type="text" id="chatbot-input" class="chatbot-input form-control"
+                   placeholder="Posez votre question RH..." autocomplete="off" />
             <button id="chatbot-send-btn" class="chatbot-send-btn" disabled>
                 <i class="fas fa-paper-plane"></i>
             </button>

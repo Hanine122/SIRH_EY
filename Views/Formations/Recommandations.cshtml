@@ -1,0 +1,149 @@
+@model SIRH.EY.Models.RecommandationsPageViewModel
+
+@{
+    ViewData["Title"] = "Recommandations de formation";
+    var collab = Model.Collaborateur;
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/ey-formations-catalogue.css" asp-append-version="true" />
+}
+
+<!-- Header -->
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+    <div>
+        <div class="small text-muted fw-semibold mb-1" style="letter-spacing:.08em;text-transform:uppercase;">
+            Centre de formation · Recommandations IA
+        </div>
+        <h2 class="fw-black text-dark mb-0">
+            Formations recommandées
+        </h2>
+        @if (collab != null)
+        {
+            <div class="text-muted mt-1">
+                Personnalisées pour <strong>@collab.Prenom @collab.Nom</strong>
+                @if (!string.IsNullOrEmpty(collab.Grade))
+                {
+                    <span class="badge ms-1 fw-bold text-dark" style="background:#ffe600;">@collab.Grade.ToUpperInvariant()</span>
+                }
+                @if (Model.ProchainGrade != null)
+                {
+                    <span class="ms-2 text-muted small">· Objectif : <strong>@Model.ProchainGrade</strong></span>
+                }
+            </div>
+        }
+    </div>
+    <div class="d-flex gap-2 flex-shrink-0">
+        <a asp-action="ParcoursCarriere" asp-route-collaborateurId="@Model.CollaborateurId"
+           class="ey-btn-premium-ghost text-decoration-none px-3 py-2">
+            <i class="fas fa-road me-1"></i>Parcours carrière
+        </a>
+        <a asp-action="Index" asp-route-collaborateurId="@Model.CollaborateurId"
+           class="ey-btn-premium-main text-decoration-none text-white px-3 py-2">
+            <i class="fas fa-compass me-1"></i>Catalogue complet
+        </a>
+    </div>
+</div>
+
+@if (Model.TotalRecommandations == 0)
+{
+    <div class="card border-0 shadow-sm p-5 text-center" style="border-radius:16px;">
+        <i class="fas fa-check-double fa-3x text-success mb-3"></i>
+        <h5 class="fw-bold text-dark">Profil optimisé !</h5>
+        <p class="text-muted">Vos compétences correspondent à votre grade actuel. Parcourez le catalogue pour aller encore plus loin.</p>
+        <a asp-action="Index" asp-route-collaborateurId="@Model.CollaborateurId"
+           class="ey-btn-premium-gold px-4 py-2 text-decoration-none mt-2">
+            Explorer le catalogue
+        </a>
+    </div>
+}
+else
+{
+    <!-- KPI strip -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm p-3 text-center" style="border-radius:12px;">
+                <div class="fw-black text-dark" style="font-size:1.6rem;">@Model.TotalRecommandations</div>
+                <div class="text-muted small fw-semibold">Recommandations</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm p-3 text-center" style="border-radius:12px;background:#f0fdf4;">
+                <div class="fw-black" style="font-size:1.6rem;color:#0d7a4e;">@Model.ParCompetence.Count</div>
+                <div class="text-muted small fw-semibold">Compétences</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm p-3 text-center" style="border-radius:12px;background:#f0f4ff;">
+                <div class="fw-black text-primary" style="font-size:1.6rem;">@Model.ParGrade.Count</div>
+                <div class="text-muted small fw-semibold">Évolution grade</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm p-3 text-center" style="border-radius:12px;background:#fffbeb;">
+                <div class="fw-black text-warning" style="font-size:1.6rem;">@Model.ParPlan.Count</div>
+                <div class="text-muted small fw-semibold">Plans dev.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section: Par compétence manquante -->
+    @if (Model.ParCompetence.Any())
+    {
+        <div class="mb-5">
+            <h5 class="fw-bold text-dark mb-3">
+                <i class="fas fa-bullseye text-success me-2"></i>Combler vos lacunes de compétences
+                <span class="badge bg-light text-dark border ms-2 fw-normal" style="font-size:.8rem;">@Model.ParCompetence.Count</span>
+            </h5>
+            <div class="row g-3">
+                @foreach (var rec in Model.ParCompetence)
+                {
+                    @await Html.PartialAsync("_RecommandationCard", rec, new ViewDataDictionary(ViewData)
+                    {
+                        { "CollaborateurId", Model.CollaborateurId }
+                    })
+                }
+            </div>
+        </div>
+    }
+
+    <!-- Section: Par grade -->
+    @if (Model.ParGrade.Any())
+    {
+        <div class="mb-5">
+            <h5 class="fw-bold text-dark mb-3">
+                <i class="fas fa-level-up-alt text-primary me-2"></i>Pour votre prochain grade (@(Model.ProchainGrade ?? "supérieur"))
+                <span class="badge bg-light text-dark border ms-2 fw-normal" style="font-size:.8rem;">@Model.ParGrade.Count</span>
+            </h5>
+            <div class="row g-3">
+                @foreach (var rec in Model.ParGrade)
+                {
+                    @await Html.PartialAsync("_RecommandationCard", rec, new ViewDataDictionary(ViewData)
+                    {
+                        { "CollaborateurId", Model.CollaborateurId }
+                    })
+                }
+            </div>
+        </div>
+    }
+
+    <!-- Section: Plan de développement -->
+    @if (Model.ParPlan.Any())
+    {
+        <div class="mb-5">
+            <h5 class="fw-bold text-dark mb-3">
+                <i class="fas fa-clipboard-list text-info me-2"></i>Votre plan de développement
+                <span class="badge bg-light text-dark border ms-2 fw-normal" style="font-size:.8rem;">@Model.ParPlan.Count</span>
+            </h5>
+            <div class="row g-3">
+                @foreach (var rec in Model.ParPlan)
+                {
+                    @await Html.PartialAsync("_RecommandationCard", rec, new ViewDataDictionary(ViewData)
+                    {
+                        { "CollaborateurId", Model.CollaborateurId }
+                    })
+                }
+            </div>
+        </div>
+    }
+}

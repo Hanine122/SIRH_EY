@@ -1,0 +1,95 @@
+@model SIRH.EY.Models.RecommandationFormationViewModel
+
+@{
+    var collaborateurId = ViewData["CollaborateurId"] is int cid ? cid : 0;
+    var f = Model.Formation;
+    var platformeCouleur = f.Plateforme switch
+    {
+        "Udemy"             => "#A435F0",
+        "Microsoft Learn"   => "#0078D4",
+        "Coursera"          => "#0056D3",
+        "AWS Skill Builder" => "#FF9900",
+        "LinkedIn Learning" => "#0A66C2",
+        _                   => "#2E2E38"
+    };
+    var plateformeIconClass = f.Plateforme switch
+    {
+        "Udemy"             => "fab fa-udemy",
+        "Microsoft Learn"   => "fab fa-microsoft",
+        "Coursera"          => "fas fa-graduation-cap",
+        "AWS Skill Builder" => "fab fa-aws",
+        "LinkedIn Learning" => "fab fa-linkedin",
+        _                   => "fas fa-building"
+    };
+}
+
+<div class="col-md-6 col-xl-4">
+    <div class="card border-0 shadow-sm h-100 p-3 d-flex flex-column" style="border-radius:14px;border-left:4px solid #ffe600 !important;">
+
+        <!-- Badges -->
+        <div class="d-flex flex-wrap gap-1 mb-2">
+            <span class="ey-badge-pill @Model.TypeBadgeClass" style="font-size:.66rem;">
+                <i class="@Model.TypeIconClass me-1"></i>@Model.TypeLabel
+            </span>
+            @if (!string.IsNullOrEmpty(f.Plateforme))
+            {
+                <span class="badge rounded-pill px-2 py-1 fw-semibold"
+                      style="background:@(platformeCouleur)18;color:@platformeCouleur;border:1px solid @(platformeCouleur)30;font-size:.66rem;">
+                    <i class="@plateformeIconClass me-1"></i>@f.Plateforme
+                </span>
+            }
+            @if (f.EstCertifiante) { <span class="ey-badge-pill badge-certified" style="font-size:.66rem;"><i class="fas fa-certificate"></i>Certifiante</span> }
+        </div>
+
+        <!-- Title -->
+        <h6 class="fw-bold text-dark mb-1" style="line-height:1.35;">@f.Titre</h6>
+        <div class="text-muted small mb-2">@(string.IsNullOrWhiteSpace(f.Formateur) ? "Formateur à confirmer" : f.Formateur)</div>
+
+        <!-- Reason -->
+        <div class="px-2 py-2 rounded-2 mb-3 small fw-semibold"
+             style="background:#f0f4ff;color:#1e40af;border:1px solid #c7d7fd;">
+            <i class="fas fa-lightbulb me-1 text-warning"></i>@Model.Raison
+        </div>
+
+        <!-- Meta -->
+        <div class="d-flex gap-3 text-muted small mb-3">
+            <span><i class="far fa-clock me-1"></i>@f.DureeHeures h</span>
+            <span><i class="fas fa-signal me-1"></i>@(f.NiveauDifficulte ?? "—")</span>
+            <span class="ms-auto fw-bold" style="color:#b78103;">@Model.ScoreAdequation%</span>
+        </div>
+
+        <!-- Compat bar -->
+        <div class="compat-progress-bar mb-3">
+            <div class="compat-progress-fill" style="width:@Model.ScoreAdequation%;"></div>
+        </div>
+
+        <!-- Action -->
+        <div class="mt-auto">
+            @if (Model.EstInscrit)
+            {
+                <button class="ey-btn-premium-disabled w-100" disabled>
+                    <i class="fas fa-check me-1"></i>Déjà inscrit
+                </button>
+            }
+            else if (f.PlacesPrises < f.CapaciteMax)
+            {
+                <div class="d-flex gap-2">
+                    <form asp-controller="Formations" asp-action="Inscrire" method="post" class="flex-grow-1">
+                        <input type="hidden" name="formationId" value="@f.Id" />
+                        <input type="hidden" name="collaborateurId" value="@collaborateurId" />
+                        <button type="submit" class="ey-btn-premium-gold w-100">S'inscrire</button>
+                    </form>
+                    <a asp-controller="Formations" asp-action="Details"
+                       asp-route-id="@f.Id" asp-route-collaborateurId="@collaborateurId"
+                       class="ey-btn-premium-ghost px-3 text-decoration-none">
+                        <i class="fas fa-eye"></i>
+                    </a>
+                </div>
+            }
+            else
+            {
+                <button class="ey-btn-premium-disabled w-100" disabled>Complet</button>
+            }
+        </div>
+    </div>
+</div>

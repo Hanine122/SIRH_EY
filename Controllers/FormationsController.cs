@@ -276,7 +276,7 @@ namespace SIRH.EY.Controllers
         [HttpPost]
         [Authorize(Roles = Roles.ITAdminOrRH)]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,Titre,Formateur,DureeHeures,CapaciteMax,PlacesPrises,Categorie,DateDebut,Organisme,CompetenceVisee,DepartementCible,MetierCible,PosteCible,DomaineCompetence,NiveauDifficulte,EstCertifiante")] Formation formation)
+        public async Task<IActionResult> Create([Bind("Id,Titre,Formateur,DureeHeures,CapaciteMax,PlacesPrises,Categorie,DateDebut,Organisme,CompetenceVisee,DepartementCible,MetierCible,PosteCible,DomaineCompetence,NiveauDifficulte,EstCertifiante,Plateforme,ExternalUrl,Description,CompetencesRequises,CertificationNom,SupportPdfUrl,MentorEmail,EstStrategique,EstForteDemande")] Formation formation)
         {
             if (ModelState.IsValid)
             {
@@ -302,7 +302,7 @@ namespace SIRH.EY.Controllers
         [HttpPost]
         [Authorize(Roles = Roles.ITAdminOrRH)]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,Titre,Formateur,DureeHeures,CapaciteMax,PlacesPrises,Categorie,DateDebut,Organisme,CompetenceVisee,DepartementCible,MetierCible,PosteCible,DomaineCompetence,NiveauDifficulte,EstCertifiante")] Formation formation)
+        public async Task<IActionResult> Edit(int id, [Bind("Id,Titre,Formateur,DureeHeures,CapaciteMax,PlacesPrises,Categorie,DateDebut,Organisme,CompetenceVisee,DepartementCible,MetierCible,PosteCible,DomaineCompetence,NiveauDifficulte,EstCertifiante,Plateforme,ExternalUrl,Description,CompetencesRequises,CertificationNom,SupportPdfUrl,MentorEmail,EstStrategique,EstForteDemande")] Formation formation)
         {
             if (id != formation.Id) return NotFound();
             if (ModelState.IsValid)
@@ -338,7 +338,10 @@ namespace SIRH.EY.Controllers
         return RedirectToAction(nameof(Index), new { collaborateurId = inscription.CollaborateurId });
     }
 
-    inscription.Terminee = true;
+    inscription.Terminee        = true;
+    inscription.DateCompletion  = DateTime.Now;
+    inscription.Progression     = 100;
+    inscription.SourceCertification ??= inscription.Formation?.Plateforme ?? "EY Learning";
     await _context.SaveChangesAsync();
 
     var formation = inscription.Formation;
@@ -384,6 +387,274 @@ namespace SIRH.EY.Controllers
 
     return RedirectToAction(nameof(Index), new { collaborateurId = inscription.CollaborateurId });
 }
+        // GET: Formations/Details/5
+        public async Task<IActionResult> Details(int id, int? collaborateurId)
+        {
+            var formation = await _context.Formations.FindAsync(id);
+            if (formation == null) return NotFound();
+
+            if (collaborateurId == null)
+                collaborateurId = await _teamAccess.GetCurrentCollaborateurIdAsync(User);
+
+            Collaborateur? collab = null;
+            Inscription? inscriptionActuelle = null;
+            int score = 50;
+            bool dansPlan = false;
+
+            if (collaborateurId.HasValue)
+            {
+                collab = await _context.Collaborateurs.FindAsync(collaborateurId.Value);
+
+                inscriptionActuelle = await _context.Inscriptions
+                    .FirstOrDefaultAsync(i => i.CollaborateurId == collaborateurId.Value && i.FormationId == id);
+
+                dansPlan = await _context.PlansDeveloppement
+                    .AnyAsync(p => p.CollaborateurId == collaborateurId.Value && p.FormationId == id);
+
+                // Reuse same compatibility logic as Index view
+                score = 45;
+                if (!string.IsNullOrEmpty(formation.PosteCible) &&
+                    formation.PosteCible.Equals(collab?.Poste, StringComparison.OrdinalIgnoreCase)) score += 35;
+                else if (!string.IsNullOrEmpty(formation.MetierCible) &&
+                    formation.MetierCible.Equals(collab?.Poste, StringComparison.OrdinalIgnoreCase)) score += 25;
+                if (!string.IsNullOrEmpty(formation.DepartementCible) &&
+                    formation.DepartementCible.Equals(collab?.Departement, StringComparison.OrdinalIgnoreCase)) score += 15;
+                if (dansPlan) score += 10;
+                if (score > 98) score = 98;
+            }
+
+            var competencesDeveloppees = new List<string>();
+            if (!string.IsNullOrWhiteSpace(formation.CompetenceVisee))
+                competencesDeveloppees.Add(formation.CompetenceVisee);
+            if (!string.IsNullOrWhiteSpace(formation.DomaineCompetence) &&
+                formation.DomaineCompetence != formation.CompetenceVisee)
+                competencesDeveloppees.Add(formation.DomaineCompetence);
+
+            var prerequisListe = string.IsNullOrWhiteSpace(formation.CompetencesRequises)
+                ? new List<string>()
+                : formation.CompetencesRequises.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(s => s.Trim()).Where(s => s.Length > 0).ToList();
+
+            var vm = new FormationDetailViewModel
+            {
+                Formation             = formation,
+                InscriptionActuelle   = inscriptionActuelle,
+                CollaborateurId       = collaborateurId ?? 0,
+                Collaborateur         = collab,
+                ScoreAdequation       = score,
+                ProchainGrade         = GetProchainGrade(collab?.Grade),
+                EstObligatoire        = IsFormationObligatoire(formation, collab),
+                EstDansPlan           = dansPlan,
+                CompetencesDeveloppees = competencesDeveloppees,
+                CompetencesPrerequisListe = prerequisListe
+            };
+
+            return View(vm);
+        }
+
+        // GET: Formations/Recommandations/5
+        public async Task<IActionResult> Recommandations(int collaborateurId)
+        {
+            if (!await _teamAccess.CanAccessCollaborateurAsync(User, collaborateurId))
+                return Forbid();
+
+            var collab = await _context.Collaborateurs.FindAsync(collaborateurId);
+            if (collab == null) return NotFound();
+
+            var toutesFormations = await _context.Formations.OrderBy(f => f.Titre).ToListAsync();
+
+            var inscriptionsIds = await _context.Inscriptions
+                .Where(i => i.CollaborateurId == collaborateurId)
+                .Select(i => i.FormationId)
+                .ToListAsync();
+
+            var plansIds = await _context.PlansDeveloppement
+                .Where(p => p.CollaborateurId == collaborateurId)
+                .Select(p => p.FormationId)
+                .ToListAsync();
+
+            var competences = await _context.Competences
+                .Where(c => c.CollaborateurId == collaborateurId)
+                .ToListAsync();
+
+            var competencesManquantes = competences
+                .Where(c => c.NiveauActuel < c.NiveauCible)
+                .ToList();
+
+            var prochainGrade = GetProchainGrade(collab.Grade);
+            var vm = new RecommandationsPageViewModel
+            {
+                CollaborateurId = collaborateurId,
+                Collaborateur   = collab,
+                ProchainGrade   = prochainGrade
+            };
+
+            foreach (var f in toutesFormations)
+            {
+                bool inscrit  = inscriptionsIds.Contains(f.Id);
+                bool dansPlan = plansIds.Contains(f.Id);
+
+                // Par plan de développement
+                if (dansPlan && !inscrit)
+                {
+                    vm.ParPlan.Add(new RecommandationFormationViewModel
+                    {
+                        Formation        = f,
+                        Raison           = "Dans votre plan de développement",
+                        Type             = "plan",
+                        ScoreAdequation  = 90,
+                        EstInscrit       = inscrit,
+                        EstDansPlan      = dansPlan
+                    });
+                    continue;
+                }
+
+                // Par compétence manquante
+                var matchComp = competencesManquantes
+                    .FirstOrDefault(c => !string.IsNullOrEmpty(f.CompetenceVisee) &&
+                                        f.CompetenceVisee.Equals(c.Nom, StringComparison.OrdinalIgnoreCase));
+                if (matchComp != null && !inscrit)
+                {
+                    vm.ParCompetence.Add(new RecommandationFormationViewModel
+                    {
+                        Formation        = f,
+                        Raison           = $"Améliore la compétence : {matchComp.Nom} (niveau {matchComp.NiveauActuel}/{matchComp.NiveauCible})",
+                        Type             = "competence",
+                        ScoreAdequation  = 85,
+                        CompetenceCiblee = matchComp.Nom,
+                        EstInscrit       = inscrit,
+                        EstDansPlan      = dansPlan
+                    });
+                    continue;
+                }
+
+                // Par grade cible
+                if (!string.IsNullOrEmpty(prochainGrade) && !inscrit &&
+                    (!string.IsNullOrEmpty(f.PosteCible) || !string.IsNullOrEmpty(f.DepartementCible)))
+                {
+                    bool matchGrade = (!string.IsNullOrEmpty(f.PosteCible) &&
+                                       f.PosteCible.Contains(prochainGrade, StringComparison.OrdinalIgnoreCase)) ||
+                                      (!string.IsNullOrEmpty(f.MetierCible) &&
+                                       f.MetierCible.Contains(prochainGrade, StringComparison.OrdinalIgnoreCase));
+                    if (matchGrade)
+                    {
+                        vm.ParGrade.Add(new RecommandationFormationViewModel
+                        {
+                            Formation       = f,
+                            Raison          = $"Cette formation vous rapproche du grade {prochainGrade}",
+                            Type            = "grade",
+                            ScoreAdequation = 75,
+                            EstInscrit      = inscrit,
+                            EstDansPlan     = dansPlan
+                        });
+                    }
+                }
+            }
+
+            // Cap lists to avoid overwhelming the page
+            vm.ParCompetence = vm.ParCompetence.Take(6).ToList();
+            vm.ParGrade      = vm.ParGrade.Take(4).ToList();
+            vm.ParPlan       = vm.ParPlan.Take(4).ToList();
+
+            return View(vm);
+        }
+
+        // GET: Formations/ParcoursCarriere/5
+        public async Task<IActionResult> ParcoursCarriere(int collaborateurId)
+        {
+            if (!await _teamAccess.CanAccessCollaborateurAsync(User, collaborateurId))
+                return Forbid();
+
+            var collab = await _context.Collaborateurs.FindAsync(collaborateurId);
+            if (collab == null) return NotFound();
+
+            var competences = await _context.Competences
+                .Where(c => c.CollaborateurId == collaborateurId)
+                .OrderBy(c => c.Nom)
+                .ToListAsync();
+
+            var inscriptionsIds = await _context.Inscriptions
+                .Where(i => i.CollaborateurId == collaborateurId)
+                .Select(i => i.FormationId)
+                .ToListAsync();
+
+            var toutesFormations = await _context.Formations.ToListAsync();
+
+            var acquises  = competences.Where(c => c.NiveauActuel >= c.NiveauCible).ToList();
+            var manquantes = competences.Where(c => c.NiveauActuel < c.NiveauCible).ToList();
+
+            var itemsAcquises = acquises.Select(c => new CompetenceStatutItem
+            {
+                Nom          = c.Nom,
+                NiveauActuel = c.NiveauActuel,
+                NiveauCible  = c.NiveauCible
+            }).ToList();
+
+            var itemsManquantes = manquantes.Select(c =>
+            {
+                var formation = toutesFormations
+                    .FirstOrDefault(f => !string.IsNullOrEmpty(f.CompetenceVisee) &&
+                                         f.CompetenceVisee.Equals(c.Nom, StringComparison.OrdinalIgnoreCase));
+                return new CompetenceStatutItem
+                {
+                    Nom                  = c.Nom,
+                    NiveauActuel         = c.NiveauActuel,
+                    NiveauCible          = c.NiveauCible,
+                    FormationRecommandee = formation
+                };
+            }).ToList();
+
+            // Formations couvrant les gaps, not yet enrolled
+            var formationsRecommandees = toutesFormations
+                .Where(f => manquantes.Any(c =>
+                    !string.IsNullOrEmpty(f.CompetenceVisee) &&
+                    f.CompetenceVisee.Equals(c.Nom, StringComparison.OrdinalIgnoreCase)) &&
+                    !inscriptionsIds.Contains(f.Id))
+                .Take(6)
+                .ToList();
+
+            // Grade progression: % of competences at target level
+            int progressionGrade = competences.Count == 0 ? 0
+                : (int)((double)acquises.Count / competences.Count * 100);
+
+            var vm = new ParcoursCarriereViewModel
+            {
+                CollaborateurId       = collaborateurId,
+                Collaborateur         = collab,
+                GradeActuel           = collab.Grade ?? "Junior",
+                ProchainGrade         = GetProchainGrade(collab.Grade),
+                ProgressionGrade      = progressionGrade,
+                CompetencesAcquises   = itemsAcquises,
+                CompetencesManquantes  = itemsManquantes,
+                FormationsRecommandees = formationsRecommandees,
+                FormationsInscritesIds = inscriptionsIds
+            };
+
+            return View(vm);
+        }
+
+        // ── Private helpers ───────────────────────────────────────────────────
+
+        private static string? GetProchainGrade(string? grade) => grade?.ToLowerInvariant() switch
+        {
+            "junior"        => "Senior",
+            "senior"        => "Manager",
+            "manager"       => "Director",
+            "director"      => "Partner",
+            _               => null
+        };
+
+        private static bool IsFormationObligatoire(Formation f, Collaborateur? c)
+        {
+            if (f.Titre.Contains("RGPD", StringComparison.OrdinalIgnoreCase) ||
+                f.Titre.Contains("Conformité", StringComparison.OrdinalIgnoreCase))
+                return true;
+            if (c != null && !string.IsNullOrEmpty(c.FormationsObligatoires) &&
+                c.FormationsObligatoires.Contains(f.Titre, StringComparison.OrdinalIgnoreCase))
+                return true;
+            return false;
+        }
+
         // GET: Formations/Delete/5
         [Authorize(Roles = Roles.ITAdminOrRH)]
         public async Task<IActionResult> Delete(int? id)

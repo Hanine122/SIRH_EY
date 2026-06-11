@@ -1,0 +1,310 @@
+@model SIRH.EY.Models.ParcoursCarriereViewModel
+
+@{
+    ViewData["Title"] = "Parcours de carrière";
+    var collab = Model.Collaborateur;
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/ey-formations-catalogue.css" asp-append-version="true" />
+}
+
+<!-- Header -->
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+    <div>
+        <div class="small text-muted fw-semibold mb-1" style="letter-spacing:.08em;text-transform:uppercase;">
+            Centre de formation · Parcours de carrière
+        </div>
+        <h2 class="fw-black text-dark mb-0">Mon parcours de carrière</h2>
+        @if (collab != null)
+        {
+            <div class="text-muted mt-1">
+                <strong>@collab.Prenom @collab.Nom</strong>
+                @if (!string.IsNullOrEmpty(collab.Poste)) { <span>· @collab.Poste</span> }
+            </div>
+        }
+    </div>
+    <div class="d-flex gap-2 flex-shrink-0">
+        <a asp-action="Recommandations" asp-route-collaborateurId="@Model.CollaborateurId"
+           class="ey-btn-premium-ghost text-decoration-none px-3 py-2">
+            <i class="fas fa-rocket me-1"></i>Recommandations
+        </a>
+        <a asp-action="Index" asp-route-collaborateurId="@Model.CollaborateurId"
+           class="ey-btn-premium-main text-decoration-none text-white px-3 py-2">
+            <i class="fas fa-compass me-1"></i>Catalogue
+        </a>
+    </div>
+</div>
+
+<!-- ── Grade progression card ──────────────────────────────────────────────── -->
+<div class="card border-0 shadow-sm mb-4 p-4" style="border-radius:16px;background:linear-gradient(135deg,#1A1A24 0%,#2E2E38 100%);">
+    <div class="row align-items-center g-4">
+        <div class="col-md-6">
+            <div class="small fw-bold mb-1" style="color:rgba(255,230,0,.7);letter-spacing:.1em;text-transform:uppercase;">
+                Progression vers le prochain grade
+            </div>
+            <div class="d-flex align-items-center gap-3 mb-3">
+                <div>
+                    <div class="text-white-50 small">Grade actuel</div>
+                    <span class="badge fw-black px-3 py-2" style="background:#ffe600;color:#1A1A24;font-size:1rem;">
+                        @Model.GradeActuel.ToUpperInvariant()
+                    </span>
+                </div>
+                <i class="fas fa-arrow-right text-white-50 fa-lg"></i>
+                <div>
+                    <div class="text-white-50 small">Prochain grade</div>
+                    @if (Model.ProchainGrade != null)
+                    {
+                        <span class="badge fw-black px-3 py-2" style="background:rgba(255,255,255,.12);color:#fff;font-size:1rem;border:1px solid rgba(255,255,255,.2);">
+                            @Model.ProchainGrade.ToUpperInvariant()
+                        </span>
+                    }
+                    else
+                    {
+                        <span class="badge fw-semibold px-3 py-2" style="background:rgba(255,230,0,.2);color:#ffe600;">
+                            Grade maximum atteint
+                        </span>
+                    }
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="d-flex justify-content-between mb-1 small text-white">
+                <span>Compétences maîtrisées</span>
+                <span class="fw-bold">@Model.ProgressionGrade%</span>
+            </div>
+            <div class="progress rounded-pill mb-2" style="height:10px;background:rgba(255,255,255,.1);">
+                <div class="progress-bar rounded-pill"
+                     style="width:@Model.ProgressionGrade%;background:linear-gradient(90deg,#d4c000,#ffe600);"
+                     role="progressbar"></div>
+            </div>
+            <div class="text-white-50 small">
+                @Model.CompetencesAcquises.Count acquises ·
+                @Model.CompetencesManquantes.Count à développer
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+
+    <!-- ── LEFT: Competences status ──────────────────────────────────────────── -->
+    <div class="col-lg-8">
+
+        <!-- Compétences manquantes -->
+        @if (Model.CompetencesManquantes.Any())
+        {
+            <div class="card border-0 shadow-sm mb-4 p-4" style="border-radius:16px;">
+                <h5 class="fw-bold text-dark mb-3">
+                    <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+                    Compétences à acquérir
+                    <span class="badge bg-warning text-dark ms-2">@Model.CompetencesManquantes.Count</span>
+                </h5>
+
+                @foreach (var item in Model.CompetencesManquantes)
+                {
+                    <div class="p-3 mb-3 rounded-3" style="background:#fffbeb;border:1px solid #fde68a;">
+                        <div class="d-flex align-items-start justify-content-between gap-3 mb-2">
+                            <div>
+                                <span class="fw-bold text-dark">@item.Nom</span>
+                                <span class="ms-2 text-muted small">
+                                    Niveau @item.NiveauActuel / @item.NiveauCible
+                                </span>
+                            </div>
+                            <span class="fw-bold text-warning small flex-shrink-0">@item.PourcentageAtteint%</span>
+                        </div>
+
+                        <!-- Level dots -->
+                        <div class="d-flex gap-1 mb-2">
+                            @for (int i = 1; i <= 5; i++)
+                            {
+                                <div class="rounded-circle"
+                                     style="width:12px;height:12px;background:@(i <= item.NiveauActuel ? "#ffe600" : i <= item.NiveauCible ? "rgba(255,230,0,.2)" : "#e5e7eb");
+                                            border:@(i <= item.NiveauCible && i > item.NiveauActuel ? "1px dashed #fde68a" : "none");"></div>
+                            }
+                            <span class="small text-muted ms-1">
+                                @(item.NiveauActuel >= item.NiveauCible ? "Objectif atteint" : $"Objectif : {item.NiveauCible}/5")
+                            </span>
+                        </div>
+
+                        @if (item.FormationRecommandee != null)
+                        {
+                            <div class="d-flex align-items-center justify-content-between gap-2 p-2 rounded-2"
+                                 style="background:#fff;border:1px solid rgba(255,230,0,.4);">
+                                <div class="small">
+                                    <i class="fas fa-graduation-cap text-warning me-1"></i>
+                                    <strong>@item.FormationRecommandee.Titre</strong>
+                                    <span class="text-muted ms-1">· @item.FormationRecommandee.DureeHeures h</span>
+                                </div>
+                                @if (!Model.FormationsInscritesIds.Contains(item.FormationRecommandee.Id))
+                                {
+                                    <form asp-controller="Formations" asp-action="Inscrire" method="post" class="m-0">
+                                        <input type="hidden" name="formationId" value="@item.FormationRecommandee.Id" />
+                                        <input type="hidden" name="collaborateurId" value="@Model.CollaborateurId" />
+                                        <button type="submit" class="btn btn-sm btn-dark px-3 py-1" style="font-size:.7rem;">
+                                            S'inscrire
+                                        </button>
+                                    </form>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-success text-white small">Inscrit</span>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="small text-muted">
+                                <i class="fas fa-search me-1"></i>
+                                <a asp-action="Index" asp-route-collaborateurId="@Model.CollaborateurId"
+                                   class="text-muted">Trouver une formation dans le catalogue →</a>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+
+        <!-- Compétences acquises -->
+        @if (Model.CompetencesAcquises.Any())
+        {
+            <div class="card border-0 shadow-sm mb-4 p-4" style="border-radius:16px;">
+                <h5 class="fw-bold text-dark mb-3">
+                    <i class="fas fa-check-circle text-success me-2"></i>
+                    Compétences maîtrisées
+                    <span class="badge bg-success text-white ms-2">@Model.CompetencesAcquises.Count</span>
+                </h5>
+                <div class="row g-2">
+                    @foreach (var item in Model.CompetencesAcquises)
+                    {
+                        <div class="col-sm-6">
+                            <div class="d-flex align-items-center justify-content-between p-2 rounded-3"
+                                 style="background:#e6f9f0;border:1px solid #a8dfc5;">
+                                <div>
+                                    <div class="fw-semibold text-dark small">@item.Nom</div>
+                                    <div class="text-muted" style="font-size:.7rem;">Niveau @item.NiveauActuel/@item.NiveauCible</div>
+                                </div>
+                                <!-- Level dots -->
+                                <div class="d-flex gap-1">
+                                    @for (int i = 1; i <= item.NiveauCible; i++)
+                                    {
+                                        <div class="rounded-circle"
+                                             style="width:8px;height:8px;background:@(i <= item.NiveauActuel ? "#0d7a4e" : "#c8e6c9");"></div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        @if (!Model.CompetencesAcquises.Any() && !Model.CompetencesManquantes.Any())
+        {
+            <div class="alert alert-light border text-center p-5 rounded-3">
+                <i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
+                <h5 class="fw-bold">Aucune compétence enregistrée</h5>
+                <p class="text-muted small">Finalisez des formations pour alimenter automatiquement votre profil de compétences.</p>
+                <a asp-action="Index" asp-route-collaborateurId="@Model.CollaborateurId"
+                   class="ey-btn-premium-gold px-4 py-2 text-decoration-none">
+                    Parcourir le catalogue
+                </a>
+            </div>
+        }
+    </div>
+
+    <!-- ── RIGHT: Recommended formations ─────────────────────────────────────── -->
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm p-3 mb-4" style="border-radius:16px;">
+            <h6 class="fw-bold text-dark mb-3">
+                <i class="fas fa-rocket text-warning me-2"></i>Formations recommandées
+            </h6>
+            @if (!Model.FormationsRecommandees.Any())
+            {
+                <p class="text-muted small">Aucune formation ne couvre actuellement vos lacunes.</p>
+            }
+            @foreach (var form in Model.FormationsRecommandees)
+            {
+                var deja = Model.FormationsInscritesIds.Contains(form.Id);
+                <div class="p-2 mb-2 rounded-3" style="background:#f8f9fb;border:1px solid #e5e7eb;">
+                    <div class="fw-semibold text-dark small mb-1">@form.Titre</div>
+                    <div class="text-muted d-flex gap-2 small mb-2">
+                        <span><i class="far fa-clock me-1"></i>@form.DureeHeures h</span>
+                        @if (form.EstCertifiante) { <span class="text-primary"><i class="fas fa-certificate me-1"></i>Certifiante</span> }
+                    </div>
+                    @if (deja)
+                    {
+                        <span class="badge bg-success text-white small">Inscrit</span>
+                    }
+                    else
+                    {
+                        <form asp-controller="Formations" asp-action="Inscrire" method="post" class="m-0">
+                            <input type="hidden" name="formationId" value="@form.Id" />
+                            <input type="hidden" name="collaborateurId" value="@Model.CollaborateurId" />
+                            <button type="submit" class="btn btn-sm btn-dark w-100 py-1" style="font-size:.75rem;">
+                                S'inscrire
+                            </button>
+                        </form>
+                    }
+                </div>
+            }
+            <a asp-action="Recommandations" asp-route-collaborateurId="@Model.CollaborateurId"
+               class="ey-btn-premium-main text-decoration-none text-white text-center py-2 mt-2 d-block">
+                Voir toutes les recommandations
+            </a>
+        </div>
+
+        <!-- Grade roadmap -->
+        <div class="card border-0 shadow-sm p-3" style="border-radius:16px;background:linear-gradient(135deg,#111827 0%,#1e2535 100%);">
+            <h6 class="fw-bold text-white mb-3">
+                <i class="fas fa-route text-warning me-2"></i>Votre feuille de route
+            </h6>
+            @{
+                var grades = new[] { "Junior", "Senior", "Manager", "Director", "Partner" };
+                var gradeActuelNorm = (Model.GradeActuel ?? "Junior").Trim();
+                int idxActuel = Array.FindIndex(grades, g => g.Equals(gradeActuelNorm, StringComparison.OrdinalIgnoreCase));
+                if (idxActuel < 0) idxActuel = 0;
+            }
+            <div class="d-flex flex-column gap-2">
+                @for (int gi = 0; gi < grades.Length; gi++)
+                {
+                    var g = grades[gi];
+                    bool estActuel  = gi == idxActuel;
+                    bool estPasse   = gi < idxActuel;
+                    bool estFutur   = gi > idxActuel;
+                    bool estProchain = gi == idxActuel + 1;
+
+                    <div class="d-flex align-items-center gap-2 px-2 py-2 rounded-2"
+                         style="background:@(estActuel ? "rgba(255,230,0,.2)" : estPasse ? "rgba(16,185,129,.12)" : "rgba(255,255,255,.05)");
+                                border:1px solid @(estActuel ? "rgba(255,230,0,.5)" : estPasse ? "rgba(16,185,129,.3)" : "rgba(255,255,255,.08)");">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                             style="width:26px;height:26px;background:@(estPasse ? "#10b981" : estActuel ? "#ffe600" : "rgba(255,255,255,.1)");">
+                            @if (estPasse)
+                            {
+                                <i class="fas fa-check text-white" style="font-size:.65rem;"></i>
+                            }
+                            else if (estActuel)
+                            {
+                                <i class="fas fa-user text-dark" style="font-size:.65rem;"></i>
+                            }
+                            else
+                            {
+                                <span class="text-white-50" style="font-size:.65rem;">@(gi + 1)</span>
+                            }
+                        </div>
+                        <span class="fw-semibold @(estActuel ? "text-warning" : estPasse ? "text-success" : "text-white-50")"
+                              style="font-size:.85rem;">@g</span>
+                        @if (estActuel)
+                        {
+                            <span class="badge ms-auto" style="background:#ffe600;color:#1A1A24;font-size:.6rem;">Actuel</span>
+                        }
+                        else if (estProchain)
+                        {
+                            <span class="badge ms-auto" style="background:rgba(255,255,255,.1);color:rgba(255,255,255,.7);font-size:.6rem;">Prochain</span>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

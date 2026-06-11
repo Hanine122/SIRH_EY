@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace SIRH.EY.Models;
 
 public class Inscription
@@ -6,13 +8,26 @@ public class Inscription
     public DateTime DateInscription { get; set; } = DateTime.Now;
     public bool Terminee { get; set; } = false;
     public virtual ICollection<EvaluationCompetence> EvaluationsFormation { get; set; }
-    // Ajouté pour la planification d'examen
+
+    [Display(Name = "Date d'examen")]
     public DateTime? DateExamen { get; set; }
-    
-    // Optionnel : suivi de la progression (0-100)
+
+    [Display(Name = "Progression (%)")]
     public int Progression { get; set; } = 0;
 
-    // Clés étrangères
+    // ── Certification enrichment ─────────────────────────────────────────────
+
+    [Display(Name = "Date de complétion")]
+    public DateTime? DateCompletion { get; set; }
+
+    [Display(Name = "Date d'expiration du certificat")]
+    public DateTime? DateExpiration { get; set; }
+
+    [Display(Name = "Source de certification")]
+    [MaxLength(100)]
+    public string? SourceCertification { get; set; }    // "Udemy", "EY Learning", "Microsoft Learn", etc.
+
+    // ── Foreign keys ─────────────────────────────────────────────────────────
     public int CollaborateurId { get; set; }
     public Collaborateur? Collaborateur { get; set; }
 

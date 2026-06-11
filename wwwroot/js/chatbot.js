@@ -1,25 +1,25 @@
-
-
 document.addEventListener('DOMContentLoaded', function () {
-    // Mémoire conversationnelle courte
-const conversationCtx = {
-    lastIntent: null,
-    lastCollaborateurId: null,
-    lastCollaborateurNom: null
-};
-    const launcher    = document.getElementById('chatbot-launcher');
-    const panel       = document.getElementById('chatbot-panel');
-    const closeBtn    = document.getElementById('chatbot-close-btn');
-    const launcherIcon = launcher.querySelector('.chatbot-launcher-icon');
-    const closeIcon   = launcher.querySelector('.chatbot-close-icon');
-    const inputArea   = document.getElementById('chatbot-input');
-    const sendBtn     = document.getElementById('chatbot-send-btn');
+
+    // ── Conversational memory ─────────────────────────────────────────────────
+    const conversationCtx = {
+        lastIntent: null,
+        lastCollaborateurId: null,
+        lastCollaborateurNom: null
+    };
+
+    const launcher              = document.getElementById('chatbot-launcher');
+    const panel                 = document.getElementById('chatbot-panel');
+    const closeBtn              = document.getElementById('chatbot-close-btn');
+    const launcherIcon          = launcher.querySelector('.chatbot-launcher-icon');
+    const closeIcon             = launcher.querySelector('.chatbot-close-icon');
+    const inputArea             = document.getElementById('chatbot-input');
+    const sendBtn               = document.getElementById('chatbot-send-btn');
     const messagesContainer     = document.getElementById('chatbot-messages');
     const quickPromptsContainer = document.getElementById('chatbot-quick-prompts');
 
     let isChatOpen = false;
 
-    // ── Toggle ────────────────────────────────────────────────
+    // ── Toggle panel ──────────────────────────────────────────────────────────
     function toggleChat() {
         isChatOpen = !isChatOpen;
         if (isChatOpen) {
@@ -38,24 +38,21 @@ const conversationCtx = {
     launcher.addEventListener('click', toggleChat);
     closeBtn.addEventListener('click', toggleChat);
 
-    // ── Input ─────────────────────────────────────────────────
-    inputArea.addEventListener('input', function () {
+    // ── Input events ──────────────────────────────────────────────────────────
+    inputArea.addEventListener('input', () => {
         sendBtn.disabled = inputArea.value.trim() === '';
     });
-
-    inputArea.addEventListener('keypress', function (e) {
+    inputArea.addEventListener('keypress', e => {
         if (e.key === 'Enter' && !sendBtn.disabled) sendMessage();
     });
-
-    sendBtn.addEventListener('click', function () {
+    sendBtn.addEventListener('click', () => {
         if (!sendBtn.disabled) sendMessage();
     });
 
-    // ── Quick prompts ─────────────────────────────────────────
+    // ── Quick prompts ─────────────────────────────────────────────────────────
     document.querySelectorAll('.quick-prompt-btn').forEach(btn => {
         btn.addEventListener('click', function () {
-            const prompt = this.getAttribute('data-prompt');
-            inputArea.value = prompt;
+            inputArea.value = this.getAttribute('data-prompt');
             sendBtn.disabled = false;
             if (quickPromptsContainer) quickPromptsContainer.style.display = 'none';
             sendMessage();
@@ -66,188 +63,349 @@ const conversationCtx = {
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
     }
 
-    // ── Detect page context ───────────────────────────────────
+    // ── Page context detection ────────────────────────────────────────────────
     function detectPageContext() {
         const path = window.location.pathname.toLowerCase();
-
         if (path.includes('succession')) {
-            const match = path.match(/\/(\d+)/);
-            const contextId = match ? match[1] : null;
-            const pageData = document.querySelector('[data-succession-id]');
-            const successionId = contextId
-                || (pageData ? pageData.dataset.successionId : null);
-            return { page: 'succession', contextId: successionId };
+            const match   = path.match(/\/(\d+)/);
+            const pageEl  = document.querySelector('[data-succession-id]');
+            const id      = (match && match[1]) || (pageEl && pageEl.dataset.successionId) || null;
+            return { page: 'succession', contextId: id };
         }
-
-        if (path.includes('talent') || path.includes('ninebox')) {
+        if (path.includes('talent') || path.includes('ninebox'))
             return { page: 'talent', contextId: null };
-        }
-
         return { page: 'general', contextId: null };
     }
 
-    // ── User message ──────────────────────────────────────────
-    function appendMessage(text, isUser) {
-        const msgDiv = document.createElement('div');
-        msgDiv.className = `chat-message ${isUser ? 'user-message' : 'bot-message'}`;
-        const contentDiv = document.createElement('div');
-        contentDiv.className = 'message-content';
-        contentDiv.textContent = text;
-        msgDiv.appendChild(contentDiv);
-        messagesContainer.appendChild(msgDiv);
+    // ── User message bubble ───────────────────────────────────────────────────
+    function appendUserMessage(text) {
+        const wrap = document.createElement('div');
+        wrap.className = 'chat-message user-message';
+        const inner = document.createElement('div');
+        inner.className = 'message-content';
+        inner.textContent = text;          // textContent = XSS-safe for user input
+        wrap.appendChild(inner);
+        messagesContainer.appendChild(wrap);
         scrollToBottom();
     }
 
-    // ── Format markdown-lite ──────────────────────────────────
+    // ── Utilities ─────────────────────────────────────────────────────────────
+
+    // Safe HTML escape (uses the browser's own escaping)
+    function escapeHtml(str) {
+        if (!str) return '';
+        const d = document.createElement('div');
+        d.textContent = str;
+        return d.innerHTML;
+    }
+
+    // Extract up to 2 initials from a name
+    function getInitials(name) {
+        return (name || '').split(/\s+/).slice(0, 2)
+            .map(w => w[0] ? w[0].toUpperCase() : '').join('');
+    }
+
+    // Markdown-lite: **bold**, *italic*, \n → <br>
+    // B4 fix: removed the erroneous • → <br>• substitution (double-break)
     function formatText(text) {
         if (!text) return '';
         return text
             .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-            .replace(/•/g, '<br>•')
+            .replace(/\*(.*?)\*/g, '<em>$1</em>')
             .replace(/\n/g, '<br>');
     }
 
-    // ── Copilot response ──────────────────────────────────────
+    // Renders 5-dot skill level indicator
+    function renderDots(level) {
+        let h = '';
+        for (let i = 1; i <= 5; i++)
+            h += `<span class="ey-dot${i <= Math.round(level) ? ' on' : ''}"></span>`;
+        return h;
+    }
+
+    // ── Priority 3: Smart enterprise content renderer ─────────────────────────
+    //
+    // Detects content type from n8n response text and produces
+    // the appropriate visual component:
+    //   • Person chips  — for talent / succession / promotion lists
+    //   • Dept bar list — for headcount distribution
+    //   • Skill dots    — for competence breakdowns
+    //   • KPI highlight — for single-stat answers
+    //   • Simple list   — fallback for unrecognised bullet lists
+    //   • Plain text    — for narrative / error messages
+    //
+    function renderContent(text) {
+        if (!text) return '';
+
+        const lines   = text.split('\n').map(l => l.trim()).filter(Boolean);
+        const bullets = lines.filter(l => l.startsWith('•'));
+        const prose   = lines.filter(l => !l.startsWith('•'));
+
+        // Prose intro rendered above the cards
+        const introHtml = prose.length
+            ? `<p class="ey-answer-text">${formatText(prose.join('\n'))}</p>`
+            : '';
+
+        if (bullets.length === 0) {
+            // No bullets — check for KPI numbers (**25**, **75%**, etc.)
+            if (/\*\*[\d.,]+%?\*\*/.test(text))
+                return renderKpiLine(text);
+            return `<p class="ey-answer-text">${formatText(text)}</p>`;
+        }
+
+        // Classify bullet list by content
+        const isDept   = bullets.some(l => /:\s*\d+\s*(collaborateur|collab|inscription|formation)/i.test(l));
+        const isPeople = bullets.some(l => /\([A-Za-zÀ-ÿÇçÉéÈèÊêÀàÙùÔôÎîÏïŒœ\s\-']+\)/.test(l));
+        const isSkill  = bullets.some(l => /niveau moy\.|—\s*\d+\s*collab/i.test(l));
+
+        if (isDept)    return introHtml + renderDeptCards(bullets);
+        if (isPeople)  return introHtml + renderPersonCards(bullets);
+        if (isSkill)   return introHtml + renderSkillCards(bullets);
+        return          introHtml + renderSimpleList(bullets);
+    }
+
+    // KPI: numbers get large bold treatment
+    function renderKpiLine(text) {
+        const formatted = text
+            .replace(/\*\*([\d.,]+%?)\*\*/g, '<span class="ey-kpi-val">$1</span>')
+            .replace(/\n/g, '<br>');
+        return `<p class="ey-kpi-text">${formatted}</p>`;
+    }
+
+    // Person chips — talent, succession, promotion cards
+    function renderPersonCards(bullets) {
+        let h = `<div class="ey-person-list">`;
+        bullets.forEach(b => {
+            const raw   = b.replace(/^•\s*/, '').trim();
+            const paren = raw.match(/^(.+?)\s*\(([^)]+)\)(.*)?$/);
+            const dash  = !paren && raw.match(/^(.+?)\s*—\s*(.+)$/);
+
+            if (paren) {
+                const name  = paren[1].trim();
+                const role  = paren[2].trim();
+                const extra = (paren[3] || '').replace(/^[\s,·—]+/, '').trim();
+                h += personChip(name, role + (extra ? ' · ' + extra : ''));
+            } else if (dash) {
+                h += personChip(dash[1].trim(), dash[2].trim());
+            } else {
+                h += personChip(raw, '');
+            }
+        });
+        return h + `</div>`;
+    }
+
+    function personChip(name, role) {
+        return `<div class="ey-person-chip">
+            <div class="ey-person-avatar">${getInitials(name)}</div>
+            <div class="ey-person-info">
+                <span class="ey-person-name">${escapeHtml(name)}</span>
+                ${role ? `<span class="ey-person-role">${escapeHtml(role)}</span>` : ''}
+            </div>
+        </div>`;
+    }
+
+    // Department bar chart — headcount distribution
+    function renderDeptCards(bullets) {
+        const counts = bullets.map(b => parseInt((b.match(/:\s*(\d+)/) || [])[1]) || 0);
+        const max    = Math.max(...counts, 1);
+        let h = `<div class="ey-dept-list">`;
+        bullets.forEach((b, i) => {
+            const raw = b.replace(/^•\s*/, '').trim();
+            const ci  = raw.lastIndexOf(':');
+            if (ci < 0) { h += `<div class="ey-simple-item">${escapeHtml(raw)}</div>`; return; }
+            const name  = raw.substring(0, ci).trim();
+            const count = counts[i];
+            const pct   = Math.round((count / max) * 100);
+            h += `<div class="ey-dept-row">
+                <span class="ey-dept-name" title="${escapeHtml(name)}">${escapeHtml(name)}</span>
+                <div class="ey-dept-bar"><div class="ey-dept-fill" style="width:${pct}%"></div></div>
+                <span class="ey-dept-count">${count}</span>
+            </div>`;
+        });
+        return h + `</div>`;
+    }
+
+    // Skill dots — competence breakdowns
+    function renderSkillCards(bullets) {
+        let h = `<div class="ey-skill-list">`;
+        bullets.forEach(b => {
+            const raw  = b.replace(/^•\s*/, '').trim();
+            const di   = raw.indexOf(' — ');
+            const name = di > -1 ? raw.substring(0, di).trim() : raw;
+            const meta = di > -1 ? raw.substring(di + 3).trim() : '';
+            const lm   = meta.match(/niveau moy\.\s*([\d.]+)\s*\/\s*5/);
+            const lvl  = lm ? parseFloat(lm[1]) : null;
+            const clean = meta.replace(/\s*\(niveau moy\.[^)]*\)/, '').trim();
+            h += `<div class="ey-skill-row">
+                <span class="ey-skill-name">${escapeHtml(name)}</span>
+                ${lvl !== null ? `<div class="ey-skill-dots">${renderDots(lvl)}</div>` : ''}
+                ${clean ? `<span class="ey-skill-meta">${escapeHtml(clean)}</span>` : ''}
+            </div>`;
+        });
+        return h + `</div>`;
+    }
+
+    // Generic bullet fallback
+    function renderSimpleList(bullets) {
+        let h = `<div class="ey-simple-list">`;
+        bullets.forEach(b => {
+            h += `<div class="ey-simple-item">${formatText(b.replace(/^•\s*/, ''))}</div>`;
+        });
+        return h + `</div>`;
+    }
+
+    // ── Bot response renderer ─────────────────────────────────────────────────
+    //
+    // B1 fix: all responses now wrap content in .message-content (gets card styling)
+    // B2 fix: action items strip leading → before CSS ::before adds its own
+    // Priority 2: handles both {reply} (UC1 stats) and {answer+analysis+actions+suggestions} (UC2 copilot)
+    //
     function appendCopilotResponse(data) {
         const wrapper = document.createElement('div');
         wrapper.className = 'chat-message bot-message';
 
-        // Compatibilité : certains workflows retournent "reply" d'autres "answer"
-        const mainText = data.answer || data.reply || '';
+        // Priority 2: normalise both "reply" (n8n UC1) and "answer" (copilot)
+        const mainText   = data.answer || data.reply || '';
+        const hasCopilot = !!(
+            data.analysis ||
+            (data.actions    && data.actions.length    > 0) ||
+            (data.suggestions && data.suggestions.length > 0)
+        );
 
-        let html = '';
+        const contentDiv = document.createElement('div');
 
-        if (mainText) {
-            html += `<div class="copilot-answer">${formatText(mainText)}</div>`;
+        if (hasCopilot) {
+            // ── Full copilot card ──────────────────────────────
+            contentDiv.className = 'message-content copilot-card';
+            let html = '';
+
+            if (mainText)
+                html += `<div class="copilot-answer">${renderContent(mainText)}</div>`;
+
+            if (data.analysis)
+                html += `<div class="copilot-analysis">
+                            <span class="copilot-icon">💡</span>
+                            <div>${formatText(data.analysis)}</div>
+                         </div>`;
+
+            if (data.actions && data.actions.length > 0) {
+                html += `<div class="copilot-section-label">Actions recommandées</div>
+                         <div class="copilot-actions">`;
+                data.actions.forEach(a => {
+                    if (a) {
+                        // B2 fix: strip any → the workflow may already include
+                        const clean = a.replace(/^\s*→\s*/, '').trim();
+                        html += `<div class="copilot-action-item">${formatText(clean)}</div>`;
+                    }
+                });
+                html += `</div>`;
+            }
+
+            if (data.suggestions && data.suggestions.length > 0) {
+                html += `<div class="copilot-section-label">Approfondir</div>
+                         <div class="copilot-suggestions">`;
+                data.suggestions.forEach(s => {
+                    if (!s) return;
+                    const parts  = s.split('|');
+                    const label  = escapeHtml(parts[0].trim());
+                    const ctxId  = parts[1] ? escapeHtml(parts[1].trim()) : '';
+                    html += `<button type="button" class="copilot-suggestion-btn"
+                                     data-suggestion="${escapeHtml(s)}"
+                                     data-context-id="${ctxId}"
+                                     onclick="window._copilotSend(this)">${label}</button>`;
+                });
+                html += `</div>`;
+            }
+
+            contentDiv.innerHTML = html;
+
+        } else {
+            // ── Simple card (stats / plain text) ──────────────
+            contentDiv.className = 'message-content';
+            contentDiv.innerHTML = renderContent(mainText);
         }
 
-        if (data.analysis) {
-            html += `<div class="copilot-analysis">
-                        <span class="copilot-icon">💡</span>
-                        <div>${data.analysis}</div>
-                     </div>`;
-        }
-
-        if (data.actions && data.actions.length > 0) {
-            html += `<div class="copilot-section-label">Actions recommandées</div>
-                     <div class="copilot-actions">`;
-            data.actions.forEach(action => {
-                html += `<div class="copilot-action-item">→ ${action}</div>`;
-            });
-            html += `</div>`;
-        }
-
-        if (data.suggestions && data.suggestions.length > 0) {
-            html += `<div class="copilot-section-label">Approfondir</div>
-                     <div class="copilot-suggestions">`;
-            data.suggestions.forEach(suggestion => {
-                // Format : "Texte affiché|contextId" ou "Texte affiché"
-                const parts     = suggestion.split('|');
-                const label     = parts[0].trim();
-                const contextId = parts[1] ? parts[1].trim() : '';
-                html += `<button class="copilot-suggestion-btn"
-                                 data-suggestion="${suggestion}"
-                                 data-context-id="${contextId}"
-                                 onclick="window._copilotSend(this)">
-                           ${label}
-                         </button>`;
-            });
-            html += `</div>`;
-            // Mettre à jour la mémoire conversationnelle
-if (data.contextId) conversationCtx.lastCollaborateurId = data.contextId;
-if (data.title)     conversationCtx.lastIntent = data.title;
-        }
-
-        wrapper.innerHTML = html;
+        wrapper.appendChild(contentDiv);
         messagesContainer.appendChild(wrapper);
         scrollToBottom();
+
+        if (data.contextId) conversationCtx.lastCollaborateurId = data.contextId;
+        if (data.title)     conversationCtx.lastIntent          = data.title;
     }
 
-    // ── Suggestion click handler (global) ─────────────────────
+    // ── Suggestion click handler (global) ─────────────────────────────────────
+    // B3 fix: calls detectPageContext() directly instead of referencing
+    //         the local `pageContext` variable from sendMessage() that was out of scope.
     window._copilotSend = function (btn) {
-        const raw       = btn.getAttribute('data-suggestion');
-       const contextId = window._pendingContextId
-               || pageContext.contextId
-               || conversationCtx.lastCollaborateurId
-               || null;
-window._pendingContextId = null;
-        const parts     = raw.split('|');
-        const text      = parts[0].trim();
+        const raw      = btn.getAttribute('data-suggestion') || btn.textContent.trim();
+        const ctx      = detectPageContext();                  // B3 fix
+        const contextId = window._pendingContextId
+                       || ctx.contextId
+                       || conversationCtx.lastCollaborateurId
+                       || null;
+        window._pendingContextId = null;
 
-        inputArea.value = text;
+        const text = raw.split('|')[0].trim();
+        inputArea.value  = text;
         sendBtn.disabled = false;
-
-        // Stocker le contextId pour l'envoi suivant
         window._pendingContextId = contextId || null;
-
         sendMessage();
     };
 
-    // ── Typing indicator ──────────────────────────────────────
+    // ── Typing indicator ──────────────────────────────────────────────────────
     function showTypingIndicator() {
-        const indicator = document.createElement('div');
-        indicator.className = 'chat-message bot-message typing-indicator-container';
-        indicator.id = 'typing-indicator';
-        indicator.innerHTML = `
-            <div class="typing-indicator">
-                <div class="typing-dot"></div>
-                <div class="typing-dot"></div>
-                <div class="typing-dot"></div>
-            </div>`;
-        messagesContainer.appendChild(indicator);
+        const el = document.createElement('div');
+        el.className = 'chat-message bot-message typing-indicator-container';
+        el.id = 'typing-indicator';
+        el.innerHTML = `<div class="typing-indicator">
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+        </div>`;
+        messagesContainer.appendChild(el);
         scrollToBottom();
     }
 
     function removeTypingIndicator() {
-        const indicator = document.getElementById('typing-indicator');
-        if (indicator) indicator.remove();
+        const el = document.getElementById('typing-indicator');
+        if (el) el.remove();
     }
 
-    // ── Send message ──────────────────────────────────────────
+    // ── Send message ──────────────────────────────────────────────────────────
     async function sendMessage() {
-        const messageText = inputArea.value.trim();
-        if (!messageText) return;
+        const text = inputArea.value.trim();
+        if (!text) return;
 
-        if (quickPromptsContainer &&
-            quickPromptsContainer.style.display !== 'none') {
+        if (quickPromptsContainer && quickPromptsContainer.style.display !== 'none')
             quickPromptsContainer.style.display = 'none';
-        }
 
-        appendMessage(messageText, true);
+        appendUserMessage(text);
         inputArea.value  = '';
         sendBtn.disabled = true;
         showTypingIndicator();
 
-        // Contexte page + contextId depuis suggestion ou page
-        const pageContext = detectPageContext();
-        const contextId   = window._pendingContextId
-                         || pageContext.contextId
-                         || null;
-        window._pendingContextId = null; // reset après usage
+        const pageCtx  = detectPageContext();
+        const contextId = window._pendingContextId || pageCtx.contextId || null;
+        window._pendingContextId = null;
 
         try {
-            const response = await fetch('/api/chatbot/ask', {
+            const res = await fetch('/api/chatbot/ask', {
                 method:  'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    message:   messageText,
-                    page:      pageContext.page,
-                    contextId: contextId
-                })
+                body: JSON.stringify({ message: text, page: pageCtx.page, contextId })
             });
-
             removeTypingIndicator();
 
-            if (response.ok) {
-                const data = await response.json();
-                appendCopilotResponse(data);
+            if (res.ok) {
+                appendCopilotResponse(await res.json());
             } else {
-                appendMessage('Erreur lors de la communication avec le serveur.', false);
+                appendCopilotResponse({ reply: 'Erreur lors de la communication avec le serveur.' });
             }
-        } catch (error) {
-            console.error('Chatbot API error:', error);
+        } catch (err) {
+            console.error('Chatbot error:', err);
             removeTypingIndicator();
-            appendMessage('Impossible de joindre le service IA.', false);
+            appendCopilotResponse({ reply: 'Impossible de joindre le service IA pour le moment.' });
         }
     }
+
 });
