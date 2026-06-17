@@ -24,14 +24,15 @@ namespace SIRH.EY.Controllers
 
        public class ChatRequest
 {
-    public string Message { get; set; }
+    public string Message { get; set; } = "";
     public string? Page { get; set; }
     public string? ContextId { get; set; }
+    public System.Text.Json.JsonElement? Context { get; set; }
 }
 
         public class ChatReply
         {
-            public string Reply { get; set; }
+            public string? Reply { get; set; }
         }
 
 
@@ -209,7 +210,7 @@ public async Task<IActionResult> GetHrCopilotData()
 }
 [AllowAnonymous]
 [HttpGet("promotables")]
-public async Task<IActionResult> GetPromotables([FromQuery] string dept = null)
+public async Task<IActionResult> GetPromotables([FromQuery] string? dept = null)
 {
     var collaborateurs = await _context.Collaborateurs
         .Include(c => c.Competences)
@@ -500,122 +501,58 @@ public async Task<IActionResult> Ask([FromBody] ChatRequest request)
     if (request == null || string.IsNullOrWhiteSpace(request.Message))
         return BadRequest("Message cannot be empty.");
 
+    const string webhookUrl = "http://localhost:5678/webhook/hr-copilot";
+
     try
     {
         var client = _httpClientFactory.CreateClient();
 
-       var msg  = request.Message.ToLower();
-var page = request.Page?.ToLower() ?? "general";
-
-var isCopilot =
-    msg.Contains("haut potentiel")  || msg.Contains("hauts potentiels") ||
-    msg.Contains("top talent")      || msg.Contains("top talents") ||
-    msg.Contains("high potential")  || msg.Contains("hipo") ||
-    msg.Contains("9 box")           || msg.Contains("nine box") ||
-    msg.Contains("fort potentiel")  || msg.Contains("talent prêt") ||
-    msg.Contains("promotion")       || msg.Contains("promouv") ||
-    msg.Contains("mérite")          || msg.Contains("évolution") ||
-    msg.Contains("évoluer")         || msg.Contains("carrière") ||
-    msg.Contains("remplacer")       || msg.Contains("remplaçant") ||
-    msg.Contains("succession")      || msg.Contains("successeur") ||
-    msg.Contains("risque")          || msg.Contains("poste critique") ||
-    msg.Contains("sans successeur") || msg.Contains("poste vacant") ||
-    msg.Contains("profil")          || msg.Contains("voir") ||
-    msg.Contains("départ")          || msg.Contains("développement");
-
-var isTalent =
-    msg.Contains("talent") ||
-    msg.Contains("potentiel") ||
-    msg.Contains("meilleur");
-
-string webhookUrl;
-
-if (page == "succession" || isCopilot)
-    webhookUrl = "http://localhost:5678/webhook/hr-copilot";
-else if (isTalent)
-    webhookUrl = "http://localhost:5678/webhook/hr-talent";
-else
-    webhookUrl = "http://localhost:5678/webhook/hr-stats";
-
-        var jsonContent = JsonSerializer.Serialize(new
+        var payload = JsonSerializer.Serialize(new
         {
-            message = request.Message
+            message = request.Message,
+            page    = request.Page ?? "general",
+            context = request.Context
         });
 
-        var content = new StringContent(
-            jsonContent,
-            Encoding.UTF8,
-            "application/json"
-        );
-
-        var response = await client.PostAsync(webhookUrl, content);
+        var response = await client.PostAsync(
+            webhookUrl,
+            new StringContent(payload, Encoding.UTF8, "application/json"));
 
         if (!response.IsSuccessStatusCode)
-        {
-            return StatusCode((int)response.StatusCode, new
-            {
-                answer = "Erreur de connexion.",
-                analysis = "",
-                actions = new List<string>(),
-                suggestions = new List<string>()
-            });
-        }
+            return StatusCode((int)response.StatusCode, BuildFallback("Erreur de connexion avec le service IA."));
 
-        var responseString = await response.Content.ReadAsStringAsync();
+        var body = await response.Content.ReadAsStringAsync();
 
         try
         {
-            var json = JsonSerializer.Deserialize<JsonElement>(responseString);
-
-            var answer = json.TryGetProperty("answer", out var a)
-                ? a.GetString()
-                : responseString;
-
-            var analysis = json.TryGetProperty("analysis", out var an)
-                ? an.GetString()
-                : "";
-
-            var actions = json.TryGetProperty("actions", out var ac)
-                ? ac.EnumerateArray()
-                    .Select(x => x.GetString()!)
-                    .ToList()
-                : new List<string>();
-
-            var suggestions = json.TryGetProperty("suggestions", out var s)
-                ? s.EnumerateArray()
-                    .Select(x => x.GetString()!)
-                    .ToList()
-                : new List<string>();
-
-            return Ok(new
-            {
-                answer,
-                analysis,
-                actions,
-                suggestions
-            });
+            // Validate parseable JSON then forward as-is so the frontend
+            // receives the complete n8n payload (cards, reasoning, context…)
+            JsonSerializer.Deserialize<JsonElement>(body);
+            return Content(body, "application/json", Encoding.UTF8);
         }
         catch
         {
-            return Ok(new
-            {
-                answer = responseString,
-                analysis = "",
-                actions = new List<string>(),
-                suggestions = new List<string>()
-            });
+            // n8n sent something non-JSON (plain text reply fallback)
+            return Ok(BuildFallback(body));
         }
     }
     catch
     {
-        return StatusCode(500, new
-        {
-            answer = "Service temporairement indisponible.",
-            analysis = "",
-            actions = new List<string>(),
-            suggestions = new List<string>()
-        });
+        return StatusCode(500, BuildFallback("Service IA temporairement indisponible. Veuillez réessayer dans quelques instants."));
     }
 }
+
+private static object BuildFallback(string message) => new
+{
+    answer           = message,
+    analysis         = (string?)null,
+    reasoning        = Array.Empty<string>(),
+    actions          = Array.Empty<string>(),
+    suggestions      = new[] { "Quels sont les hauts potentiels ?", "Qui est prêt pour une promotion ?", "Répartition des effectifs ?" },
+    sources          = Array.Empty<object>(),
+    cards            = Array.Empty<object>(),
+    executionHistory = Array.Empty<object>(),
+    context          = new { }
+};
     }
 }

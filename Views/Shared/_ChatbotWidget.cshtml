@@ -1,59 +1,569 @@
+@* EY HR Copilot v2 — conversational memory + structured cards *@
 <div id="chatbot-widget-container" class="chatbot-widget-container">
-    <!-- Chatbot Launcher Button -->
-    <button id="chatbot-launcher" class="chatbot-launcher shadow-lg" aria-label="Ouvrir l'assistant IA">
+
+    <button id="chatbot-launcher" class="chatbot-launcher shadow-lg" aria-label="Ouvrir l'assistant RH IA">
         <i class="fas fa-comment-dots chatbot-launcher-icon"></i>
-        <i class="fas fa-times chatbot-close-icon" style="display: none;"></i>
+        <i class="fas fa-times chatbot-close-icon" style="display:none"></i>
     </button>
 
-    <!-- Chatbot Panel -->
-    <div id="chatbot-panel" class="chatbot-panel shadow-lg" style="display: none;">
-        <!-- Header -->
+
+    <div id="chatbot-panel" class="chatbot-panel shadow-lg" style="display:none">
+
+
         <div class="chatbot-header">
             <div class="chatbot-header-info">
-                <div class="chatbot-avatar">
-                    <i class="fas fa-robot"></i>
-                </div>
+                <div class="chatbot-avatar"><i class="fas fa-robot"></i></div>
                 <div class="chatbot-header-text">
-                    <div class="chatbot-title">Assistant RH IA</div>
+                    <div class="chatbot-title">EY HR Copilot</div>
                     <div class="chatbot-status">En ligne</div>
                 </div>
             </div>
             <div class="chatbot-header-actions">
-                <span class="ey-ai-tag">EY IA</span>
+                <span class="ey-ai-tag">IA</span>
+                <button id="chatbot-history-btn" class="chatbot-icon-btn" title="Historique d'exécution" aria-label="Historique">
+                    <i class="fas fa-history"></i>
+                </button>
+                <button id="chatbot-clear-btn" class="chatbot-icon-btn" title="Nouvelle conversation" aria-label="Effacer">
+                    <i class="fas fa-redo"></i>
+                </button>
                 <button id="chatbot-close-btn" class="chatbot-close-btn" aria-label="Fermer">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
         </div>
 
-        <!-- Messages Area -->
-        <div id="chatbot-messages" class="chatbot-messages">
-            <!-- Welcome Message -->
-            <div class="chat-message bot-message">
-                <div class="message-content">
-                    <p class="ey-answer-text">
-                        <strong>Bonjour !</strong> Je suis votre assistant RH IA EY.<br>
-                        Je peux analyser vos <strong>talents</strong>, <strong>successions</strong>,
-                        <strong>promotions</strong> et <strong>effectifs</strong> en temps réel.
-                    </p>
-                </div>
-            </div>
 
-            <!-- Quick Prompts -->
-            <div id="chatbot-quick-prompts" class="chatbot-quick-prompts">
-                <button class="quick-prompt-btn" data-prompt="Quels sont les top talents ?">Top talents &amp; hauts potentiels?</button>
-                <button class="quick-prompt-btn" data-prompt="Qui est prêt pour une promotion ?">Candidats à la promotion?</button>
-                <button class="quick-prompt-btn" data-prompt="Montre la répartition par département">Répartition des effectifs?</button>
+        <div id="chatbot-exec-history" class="chatbot-exec-history" style="display:none">
+            <div class="chatbot-exec-history-hdr">
+                <span><i class="fas fa-history" style="margin-right:6px"></i>Historique d'exécution</span>
+                <button id="chatbot-exec-close" class="chatbot-icon-btn" aria-label="Fermer">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div id="chatbot-exec-list" class="chatbot-exec-history-list">
+                <div style="font-size:11px;color:#9ca3af;padding:4px 0">Aucune exécution dans cette session.</div>
             </div>
         </div>
 
-        <!-- Input Area -->
+
+        <div id="chatbot-messages" class="chatbot-messages">
+            <div class="chat-message bot-message">
+                <div class="message-content">
+                    <p class="ey-answer-text">
+                        <strong>Bonjour&nbsp;!</strong> Je suis votre <strong>EY HR Copilot</strong>.<br>
+                        Je peux analyser vos <strong>talents</strong>, <strong>successions</strong>,
+                        <strong>promotions</strong>, <strong>formations</strong> et <strong>effectifs</strong> en temps réel.
+                    </p>
+                </div>
+            </div>
+            <div id="chatbot-quick-prompts" class="chatbot-quick-prompts">
+                <button class="quick-prompt-btn" data-prompt="Quels sont les hauts potentiels ?">
+                    <i class="fas fa-star" style="color:#FFE600;margin-right:7px;font-size:11px"></i>Top talents &amp; hauts potentiels
+                </button>
+                <button class="quick-prompt-btn" data-prompt="Qui est prêt pour une promotion ?">
+                    <i class="fas fa-arrow-up" style="color:#4ade80;margin-right:7px;font-size:11px"></i>Candidats à la promotion
+                </button>
+                <button class="quick-prompt-btn" data-prompt="Quels postes sont sans successeur ?">
+                    <i class="fas fa-exclamation-triangle" style="color:#f59e0b;margin-right:7px;font-size:11px"></i>Postes sans successeur
+                </button>
+                <button class="quick-prompt-btn" data-prompt="Montre la répartition par département">
+                    <i class="fas fa-chart-pie" style="color:#60a5fa;margin-right:7px;font-size:11px"></i>Répartition des effectifs
+                </button>
+            </div>
+        </div>
+
+
         <div class="chatbot-input-area">
             <input type="text" id="chatbot-input" class="chatbot-input form-control"
-                   placeholder="Posez votre question RH..." autocomplete="off" />
-            <button id="chatbot-send-btn" class="chatbot-send-btn" disabled>
+                   placeholder="Posez votre question RH…" autocomplete="off" />
+            <button id="chatbot-send-btn" class="chatbot-send-btn" disabled aria-label="Envoyer">
                 <i class="fas fa-paper-plane"></i>
             </button>
         </div>
     </div>
 </div>
+
+<script>
+// ════════════════════════════════════════════════════════════════════════════
+// EY HR COPILOT v2 — Conversational memory + structured cards
+// ════════════════════════════════════════════════════════════════════════════
+(function () {
+    'use strict';
+
+    // ── Conversational memory ────────────────────────────────────────────────
+    window.hrContext = {
+        lastCollaborateurId:  null,
+        lastCollaborateurNom: null,
+        lastIntent:           null,
+        lastEndpoint:         null,
+        timestamp:            null,
+        executionHistory:     []
+    };
+
+    // ── DOM refs ─────────────────────────────────────────────────────────────
+    const launcher    = document.getElementById('chatbot-launcher');
+    const panel       = document.getElementById('chatbot-panel');
+    const closeBtn    = document.getElementById('chatbot-close-btn');
+    const clearBtn    = document.getElementById('chatbot-clear-btn');
+    const histBtn     = document.getElementById('chatbot-history-btn');
+    const execPanel   = document.getElementById('chatbot-exec-history');
+    const execClose   = document.getElementById('chatbot-exec-close');
+    const execList    = document.getElementById('chatbot-exec-list');
+    const messages    = document.getElementById('chatbot-messages');
+    const input       = document.getElementById('chatbot-input');
+    const sendBtn     = document.getElementById('chatbot-send-btn');
+    const launchIcon  = launcher.querySelector('.chatbot-launcher-icon');
+    const closeIcon   = launcher.querySelector('.chatbot-close-icon');
+
+    let isOpen = false;
+    let isTyping = false;
+
+    // ── Open / close ─────────────────────────────────────────────────────────
+    function openPanel() {
+        panel.style.display = 'flex';
+        launchIcon.style.display = 'none';
+        closeIcon.style.display  = '';
+        isOpen = true;
+        scrollToBottom();
+        input.focus();
+    }
+    function closePanel() {
+        panel.style.display = 'none';
+        launchIcon.style.display = '';
+        closeIcon.style.display  = 'none';
+        isOpen = false;
+        execPanel.style.display = 'none';
+        histBtn.classList.remove('active');
+    }
+
+    launcher.addEventListener('click', () => isOpen ? closePanel() : openPanel());
+    closeBtn.addEventListener('click', closePanel);
+
+    // ── Clear conversation ────────────────────────────────────────────────────
+    clearBtn.addEventListener('click', () => {
+        messages.innerHTML = `
+        <div class="chat-message bot-message">
+          <div class="message-content">
+            <p class="ey-answer-text"><strong>Nouvelle conversation démarrée.</strong><br>
+            Comment puis-je vous aider&nbsp;?</p>
+          </div>
+        </div>
+        <div id="chatbot-quick-prompts" class="chatbot-quick-prompts">
+          <button class="quick-prompt-btn" data-prompt="Quels sont les hauts potentiels ?">
+            <i class="fas fa-star" style="color:#FFE600;margin-right:7px;font-size:11px"></i>Top talents &amp; hauts potentiels
+          </button>
+          <button class="quick-prompt-btn" data-prompt="Qui est prêt pour une promotion ?">
+            <i class="fas fa-arrow-up" style="color:#4ade80;margin-right:7px;font-size:11px"></i>Candidats à la promotion
+          </button>
+          <button class="quick-prompt-btn" data-prompt="Quels postes sont sans successeur ?">
+            <i class="fas fa-exclamation-triangle" style="color:#f59e0b;margin-right:7px;font-size:11px"></i>Postes sans successeur
+          </button>
+          <button class="quick-prompt-btn" data-prompt="Montre la répartition par département">
+            <i class="fas fa-chart-pie" style="color:#60a5fa;margin-right:7px;font-size:11px"></i>Répartition des effectifs
+          </button>
+        </div>`;
+        window.hrContext = { lastCollaborateurId: null, lastCollaborateurNom: null, lastIntent: null, lastEndpoint: null, timestamp: null, executionHistory: [] };
+        execList.innerHTML = '<div style="font-size:11px;color:#9ca3af;padding:4px 0">Aucune exécution dans cette session.</div>';
+        bindQuickPrompts();
+    });
+
+    // ── Execution History panel ───────────────────────────────────────────────
+    histBtn.addEventListener('click', () => {
+        const visible = execPanel.style.display !== 'none';
+        execPanel.style.display = visible ? 'none' : 'flex';
+        histBtn.classList.toggle('active', !visible);
+    });
+    execClose.addEventListener('click', () => {
+        execPanel.style.display = 'none';
+        histBtn.classList.remove('active');
+    });
+
+    function refreshExecHistory(history) {
+        if (!history || !history.length) return;
+        execList.innerHTML = history.slice().reverse().map(function(e) {
+            const ts  = e.timestamp ? new Date(e.timestamp).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '';
+            const ep  = (e.endpoint || '').replace('http://localhost:5000', '');
+            const cnt = typeof e.resultCount === 'number' ? e.resultCount + ' résultat(s)' : '';
+            return `<div class="cp-exec-item">
+              <span class="cp-exec-intent">${e.intent || '?'}</span>
+              <span class="cp-exec-endpoint">${ep}</span>
+              ${cnt ? `<span class="cp-exec-count">${cnt}</span>` : ''}
+              <span class="cp-exec-ts">${ts}</span>
+            </div>`;
+        }).join('');
+    }
+
+    // ── Input enable/disable ──────────────────────────────────────────────────
+    input.addEventListener('input', () => {
+        sendBtn.disabled = !input.value.trim();
+    });
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey && !sendBtn.disabled && !isTyping) {
+            e.preventDefault();
+            handleSend();
+        }
+    });
+    sendBtn.addEventListener('click', () => { if (!isTyping) handleSend(); });
+
+    // ── Quick prompts (delegated, survives clear) ─────────────────────────────
+    messages.addEventListener('click', (e) => {
+        const btn = e.target.closest('.quick-prompt-btn, .copilot-suggestion-btn');
+        if (btn) {
+            const prompt = btn.dataset.prompt || btn.textContent.trim();
+            if (prompt) sendMessage(prompt);
+        }
+    });
+
+    function bindQuickPrompts() { /* handled via delegation above */ }
+
+    // ── Send flow ─────────────────────────────────────────────────────────────
+    async function handleSend() {
+        const text = input.value.trim();
+        if (!text || isTyping) return;
+        input.value = '';
+        sendBtn.disabled = true;
+
+        // Remove quick prompts on first real interaction
+        const qp = document.getElementById('chatbot-quick-prompts');
+        if (qp) qp.remove();
+
+        appendUserMessage(text);
+        const typingEl = appendTyping();
+        isTyping = true;
+
+        try {
+            const data = await postMessage(text);
+            typingEl.remove();
+            isTyping = false;
+            renderResponse(data);
+            updateMemory(data.context);
+            if (data.executionHistory) refreshExecHistory(data.executionHistory);
+        } catch (err) {
+            typingEl.remove();
+            isTyping = false;
+            appendBotText('Service momentanément indisponible. Veuillez réessayer.');
+        }
+    }
+
+    function sendMessage(text) {
+        input.value = text;
+        sendBtn.disabled = false;
+        handleSend();
+    }
+
+    // ── API call ──────────────────────────────────────────────────────────────
+    async function postMessage(text) {
+        const payload = {
+            message: text,
+            page:    window.location.pathname,
+            contextId: null,
+            context: {
+                lastCollaborateurId:  window.hrContext.lastCollaborateurId,
+                lastCollaborateurNom: window.hrContext.lastCollaborateurNom,
+                lastIntent:           window.hrContext.lastIntent,
+                executionHistory:     window.hrContext.executionHistory
+            }
+        };
+
+        const res = await fetch('/api/chatbot/ask', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return await res.json();
+    }
+
+    // ── Memory update ─────────────────────────────────────────────────────────
+    function updateMemory(ctx) {
+        if (!ctx) return;
+        if (ctx.lastCollaborateurId  != null) window.hrContext.lastCollaborateurId  = ctx.lastCollaborateurId;
+        if (ctx.lastCollaborateurNom != null) window.hrContext.lastCollaborateurNom = ctx.lastCollaborateurNom;
+        if (ctx.lastIntent           != null) window.hrContext.lastIntent           = ctx.lastIntent;
+        if (Array.isArray(ctx.executionHistory))   window.hrContext.executionHistory = ctx.executionHistory;
+        window.hrContext.timestamp = new Date().toISOString();
+    }
+
+    // ════════════════════════════════════════════════════════════════════════════
+    // RENDER RESPONSE
+    // ════════════════════════════════════════════════════════════════════════════
+    function renderResponse(data) {
+        const answer      = data.answer      || '';
+        const analysis    = data.analysis    || '';
+        const reasoning   = Array.isArray(data.reasoning)   ? data.reasoning   : [];
+        const actions     = Array.isArray(data.actions)     ? data.actions     : [];
+        const suggestions = Array.isArray(data.suggestions) ? data.suggestions : [];
+        const cards       = Array.isArray(data.cards)       ? data.cards       : [];
+        const sources     = Array.isArray(data.sources)     ? data.sources     : [];
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'chat-message bot-message';
+
+        const mc = document.createElement('div');
+        mc.className = 'message-content copilot-card';
+
+        // ── 1. Answer ──
+        if (answer) {
+            const p = document.createElement('div');
+            p.className = 'copilot-answer';
+            p.textContent = answer;
+            mc.appendChild(p);
+        }
+
+        // ── 2. Analysis strip ──
+        if (analysis) {
+            const a = document.createElement('div');
+            a.className = 'copilot-analysis';
+            a.innerHTML = `<i class="fas fa-lightbulb copilot-icon"></i><span>${escHtml(analysis)}</span>`;
+            mc.appendChild(a);
+        }
+
+        // ── 3. Cards ──
+        if (cards.length) {
+            const cc = document.createElement('div');
+            cc.className = 'cp-cards-container';
+            cc.innerHTML = cards.map(renderCard).join('');
+            mc.appendChild(cc);
+        }
+
+        // ── 4. Actions ──
+        if (actions.length) {
+            const lbl = document.createElement('div');
+            lbl.className = 'copilot-section-label';
+            lbl.textContent = 'Actions recommandées';
+            mc.appendChild(lbl);
+
+            const al = document.createElement('div');
+            al.className = 'copilot-actions';
+            al.innerHTML = actions.map(a => `<div class="copilot-action-item">${escHtml(a)}</div>`).join('');
+            mc.appendChild(al);
+        }
+
+        // ── 5. Suggestions (clickable pills) ──
+        if (suggestions.length) {
+            const lbl2 = document.createElement('div');
+            lbl2.className = 'copilot-section-label';
+            lbl2.textContent = 'Questions suggérées';
+            mc.appendChild(lbl2);
+
+            const sl = document.createElement('div');
+            sl.className = 'copilot-suggestions';
+            sl.innerHTML = suggestions.map(s =>
+                `<button class="copilot-suggestion-btn" data-prompt="${escAttr(s)}">${escHtml(s)}</button>`
+            ).join('');
+            mc.appendChild(sl);
+        }
+
+        // ── 6. Reasoning (collapsible) ──
+        if (reasoning.length) {
+            const det = document.createElement('details');
+            det.className = 'cp-reasoning';
+            det.innerHTML =
+                `<summary><i class="fas fa-brain"></i> Raisonnement IA (${reasoning.length} étapes)</summary>` +
+                `<div class="cp-reasoning-list">` +
+                reasoning.map(r => `<div class="cp-reasoning-item"><i class="fas fa-check-circle cp-reasoning-icon"></i><span>${escHtml(r)}</span></div>`).join('') +
+                `</div>`;
+            mc.appendChild(det);
+        }
+
+        // ── 7. Sources ──
+        if (sources.length) {
+            const sc = document.createElement('div');
+            sc.className = 'cp-sources';
+            sc.innerHTML = sources.map(s => `<span class="cp-source-chip">${escHtml(s.label || s)}</span>`).join('');
+            mc.appendChild(sc);
+        }
+
+        wrapper.appendChild(mc);
+        messages.appendChild(wrapper);
+        scrollToBottom();
+    }
+
+    // ════════════════════════════════════════════════════════════════════════════
+    // CARD RENDERERS
+    // ════════════════════════════════════════════════════════════════════════════
+    function renderCard(card) {
+        switch (card.type) {
+            case 'collaborateur': return renderPersonCard(card);
+            case 'succession':    return renderSuccessionCard(card);
+            case 'promotion':     return renderPromotionCard(card);
+            case 'analytics':     return renderAnalyticsCard(card);
+            case 'alerte':        return renderAlerteCard(card);
+            default:              return '';
+        }
+    }
+
+    function renderPersonCard(card) {
+        const d   = card.data || {};
+        const nom = d.nom || '';
+        const initials = nom.split(' ').filter(Boolean).map(n => n[0]).join('').substring(0, 2).toUpperCase() || '?';
+        const rankHtml = card.rank != null ? `<span class="cp-rank">#${card.rank}</span>` : '';
+        const scoreHtml = d.score != null
+            ? `<div class="cp-score-bar"><div class="cp-score-fill" style="width:${Math.round(d.score / 5 * 100)}%"></div></div>
+               <div class="cp-score-label">${d.score}/5</div>`
+            : '';
+        const badgeCls = d.badgeLevel === 'critical' ? 'cp-badge-critical' : 'cp-badge-talent';
+        const badgeHtml = d.badge ? `<span class="cp-badge ${badgeCls}">${escHtml(d.badge)}</span>` : '';
+        return `<div class="cp-card cp-card-person">
+          ${rankHtml}
+          <div class="cp-avatar">${escHtml(initials)}</div>
+          <div class="cp-info">
+            <div class="cp-name">${escHtml(nom)}</div>
+            <div class="cp-role">${escHtml([d.poste || d.grade, d.departement].filter(Boolean).join(' · '))}</div>
+            ${scoreHtml}
+            ${badgeHtml}
+          </div>
+        </div>`;
+    }
+
+    function renderSuccessionCard(card) {
+        const d  = card.data || {};
+        const colors = ['#1A1A24', '#3B3B4F', '#6B7280'];
+        const cands  = (d.candidats || []).map(function(c, i) {
+            const manq = (c.competencesManquantes || []).slice(0, 2);
+            const manqHtml = manq.length
+                ? `<div style="font-size:10px;color:#9ca3af;margin-top:3px">Gaps&nbsp;: ${manq.map(escHtml).join(', ')}</div>`
+                : '';
+            const transHtml = c.profilTransversal
+                ? `<span class="cp-badge cp-badge-transversal" style="margin-top:4px">Transversal</span>` : '';
+            return `<div class="cp-succession-cand">
+              <div class="cp-succ-rank" style="background:${colors[i] || '#9CA3AF'};margin-top:2px">TOP ${c.rank}</div>
+              <div class="cp-succ-info">
+                <div class="cp-succ-name">${escHtml(c.nom || '')}</div>
+                <div class="cp-succ-role">${escHtml([c.grade, c.departement].filter(Boolean).join(' · '))}</div>
+                <div class="cp-succ-bar-wrap">
+                  <div class="cp-succ-bar"><div style="width:${c.scoreMatch || 0}%"></div></div>
+                  <span class="cp-succ-pct">${c.scoreMatch || 0}%</span>
+                </div>
+                ${transHtml}
+                ${manqHtml}
+                <div class="cp-succ-delay">${escHtml(c.delaiEstime || '')}</div>
+              </div>
+            </div>`;
+        }).join('');
+
+        return `<div class="cp-card cp-card-succession">
+          <div class="cp-card-header">
+            <span><i class="fas fa-sitemap"></i>Plan de succession — ${escHtml(d.partant || '')}</span>
+            <span class="cp-card-subtitle">${escHtml(d.poste || '')}</span>
+          </div>
+          <div class="cp-succession-list">${cands || '<div style="padding:12px;font-size:12px;color:#9ca3af">Aucun successeur identifié.</div>'}</div>
+        </div>`;
+    }
+
+    function renderPromotionCard(card) {
+        const d = card.data || {};
+        const nom = d.nom || '';
+        const initials = nom.split(' ').filter(Boolean).map(n => n[0]).join('').substring(0, 2).toUpperCase() || '?';
+        const badgeCls = d.score >= 4.5 ? 'cp-badge-talent' : 'cp-badge-ready';
+        return `<div class="cp-card cp-card-promotion">
+          <div class="cp-promo-rank">#${card.rank || '?'}</div>
+          <div class="cp-avatar" style="margin-right:4px">${escHtml(initials)}</div>
+          <div class="cp-info">
+            <div class="cp-name">${escHtml(nom)}</div>
+            <div class="cp-role">${escHtml([d.poste || d.grade, d.departement].filter(Boolean).join(' · '))}</div>
+            <div class="cp-promo-score">
+              <span class="cp-badge ${badgeCls}">${escHtml(d.readinessLabel || 'Prêt')}</span>
+              <span class="cp-score-text">${d.score != null ? d.score + '/5' : ''}</span>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    function renderAnalyticsCard(card) {
+        const d = card.data || {};
+        const kpisHtml = (d.kpis || []).map(k =>
+            `<div class="cp-kpi-item">
+               <i class="fas ${escHtml(k.icon || 'fa-chart-bar')} cp-kpi-icon"></i>
+               <div class="cp-kpi-value">${escHtml(String(k.value))}</div>
+               <div class="cp-kpi-label">${escHtml(k.label)}</div>
+             </div>`
+        ).join('');
+
+        const maxDept = (d.departments || [])[0];
+        const deptsHtml = (d.departments || []).map(dept => {
+            const pct = maxDept && maxDept.value > 0 ? Math.round(dept.value / maxDept.value * 100) : 0;
+            return `<div class="ey-dept-row">
+              <div class="ey-dept-name">${escHtml(dept.label || '')}</div>
+              <div class="ey-dept-bar"><div class="ey-dept-fill" style="width:${pct}%"></div></div>
+              <div class="ey-dept-count">${dept.value}</div>
+            </div>`;
+        }).join('');
+
+        return `<div class="cp-card cp-card-analytics">
+          ${kpisHtml ? `<div class="cp-kpi-grid">${kpisHtml}</div>` : ''}
+          ${deptsHtml ? `<div class="cp-dept-section"><div class="cp-section-label">Répartition départements</div><div class="ey-dept-list">${deptsHtml}</div></div>` : ''}
+        </div>`;
+    }
+
+    function renderAlerteCard(card) {
+        const d = card.data || {};
+        const riskColor = d.niveauRisque === 'Élevé' ? '#ef4444' : '#f59e0b';
+        const nom = d.nom || '';
+        const initials = nom.split(' ').filter(Boolean).map(n => n[0]).join('').substring(0, 2).toUpperCase() || '?';
+        return `<div class="cp-card cp-card-alerte" style="border-left-color:${riskColor}">
+          <div class="cp-alerte-risk" style="color:${riskColor}">
+            <i class="fas fa-exclamation-triangle"></i> Risque ${escHtml(d.niveauRisque || '')}
+          </div>
+          <div class="cp-name">${escHtml(nom)}</div>
+          <div class="cp-role">${escHtml([d.poste, d.grade, d.departement].filter(Boolean).join(' · '))}</div>
+          <div class="cp-alerte-detail">
+            Score actuel&nbsp;: <strong>${d.scoreActuel ?? '—'}</strong>
+            &emsp;Seuil&nbsp;: <strong>${d.seuilAttendu ?? '—'}</strong>
+            &emsp;Écart&nbsp;: <strong style="color:${riskColor}">−${d.ecart ?? '?'}</strong>
+          </div>
+          ${d.anciennete != null ? `<div class="cp-alerte-anciennete">Ancienneté&nbsp;: ${d.anciennete} an(s)</div>` : ''}
+        </div>`;
+    }
+
+    // ════════════════════════════════════════════════════════════════════════════
+    // HELPERS
+    // ════════════════════════════════════════════════════════════════════════════
+    function appendUserMessage(text) {
+        const div = document.createElement('div');
+        div.className = 'chat-message user-message';
+        const mc = document.createElement('div');
+        mc.className = 'message-content';
+        mc.textContent = text;
+        div.appendChild(mc);
+        messages.appendChild(div);
+        scrollToBottom();
+    }
+
+    function appendTyping() {
+        const div = document.createElement('div');
+        div.className = 'chat-message bot-message typing-indicator-container';
+        div.innerHTML = '<div class="typing-indicator"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div>';
+        messages.appendChild(div);
+        scrollToBottom();
+        return div;
+    }
+
+    function appendBotText(text) {
+        const div = document.createElement('div');
+        div.className = 'chat-message bot-message';
+        const mc = document.createElement('div');
+        mc.className = 'message-content';
+        mc.textContent = text;
+        div.appendChild(mc);
+        messages.appendChild(div);
+        scrollToBottom();
+    }
+
+    function scrollToBottom() {
+        requestAnimationFrame(() => { messages.scrollTop = messages.scrollHeight; });
+    }
+
+    function escHtml(str) {
+        return String(str)
+            .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+            .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    }
+
+    function escAttr(str) {
+        return String(str).replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    }
+
+})();
+</script>

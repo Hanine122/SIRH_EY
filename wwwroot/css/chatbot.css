@@ -716,3 +716,458 @@
     border-left: 2px solid var(--ey-yellow);
     line-height: 1.5;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   HR COPILOT v2 — STRUCTURED CARDS SYSTEM
+   All scoped under .chatbot-widget-container
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Card container ── */
+.chatbot-widget-container .cp-cards-container {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    padding: 0 14px 12px;
+}
+
+/* ── Base card ── */
+.chatbot-widget-container .cp-card {
+    border: 1px solid var(--ey-border);
+    border-radius: 10px;
+    background: var(--ey-white);
+    overflow: hidden;
+    font-size: 12.5px;
+    animation: eyMsgIn .2s ease-out both;
+}
+
+/* ── COLLABORATEUR card ── */
+.chatbot-widget-container .cp-card-person {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    position: relative;
+    transition: border-color .14s;
+}
+.chatbot-widget-container .cp-card-person:hover {
+    border-color: var(--ey-yellow);
+}
+
+.chatbot-widget-container .cp-rank {
+    position: absolute;
+    top: 7px;
+    right: 9px;
+    font-size: 9.5px;
+    font-weight: 800;
+    color: var(--ey-dark);
+    background: var(--ey-surface);
+    border: 1px solid var(--ey-border);
+    padding: 2px 6px;
+    border-radius: 5px;
+    letter-spacing: .02em;
+}
+
+.chatbot-widget-container .cp-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--ey-black);
+    color: var(--ey-yellow);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 800;
+    flex-shrink: 0;
+    letter-spacing: .03em;
+}
+
+.chatbot-widget-container .cp-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.chatbot-widget-container .cp-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #111827;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.chatbot-widget-container .cp-role {
+    font-size: 11px;
+    color: #6b7280;
+    margin-top: 1px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.chatbot-widget-container .cp-score-bar {
+    height: 4px;
+    background: #e5e7eb;
+    border-radius: 2px;
+    margin-top: 6px;
+    overflow: hidden;
+}
+
+.chatbot-widget-container .cp-score-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--ey-dark) 0%, var(--ey-yellow) 100%);
+    border-radius: 2px;
+    transition: width .5s ease;
+}
+
+.chatbot-widget-container .cp-score-label {
+    font-size: 10px;
+    color: #9ca3af;
+    margin-top: 2px;
+}
+
+/* ── Badges ── */
+.chatbot-widget-container .cp-badge {
+    display: inline-block;
+    font-size: 9.5px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 4px;
+    margin-top: 5px;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    line-height: 1.6;
+}
+.chatbot-widget-container .cp-badge-talent     { background: var(--ey-yellow); color: var(--ey-black); }
+.chatbot-widget-container .cp-badge-critical   { background: #fef2f2; color: #dc2626; border: 1px solid #fca5a5; }
+.chatbot-widget-container .cp-badge-ready      { background: #f0fdf4; color: #16a34a; border: 1px solid #86efac; }
+.chatbot-widget-container .cp-badge-transversal{ background: #eff6ff; color: #2563eb; border: 1px solid #93c5fd; }
+.chatbot-widget-container .cp-badge-risk-high  { background: #fef2f2; color: #dc2626; }
+.chatbot-widget-container .cp-badge-risk-med   { background: #fffbeb; color: #d97706; }
+
+/* ── SUCCESSION card ── */
+.chatbot-widget-container .cp-card-succession .cp-card-header {
+    background: var(--ey-black);
+    color: #fff;
+    padding: 10px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.chatbot-widget-container .cp-card-succession .cp-card-header i {
+    color: var(--ey-yellow);
+    margin-right: 6px;
+}
+.chatbot-widget-container .cp-card-subtitle {
+    font-size: 10px;
+    color: rgba(255,255,255,.55);
+    font-weight: 400;
+}
+
+.chatbot-widget-container .cp-succession-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.chatbot-widget-container .cp-succession-cand {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--ey-border);
+    transition: background .12s;
+}
+.chatbot-widget-container .cp-succession-cand:last-child { border-bottom: none; }
+.chatbot-widget-container .cp-succession-cand:hover { background: var(--ey-surface); }
+
+.chatbot-widget-container .cp-succ-rank {
+    width: 44px;
+    text-align: center;
+    border-radius: 5px;
+    color: #fff;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: .04em;
+    padding: 5px 2px;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.chatbot-widget-container .cp-succ-info { flex: 1; min-width: 0; }
+.chatbot-widget-container .cp-succ-name { font-size: 12.5px; font-weight: 600; color: #111827; }
+.chatbot-widget-container .cp-succ-role { font-size: 10.5px; color: #6b7280; margin-bottom: 5px; }
+
+.chatbot-widget-container .cp-succ-bar-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.chatbot-widget-container .cp-succ-bar {
+    flex: 1;
+    height: 4px;
+    background: #e5e7eb;
+    border-radius: 2px;
+    overflow: hidden;
+}
+.chatbot-widget-container .cp-succ-bar > div {
+    height: 100%;
+    background: var(--ey-yellow);
+    border-radius: 2px;
+    transition: width .5s ease;
+}
+.chatbot-widget-container .cp-succ-pct {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--ey-dark);
+    flex-shrink: 0;
+    min-width: 28px;
+    text-align: right;
+}
+.chatbot-widget-container .cp-succ-delay {
+    font-size: 10px;
+    color: #9ca3af;
+    margin-top: 4px;
+}
+
+/* ── PROMOTION card ── */
+.chatbot-widget-container .cp-card-promotion {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    transition: border-color .14s;
+}
+.chatbot-widget-container .cp-card-promotion:hover { border-color: var(--ey-yellow); }
+
+.chatbot-widget-container .cp-promo-rank {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--ey-dark);
+    flex-shrink: 0;
+    min-width: 28px;
+    line-height: 1;
+}
+
+.chatbot-widget-container .cp-promo-score {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-top: 4px;
+}
+.chatbot-widget-container .cp-score-text {
+    font-size: 11px;
+    color: #6b7280;
+    font-weight: 600;
+}
+
+/* ── ANALYTICS card ── */
+.chatbot-widget-container .cp-card-analytics { padding: 0; }
+
+.chatbot-widget-container .cp-kpi-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+}
+
+.chatbot-widget-container .cp-kpi-item {
+    padding: 12px 10px;
+    text-align: center;
+    border-right: 1px solid var(--ey-border);
+}
+.chatbot-widget-container .cp-kpi-item:nth-child(even)    { border-right: none; }
+.chatbot-widget-container .cp-kpi-item:nth-child(n+3)     { border-top: 1px solid var(--ey-border); }
+
+.chatbot-widget-container .cp-kpi-icon  { font-size: 14px; color: var(--ey-dark); margin-bottom: 4px; display: block; }
+.chatbot-widget-container .cp-kpi-value { font-size: 22px; font-weight: 800; color: var(--ey-black); line-height: 1; }
+.chatbot-widget-container .cp-kpi-label { font-size: 9.5px; color: #6b7280; margin-top: 3px; text-transform: uppercase; letter-spacing: .05em; }
+
+.chatbot-widget-container .cp-dept-section { padding: 10px 12px; border-top: 1px solid var(--ey-border); }
+.chatbot-widget-container .cp-section-label {
+    font-size: 9.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: #9ca3af;
+    margin-bottom: 8px;
+}
+
+/* ── ALERTE card ── */
+.chatbot-widget-container .cp-card-alerte {
+    padding: 10px 12px;
+    border-left-width: 3px !important;
+}
+.chatbot-widget-container .cp-alerte-risk {
+    font-size: 11px;
+    font-weight: 700;
+    margin-bottom: 5px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+.chatbot-widget-container .cp-alerte-detail {
+    font-size: 11px;
+    color: #374151;
+    margin-top: 5px;
+    background: var(--ey-surface);
+    padding: 4px 8px;
+    border-radius: 5px;
+    line-height: 1.6;
+}
+.chatbot-widget-container .cp-alerte-anciennete {
+    font-size: 10px;
+    color: #9ca3af;
+    margin-top: 3px;
+}
+
+/* ── REASONING section ── */
+.chatbot-widget-container .cp-reasoning {
+    border-top: 1px solid var(--ey-border);
+}
+.chatbot-widget-container .cp-reasoning > summary {
+    padding: 8px 14px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #9ca3af;
+    cursor: pointer;
+    user-select: none;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: color .15s;
+}
+.chatbot-widget-container .cp-reasoning > summary:hover { color: var(--ey-dark); }
+.chatbot-widget-container .cp-reasoning > summary::-webkit-details-marker { display: none; }
+.chatbot-widget-container .cp-reasoning > summary i { font-size: 12px; }
+
+.chatbot-widget-container .cp-reasoning-list {
+    padding: 2px 14px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.chatbot-widget-container .cp-reasoning-item {
+    display: flex;
+    gap: 8px;
+    font-size: 12px;
+    color: #374151;
+    line-height: 1.5;
+}
+.chatbot-widget-container .cp-reasoning-icon {
+    color: #4ade80;
+    flex-shrink: 0;
+    margin-top: 1px;
+    font-size: 11px;
+}
+
+/* ── EXECUTION HISTORY panel ── */
+.chatbot-exec-history {
+    background: var(--ey-surface);
+    border-bottom: 1px solid var(--ey-border);
+    flex-shrink: 0;
+    max-height: 160px;
+    display: flex;
+    flex-direction: column;
+}
+.chatbot-exec-history-hdr {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 14px;
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: #374151;
+    border-bottom: 1px solid var(--ey-border);
+    flex-shrink: 0;
+}
+.chatbot-exec-history-list {
+    overflow-y: auto;
+    padding: 5px 14px 7px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+}
+.chatbot-exec-history-list::-webkit-scrollbar { width: 3px; }
+.chatbot-exec-history-list::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+
+.cp-exec-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 11px;
+    padding: 2px 0;
+}
+.cp-exec-intent {
+    font-size: 8.5px;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: var(--ey-black);
+    color: var(--ey-yellow);
+    white-space: nowrap;
+    flex-shrink: 0;
+    letter-spacing: .04em;
+}
+.cp-exec-endpoint {
+    font-size: 10px;
+    color: #9ca3af;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+}
+.cp-exec-count {
+    font-size: 10px;
+    color: #6b7280;
+    flex-shrink: 0;
+}
+.cp-exec-ts {
+    font-size: 9.5px;
+    color: #d1d5db;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+/* ── Header icon buttons ── */
+.chatbot-widget-container .chatbot-icon-btn {
+    background: transparent;
+    border: none;
+    color: rgba(255,255,255,.4);
+    font-size: 13px;
+    cursor: pointer;
+    padding: 4px 5px;
+    line-height: 1;
+    border-radius: 4px;
+    transition: color .15s, background .15s;
+    display: flex;
+    align-items: center;
+}
+.chatbot-widget-container .chatbot-icon-btn:hover {
+    color: #fff;
+    background: rgba(255,255,255,.08);
+}
+.chatbot-widget-container .chatbot-icon-btn.active {
+    color: var(--ey-yellow);
+}
+
+/* ── Sources strip ── */
+.chatbot-widget-container .cp-sources {
+    padding: 5px 14px 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    border-top: 1px solid var(--ey-border);
+}
+.chatbot-widget-container .cp-source-chip {
+    font-size: 9.5px;
+    color: #9ca3af;
+    background: var(--ey-surface);
+    border: 1px solid var(--ey-border);
+    border-radius: 4px;
+    padding: 2px 7px;
+    font-family: 'SF Mono', 'Consolas', monospace;
+}
