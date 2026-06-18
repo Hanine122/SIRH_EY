@@ -509,9 +509,10 @@ public async Task<IActionResult> Ask([FromBody] ChatRequest request)
 
         var payload = JsonSerializer.Serialize(new
         {
-            message = request.Message,
-            page    = request.Page ?? "general",
-            context = request.Context
+            message   = request.Message,
+            page      = request.Page ?? "general",
+            contextId = request.ContextId,
+            context   = request.Context
         });
 
         var response = await client.PostAsync(

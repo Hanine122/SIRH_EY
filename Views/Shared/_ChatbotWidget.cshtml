@@ -251,12 +251,24 @@
         handleSend();
     }
 
+    // ── Extract collaborateur ID from the current page URL ────────────────────
+    function detectPageContextId() {
+        const path = window.location.pathname;
+        // Matches /Collaborateurs/Details/3, /Succession/Plan/5, etc.
+        const m = path.match(/\/(\d+)(?:\/|$)/);
+        if (m) return m[1];
+        // Fallback: data attribute set by the view
+        const el = document.querySelector('[data-collab-id],[data-succession-id]');
+        return el ? (el.dataset.collabId || el.dataset.successionId || null) : null;
+    }
+
     // ── API call ──────────────────────────────────────────────────────────────
     async function postMessage(text) {
+        const pageCtxId = detectPageContextId();
         const payload = {
             message: text,
             page:    window.location.pathname,
-            contextId: null,
+            contextId: pageCtxId || window.hrContext.lastCollaborateurId || null,
             context: {
                 lastCollaborateurId:  window.hrContext.lastCollaborateurId,
                 lastCollaborateurNom: window.hrContext.lastCollaborateurNom,

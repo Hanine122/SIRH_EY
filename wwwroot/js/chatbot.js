@@ -253,6 +253,15 @@ document.addEventListener('DOMContentLoaded', function () {
         });
         return h + `</div>`;
     }
+    function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
 
     // ── Bot response renderer ─────────────────────────────────────────────────
     //
@@ -261,96 +270,126 @@ document.addEventListener('DOMContentLoaded', function () {
     // Priority 2: handles both {reply} (UC1 stats) and {answer+analysis+actions+suggestions} (UC2 copilot)
     //
     function appendCopilotResponse(data) {
-        const wrapper = document.createElement('div');
-        wrapper.className = 'chat-message bot-message';
+    const wrapper = document.createElement('div');
+    wrapper.className = 'chat-message bot-message';
 
-        // Priority 2: normalise both "reply" (n8n UC1) and "answer" (copilot)
-        const mainText   = data.answer || data.reply || '';
-        const hasCopilot = !!(
-            data.analysis ||
-            (data.actions    && data.actions.length    > 0) ||
-            (data.suggestions && data.suggestions.length > 0)
-        );
+    // Priority 2: normalise both "reply" (n8n UC1) and "answer" (copilot)
+    const mainText   = data.answer || data.reply || '';
+    const hasCopilot = !!(
+        data.analysis ||
+        (data.actions     && data.actions.length     > 0) ||
+        (data.suggestions && data.suggestions.length > 0) ||
+        (data.reasoning    && data.reasoning.length    > 0) ||
+        (data.cards        && data.cards.length        > 0)
+    );
 
-        const contentDiv = document.createElement('div');
+    const contentDiv = document.createElement('div');
 
-        if (hasCopilot) {
-            // ── Full copilot card ──────────────────────────────
-            contentDiv.className = 'message-content copilot-card';
-            let html = '';
+    if (hasCopilot) {
+        // ── Full copilot card ──────────────────────────────
+        contentDiv.className = 'message-content copilot-card';
+        let html = '';
 
-            if (mainText)
-                html += `<div class="copilot-answer">${renderContent(mainText)}</div>`;
+        if (mainText)
+            html += `<div class="copilot-answer">${renderContent(mainText)}</div>`;
 
-            if (data.analysis)
-                html += `<div class="copilot-analysis">
-                            <span class="copilot-icon">💡</span>
-                            <div>${formatText(data.analysis)}</div>
-                         </div>`;
+        if (data.analysis)
+            html += `<div class="copilot-analysis">
+                        <span class="copilot-icon">💡</span>
+                        <div>${formatText(data.analysis)}</div>
+                     </div>`;
 
-            if (data.actions && data.actions.length > 0) {
-                html += `<div class="copilot-section-label">Actions recommandées</div>
-                         <div class="copilot-actions">`;
-                data.actions.forEach(a => {
-                    if (a) {
-                        // B2 fix: strip any → the workflow may already include
-                        const clean = a.replace(/^\s*→\s*/, '').trim();
-                        html += `<div class="copilot-action-item">${formatText(clean)}</div>`;
-                    }
-                });
-                html += `</div>`;
-            }
-
-            if (data.suggestions && data.suggestions.length > 0) {
-                html += `<div class="copilot-section-label">Approfondir</div>
-                         <div class="copilot-suggestions">`;
-                data.suggestions.forEach(s => {
-                    if (!s) return;
-                    const parts  = s.split('|');
-                    const label  = escapeHtml(parts[0].trim());
-                    const ctxId  = parts[1] ? escapeHtml(parts[1].trim()) : '';
-                    html += `<button type="button" class="copilot-suggestion-btn"
-                                     data-suggestion="${escapeHtml(s)}"
-                                     data-context-id="${ctxId}"
-                                     onclick="window._copilotSend(this)">${label}</button>`;
-                });
-                html += `</div>`;
-            }
-
-            contentDiv.innerHTML = html;
-
-        } else {
-            // ── Simple card (stats / plain text) ──────────────
-            contentDiv.className = 'message-content';
-            contentDiv.innerHTML = renderContent(mainText);
+        // ── Reasoning (pourquoi ce choix) ───────────────────
+        if (data.reasoning && data.reasoning.length > 0) {
+            html += `<div class="copilot-section-label">Pourquoi ce choix</div>
+                     <div class="copilot-reasoning">`;
+            data.reasoning.forEach(r => {
+                if (!r || typeof r !== 'object') return;
+                if (r.collaborateur) {
+                    html += `<div class="copilot-reasoning-item">
+                                <strong>${escapeHtml(r.collaborateur)}</strong>
+                                ${r.rang ? `(rang ${r.rang})` : ''} — ${escapeHtml(r.pourquoi || '')}
+                                ${r.lacunes ? `<br><span class="copilot-reasoning-muted">Lacunes : ${escapeHtml(r.lacunes)}</span>` : ''}
+                             </div>`;
+                } else if (r.critere) {
+                    html += `<div class="copilot-reasoning-item">
+                                <strong>${escapeHtml(r.critere)}</strong> — ${escapeHtml(r.detail || '')}
+                             </div>`;
+                }
+            });
+            html += `</div>`;
         }
 
-        wrapper.appendChild(contentDiv);
-        messagesContainer.appendChild(wrapper);
-        scrollToBottom();
+        if (data.actions && data.actions.length > 0) {
+            html += `<div class="copilot-section-label">Actions recommandées</div>
+                     <div class="copilot-actions">`;
+            data.actions.forEach(a => {
+                if (a) {
+                    const clean = a.replace(/^\s*→\s*/, '').trim();
+                    html += `<div class="copilot-action-item">${formatText(clean)}</div>`;
+                }
+            });
+            html += `</div>`;
+        }
 
-        if (data.contextId) conversationCtx.lastCollaborateurId = data.contextId;
-        if (data.title)     conversationCtx.lastIntent          = data.title;
+        if (data.suggestions && data.suggestions.length > 0) {
+            html += `<div class="copilot-section-label">Approfondir</div>
+                     <div class="copilot-suggestions">`;
+            data.suggestions.forEach(s => {
+                if (!s) return;
+                const parts = s.split('|');
+                const label = escapeHtml(parts[0].trim());
+                const ctxId = parts[1] ? escapeHtml(parts[1].trim()) : '';
+                // Skip si un ID était attendu (pipe présent) mais vide
+                if (s.includes('|') && !ctxId) return;
+                html += `<button type="button" class="copilot-suggestion-btn"
+                                 data-suggestion="${escapeHtml(s)}"
+                                 data-context-id="${ctxId}"
+                                 onclick="window._copilotSend(this)">${label}</button>`;
+            });
+            html += `</div>`;
+        }
+
+        contentDiv.innerHTML = html;
+
+    } else {
+        // ── Simple card (stats / plain text) ──────────────
+        contentDiv.className = 'message-content';
+        contentDiv.innerHTML = renderContent(mainText);
     }
+
+    wrapper.appendChild(contentDiv);
+    messagesContainer.appendChild(wrapper);
+    scrollToBottom();
+
+    if (data.contextId) conversationCtx.lastCollaborateurId = data.contextId;
+    if (data.title)     conversationCtx.lastIntent          = data.title;
+
+    // Mémoire de session pour le prochain envoi
+    if (data.executionHistory) {
+        window._sessionHistory = data.executionHistory;
+    }
+}
 
     // ── Suggestion click handler (global) ─────────────────────────────────────
     // B3 fix: calls detectPageContext() directly instead of referencing
     //         the local `pageContext` variable from sendMessage() that was out of scope.
-    window._copilotSend = function (btn) {
-        const raw      = btn.getAttribute('data-suggestion') || btn.textContent.trim();
-        const ctx      = detectPageContext();                  // B3 fix
-        const contextId = window._pendingContextId
-                       || ctx.contextId
-                       || conversationCtx.lastCollaborateurId
-                       || null;
-        window._pendingContextId = null;
+   window._copilotSend = function (btn) {
+    const raw  = btn.getAttribute('data-suggestion') || btn.textContent.trim();
+    const text = raw.split('|')[0].trim();
 
-        const text = raw.split('|')[0].trim();
-        inputArea.value  = text;
-        sendBtn.disabled = false;
-        window._pendingContextId = contextId || null;
-        sendMessage();
-    };
+    // Priorité : ID du bouton cliqué > page > mémoire de session
+    const explicitContextId = btn.getAttribute('data-context-id');
+    const ctx = detectPageContext();
+    const contextId = (explicitContextId && explicitContextId.trim() !== '')
+        ? explicitContextId.trim()
+        : (ctx.contextId || conversationCtx.lastCollaborateurId || null);
+
+    inputArea.value = text;
+    sendBtn.disabled = false;
+    window._pendingContextId = contextId;
+    sendMessage();
+};
 
     // ── Typing indicator ──────────────────────────────────────────────────────
     function showTypingIndicator() {
