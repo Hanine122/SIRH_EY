@@ -180,13 +180,28 @@
 
     function refreshExecHistory(history) {
         if (!history || !history.length) return;
+        const INTENT_META = {
+            TALENT:               { label: 'Hauts potentiels',    icon: 'fa-star' },
+            SUCCESSION:           { label: 'Succession',          icon: 'fa-sitemap' },
+            PROMOTION:            { label: 'Promotion',           icon: 'fa-arrow-up' },
+            FORMATION:            { label: 'Formation',           icon: 'fa-graduation-cap' },
+            POSTES_CRITIQUES:     { label: 'Postes à risque', icon: 'fa-exclamation-triangle' },
+            ANALYTICS:            { label: 'Statistiques',        icon: 'fa-chart-pie' },
+            PROFIL:               { label: 'Profil',              icon: 'fa-user' },
+            SIMULATION_FORMATION: { label: 'Simul. formation', icon: 'fa-flask' },
+            SIMULATION_DEPARTS:   { label: 'Simul. départs', icon: 'fa-user-slash' },
+            EVOLUTION:            { label: 'Évolution',       icon: 'fa-chart-line' }
+        };
         execList.innerHTML = history.slice().reverse().map(function(e) {
-            const ts  = e.timestamp ? new Date(e.timestamp).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '';
-            const ep  = (e.endpoint || '').replace('http://localhost:5000', '');
-            const cnt = typeof e.resultCount === 'number' ? e.resultCount + ' résultat(s)' : '';
+            const ts   = e.timestamp ? new Date(e.timestamp).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '';
+            const ep   = (e.endpoint || '').replace('http://localhost:5000', '');
+            const cnt  = typeof e.resultCount === 'number' ? e.resultCount + ' rés.' : '';
+            const meta = INTENT_META[e.intent] || { label: e.intent || '?', icon: 'fa-circle' };
+            const ok   = e.error !== true;
             return `<div class="cp-exec-item">
-              <span class="cp-exec-intent">${e.intent || '?'}</span>
-              <span class="cp-exec-endpoint">${ep}</span>
+              <span class="cp-exec-badge"><i class="fas ${meta.icon}"></i> ${escHtml(meta.label)}</span>
+              <i class="fas ${ok ? 'fa-check-circle cp-exec-ok' : 'fa-times-circle cp-exec-err'}" title="${ok ? 'Succès' : 'Erreur'}"></i>
+              <span class="cp-exec-endpoint">${escHtml(ep)}</span>
               ${cnt ? `<span class="cp-exec-count">${cnt}</span>` : ''}
               <span class="cp-exec-ts">${ts}</span>
             </div>`;
@@ -207,12 +222,23 @@
 
     // ── Quick prompts (delegated, survives clear) ─────────────────────────────
     messages.addEventListener('click', (e) => {
-        const btn = e.target.closest('.quick-prompt-btn, .copilot-suggestion-btn');
-        if (btn) {
-            const prompt = btn.dataset.prompt || btn.textContent.trim();
-            if (prompt) sendMessage(prompt);
-        }
-    });
+    const btn = e.target.closest('.quick-prompt-btn, .copilot-suggestion-btn');
+    if (!btn) return;
+
+    const raw = btn.dataset.prompt || btn.textContent.trim();
+    if (!raw) return;
+
+    // Extraire le contextId embarqué après le pipe, s'il existe
+    const parts = raw.split('|');
+    const promptText = parts[0].trim();
+    const embeddedId = parts.length > 1 ? parts[1].trim() : null;
+
+    if (embeddedId) {
+        window.hrContext.lastCollaborateurId = embeddedId;
+    }
+
+    sendMessage(promptText);
+});
 
     function bindQuickPrompts() { /* handled via delegation above */ }
 
@@ -368,22 +394,47 @@
         }
 
         // ── 6. Reasoning (collapsible) ──
-        if (reasoning.length) {
-            const det = document.createElement('details');
-            det.className = 'cp-reasoning';
-            det.innerHTML =
-                `<summary><i class="fas fa-brain"></i> Raisonnement IA (${reasoning.length} étapes)</summary>` +
-                `<div class="cp-reasoning-list">` +
-                reasoning.map(r => `<div class="cp-reasoning-item"><i class="fas fa-check-circle cp-reasoning-icon"></i><span>${escHtml(r)}</span></div>`).join('') +
-                `</div>`;
-            mc.appendChild(det);
+      if (reasoning.length) {
+    const det = document.createElement('details');
+    det.className = 'cp-reasoning';
+
+    const itemsHtml = reasoning.map(r => {
+        // reasoning peut être une string simple OU un objet { critere, detail } / { collaborateur, pourquoi, lacunes }
+        let text = '';
+        if (typeof r === 'string') {
+            text = r;
+        } else if (r && typeof r === 'object') {
+            if (r.collaborateur) {
+                text = `${r.collaborateur}${r.rang ? ' (rang ' + r.rang + ')' : ''} — ${r.pourquoi || ''}`;
+                if (r.lacunes) text += ` · Lacunes : ${r.lacunes}`;
+            } else if (r.critere) {
+                text = `${r.critere} — ${r.detail || ''}`;
+            } else {
+                text = JSON.stringify(r);
+            }
         }
+        return `<div class="cp-reasoning-item"><i class="fas fa-check-circle cp-reasoning-icon"></i><span>${escHtml(text)}</span></div>`;
+    }).join('');
+
+    det.innerHTML =
+        `<summary><i class="fas fa-brain"></i> Raisonnement IA (${reasoning.length} étapes)</summary>` +
+        `<div class="cp-reasoning-list">${itemsHtml}</div>`;
+    mc.appendChild(det);
+}
 
         // ── 7. Sources ──
-        if (sources.length) {
+       if (sources.length) {
             const sc = document.createElement('div');
             sc.className = 'cp-sources';
-            sc.innerHTML = sources.map(s => `<span class="cp-source-chip">${escHtml(s.label || s)}</span>`).join('');
+            sc.innerHTML = sources.map(function(s) {
+                var label = '';
+                if (typeof s === 'string') {
+                    label = s;
+                } else if (s && typeof s === 'object') {
+                    label = s.label || s.api || JSON.stringify(s);
+                }
+                return '<span class="cp-source-chip">' + escHtml(label) + '</span>';
+            }).join('');
             mc.appendChild(sc);
         }
 
@@ -391,20 +442,63 @@
         messages.appendChild(wrapper);
         scrollToBottom();
     }
-
     // ════════════════════════════════════════════════════════════════════════════
     // CARD RENDERERS
     // ════════════════════════════════════════════════════════════════════════════
-    function renderCard(card) {
-        switch (card.type) {
-            case 'collaborateur': return renderPersonCard(card);
-            case 'succession':    return renderSuccessionCard(card);
-            case 'promotion':     return renderPromotionCard(card);
-            case 'analytics':     return renderAnalyticsCard(card);
-            case 'alerte':        return renderAlerteCard(card);
-            default:              return '';
-        }
+   function renderCard(card) {
+    switch (card.type) {
+        case 'collaborateur': return renderPersonCard(card);
+        case 'succession':    return renderSuccessionCard(card);
+        case 'promotion':     return renderPromotionCard(card);
+        case 'analytics':     return renderAnalyticsCard(card);
+        case 'alerte':        return renderAlerteCard(card);
+        case 'simulation_card': return renderSimulationCard(card);
+        case 'impact_card':     return renderImpactCard(card);
+        case 'evolution_card':  return renderEvolutionCard(card);
+        default:              return '';
     }
+}
+
+function renderSimulationCard(card) {
+    const pct = Math.max(0, Math.min(100, card.scoreApres || 0));
+    const gainColor = (card.gain || 0) >= 20 ? '#16a34a' : (card.gain || 0) >= 5 ? '#ca8a04' : '#9ca3af';
+    return `<div class="cp-card cp-card-simulation">
+      <div class="cp-card-header"><span><i class="fas fa-flask"></i>Simulation — ${escHtml(card.nom || '')}</span></div>
+      <div style="padding:10px 4px">
+        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px">
+          <span>Avant : <strong>${card.scoreAvant || 0}%</strong></span>
+          <span>Après : <strong style="color:${gainColor}">${card.scoreApres || 0}%</strong></span>
+        </div>
+        <div class="cp-score-bar"><div class="cp-score-fill" style="width:${pct}%;background:${gainColor}"></div></div>
+        <div style="font-size:11px;color:${gainColor};margin-top:6px;font-weight:600">Gain : ${(card.gain || 0) >= 0 ? '+' : ''}${card.gain || 0} points sur "${escHtml(card.competence || '')}"</div>
+      </div>
+    </div>`;
+}
+
+function renderImpactCard(card) {
+    const riskColor = card.niveauAlerte === 'Risque critique' ? '#ef4444' : card.niveauAlerte === 'Risque modéré' ? '#f59e0b' : '#16a34a';
+    const manquantes = (card.competencesPerdues || []).slice(0, 3);
+    return `<div class="cp-card cp-card-impact" style="border-left-color:${riskColor}">
+      <div style="color:${riskColor};font-weight:600;font-size:12px"><i class="fas fa-building"></i> ${escHtml(card.departement || '')} — ${escHtml(card.niveauAlerte || '')}</div>
+      <div style="font-size:11px;color:#6b7280;margin-top:4px">Effectif restant : ${card.effectifRestant || 0}</div>
+      ${manquantes.length ? `<div style="font-size:11px;color:#9ca3af;margin-top:4px">Compétences perdues : ${manquantes.map(escHtml).join(', ')}</div>` : ''}
+    </div>`;
+}
+
+function renderEvolutionCard(card) {
+    const timeline = card.timeline || [];
+    const rows = timeline.map(t => {
+        const evs = (t.evolutions || []).map(e => `${escHtml(e.competence || '')} : ${e.avant}→${e.apres}`).join(' · ');
+        return `<div style="padding:6px 0;border-bottom:0.5px solid #f1f1f1;font-size:11px">
+                  <strong>${escHtml(t.periode || '')}</strong><br>${evs}
+                </div>`;
+    }).join('');
+    return `<div class="cp-card cp-card-evolution">
+      <div class="cp-card-header"><span><i class="fas fa-chart-line"></i>Évolution — ${escHtml(card.nom || '')}</span></div>
+      <div style="font-size:12px;font-weight:600;color:#16a34a;padding:6px 0">${escHtml(card.tendance || '')}</div>
+      <div>${rows || '<div style="font-size:11px;color:#9ca3af">Aucune donnée.</div>'}</div>
+    </div>`;
+}
 
     function renderPersonCard(card) {
         const d   = card.data || {};

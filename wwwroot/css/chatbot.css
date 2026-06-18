@@ -10,8 +10,8 @@
     --ey-border:      #E8E8EE;
     --ey-surface:     #F4F4F8;
     --ey-white:       #FFFFFF;
-    --chat-w:         390px;
-    --chat-h:         560px;
+    --chat-w:         460px;
+    --chat-h:         630px;
     --r-panel:        16px;
     --r-bot:          4px 14px 14px 14px;
     --r-user:         18px 18px 4px 18px;
@@ -363,7 +363,7 @@
     font-size: 12px;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     color: var(--ey-dark);
-    white-space: nowrap;
+    white-space: normal;
     cursor: pointer;
     transition: background .14s, border-color .14s;
     line-height: 1.5;
@@ -510,7 +510,7 @@
 }
 
 /* ── RESPONSIVE ────────────────────────────────────────────────────────────── */
-@media (max-width: 480px) {
+@media (max-width: 520px) {
     .chatbot-panel {
         width: calc(100vw - 28px);
         height: calc(100dvh - 108px);
@@ -1039,42 +1039,45 @@
 
 /* ── REASONING section ── */
 .chatbot-widget-container .cp-reasoning {
-    border-top: 1px solid var(--ey-border);
+    border-top: 2px solid var(--ey-yellow);
+    background: #fafaf6;
+    border-left: 3px solid var(--ey-yellow);
 }
 .chatbot-widget-container .cp-reasoning > summary {
-    padding: 8px 14px;
-    font-size: 11px;
+    padding: 10px 14px;
+    font-size: 11.5px;
     font-weight: 600;
-    color: #9ca3af;
+    color: #78716c;
     cursor: pointer;
     user-select: none;
     list-style: none;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 7px;
     transition: color .15s;
 }
 .chatbot-widget-container .cp-reasoning > summary:hover { color: var(--ey-dark); }
 .chatbot-widget-container .cp-reasoning > summary::-webkit-details-marker { display: none; }
-.chatbot-widget-container .cp-reasoning > summary i { font-size: 12px; }
+.chatbot-widget-container .cp-reasoning > summary i { font-size: 13px; color: var(--ey-yellow); }
 
 .chatbot-widget-container .cp-reasoning-list {
-    padding: 2px 14px 10px;
+    padding: 4px 14px 14px;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 9px;
 }
 .chatbot-widget-container .cp-reasoning-item {
     display: flex;
-    gap: 8px;
-    font-size: 12px;
+    gap: 9px;
+    font-size: 12.5px;
     color: #374151;
-    line-height: 1.5;
+    line-height: 1.65;
+    padding: 2px 0;
 }
 .chatbot-widget-container .cp-reasoning-icon {
     color: #4ade80;
     flex-shrink: 0;
-    margin-top: 1px;
+    margin-top: 2px;
     font-size: 11px;
 }
 
@@ -1083,7 +1086,7 @@
     background: var(--ey-surface);
     border-bottom: 1px solid var(--ey-border);
     flex-shrink: 0;
-    max-height: 160px;
+    max-height: 220px;
     display: flex;
     flex-direction: column;
 }
@@ -1102,10 +1105,10 @@
 }
 .chatbot-exec-history-list {
     overflow-y: auto;
-    padding: 5px 14px 7px;
+    padding: 5px 14px 8px;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 5px;
     flex: 1;
 }
 .chatbot-exec-history-list::-webkit-scrollbar { width: 3px; }
@@ -1114,21 +1117,25 @@
 .cp-exec-item {
     display: flex;
     align-items: center;
-    gap: 7px;
-    font-size: 11px;
-    padding: 2px 0;
+    gap: 6px;
+    padding: 3px 0;
 }
-.cp-exec-intent {
-    font-size: 8.5px;
-    font-weight: 800;
-    padding: 2px 6px;
-    border-radius: 4px;
+.cp-exec-badge {
+    font-size: 9px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 10px;
     background: var(--ey-black);
     color: var(--ey-yellow);
     white-space: nowrap;
     flex-shrink: 0;
-    letter-spacing: .04em;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    letter-spacing: .01em;
 }
+.cp-exec-ok  { font-size: 10px; color: #16a34a; flex-shrink: 0; }
+.cp-exec-err { font-size: 10px; color: #dc2626; flex-shrink: 0; }
 .cp-exec-endpoint {
     font-size: 10px;
     color: #9ca3af;
@@ -1136,11 +1143,13 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     flex: 1;
+    min-width: 60px;
 }
 .cp-exec-count {
     font-size: 10px;
     color: #6b7280;
     flex-shrink: 0;
+    white-space: nowrap;
 }
 .cp-exec-ts {
     font-size: 9.5px;
@@ -1187,4 +1196,64 @@
     border-radius: 4px;
     padding: 2px 7px;
     font-family: 'SF Mono', 'Consolas', monospace;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   NEW CARD TYPES — simulation_card / impact_card / evolution_card
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Simulation card (Et si formation) ── */
+.chatbot-widget-container .cp-card-simulation {
+    padding: 12px 14px;
+    border-left: 3px solid #3b82f6;
+}
+.chatbot-widget-container .cp-card-simulation .cp-card-header {
+    background: transparent;
+    color: #1d4ed8;
+    padding: 0 0 8px 0;
+    font-size: 12px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.chatbot-widget-container .cp-card-simulation .cp-card-header i {
+    color: #3b82f6;
+}
+
+/* ── Impact card (Multi-départs) ── */
+.chatbot-widget-container .cp-card-impact {
+    padding: 12px 14px;
+    border-left-width: 3px !important;
+}
+
+/* ── Evolution card (Dimension temporelle) ── */
+.chatbot-widget-container .cp-card-evolution {
+    overflow: hidden;
+}
+.chatbot-widget-container .cp-card-evolution .cp-card-header {
+    background: var(--ey-black);
+    color: #fff;
+    padding: 10px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.chatbot-widget-container .cp-card-evolution .cp-card-header i {
+    color: var(--ey-yellow);
+    margin-right: 6px;
+}
+.chatbot-widget-container .cp-card-evolution > div:last-child {
+    padding: 8px 12px 12px;
+}
+.chatbot-widget-container .cp-card-evolution > div:last-child > div {
+    padding: 7px 0;
+    border-bottom: 1px solid var(--ey-border);
+    font-size: 12px;
+    line-height: 1.55;
+}
+.chatbot-widget-container .cp-card-evolution > div:last-child > div:last-child {
+    border-bottom: none;
 }

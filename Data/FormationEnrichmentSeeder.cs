@@ -238,6 +238,7 @@ public static class FormationEnrichmentSeeder
         context.Parametres.Add(new Parametre { Code = VersionKey, Valeur = DateTime.UtcNow.ToString("O") });
         await context.SaveChangesAsync();
     }
+    
 
     private sealed record FormationEnrichment(
         string TitreContient,

@@ -93,6 +93,7 @@ using (var scope = app.Services.CreateScope())
     var userManager  = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
     var roleManager  = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
     var context      = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    await EvaluationHistoriqueSeeder.SeedAsync(context);
 
     // 1. Roles
     string[] roles = { "ITAdmin", "RH", "Manager", "Collaborateur" };
@@ -253,6 +254,7 @@ using (var scope = app.Services.CreateScope())
 
     // 9. Formation enrichment — ExternalUrl, Plateforme, Description, badges for existing formations
     await FormationEnrichmentSeeder.SeedAsync(context);
+
 }
 
 // ── MIDDLEWARE ────────────────────────────────────────────────────────────────
@@ -406,4 +408,5 @@ static async Task SeedHrMasterData(ApplicationDbContext context)
     };
     context.ContractTypes.AddRange(contractTypes);
     await context.SaveChangesAsync();
+  
 }

@@ -359,9 +359,18 @@ public async Task<IActionResult> MatriceEquipe(int? collaborateurId)
     {
         var competence = await _context.Competences.FindAsync(id);
         if (competence == null) return NotFound();
+        var ancienNiveau = competence.NiveauActuel;
         competence.NiveauActuel = nouveauNiveau;
         competence.DateEvaluation = dateEvaluation;
         _context.Update(competence);
+
+         _context.EvaluationsHistoriques.Add(new EvaluationHistorique {
+        CompetenceId = competence.Id,
+        NiveauAncien = ancienNiveau,
+        NiveauNouveau = nouveauNiveau,
+        DateChangement = dateEvaluation,
+        Raison = "Manuel"
+    });
         await _context.SaveChangesAsync();
         return Ok(new { success = true });
     }
