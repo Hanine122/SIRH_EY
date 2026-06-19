@@ -255,6 +255,9 @@ using (var scope = app.Services.CreateScope())
     // 9. Formation enrichment — ExternalUrl, Plateforme, Description, badges for existing formations
     await FormationEnrichmentSeeder.SeedAsync(context);
 
+    // 10. Postes référentiel — CompetencesRequisesParPoste for Partner, Director, Senior Manager
+    await PostesReferentielSeeder.SeedAsync(context);
+
 }
 
 // ── MIDDLEWARE ────────────────────────────────────────────────────────────────

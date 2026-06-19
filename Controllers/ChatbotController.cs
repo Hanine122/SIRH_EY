@@ -29,6 +29,8 @@ namespace SIRH.EY.Controllers
             public string? Page { get; set; }
             public string? ContextId { get; set; }
             public System.Text.Json.JsonElement? Context { get; set; }
+            public System.Text.Json.JsonElement? SessionMemory { get; set; }
+            public System.Text.Json.JsonElement? SessionHistory { get; set; }
         }
 
         public class ChatReply
@@ -759,10 +761,12 @@ var competencesRequises = competencesRequisesRaw
 
                 var payload = JsonSerializer.Serialize(new
                 {
-                    message   = request.Message,
-                    page      = request.Page ?? "general",
-                    contextId = request.ContextId,
-                    context   = request.Context
+                    message        = request.Message,
+                    page           = request.Page ?? "general",
+                    contextId      = request.ContextId,
+                    sessionMemory  = request.SessionMemory,
+                    sessionHistory = request.SessionHistory,
+                    context        = request.SessionMemory   // bridge : n8n lit body.context
                 });
 
                 var response = await client.PostAsync(

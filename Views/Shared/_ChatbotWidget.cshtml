@@ -262,8 +262,9 @@
             typingEl.remove();
             isTyping = false;
             renderResponse(data);
-            updateMemory(data.context);
-            if (data.executionHistory) refreshExecHistory(data.executionHistory);
+            updateMemory(data);
+            const hist = data.sessionHistory || data.executionHistory;
+            if (hist) refreshExecHistory(hist);
         } catch (err) {
             typingEl.remove();
             isTyping = false;
@@ -292,15 +293,15 @@
     async function postMessage(text) {
         const pageCtxId = detectPageContextId();
         const payload = {
-            message: text,
-            page:    window.location.pathname,
+            message:   text,
+            page:      window.location.pathname,
             contextId: pageCtxId || window.hrContext.lastCollaborateurId || null,
-            context: {
+            sessionMemory: {
                 lastCollaborateurId:  window.hrContext.lastCollaborateurId,
                 lastCollaborateurNom: window.hrContext.lastCollaborateurNom,
-                lastIntent:           window.hrContext.lastIntent,
-                executionHistory:     window.hrContext.executionHistory
-            }
+                lastIntent:           window.hrContext.lastIntent
+            },
+            sessionHistory: window.hrContext.executionHistory
         };
 
         const res = await fetch('/api/chatbot/ask', {
@@ -313,13 +314,19 @@
         return await res.json();
     }
 
-    // ── Memory update ─────────────────────────────────────────────────────────
-    function updateMemory(ctx) {
-        if (!ctx) return;
-        if (ctx.lastCollaborateurId  != null) window.hrContext.lastCollaborateurId  = ctx.lastCollaborateurId;
-        if (ctx.lastCollaborateurNom != null) window.hrContext.lastCollaborateurNom = ctx.lastCollaborateurNom;
-        if (ctx.lastIntent           != null) window.hrContext.lastIntent           = ctx.lastIntent;
-        if (Array.isArray(ctx.executionHistory))   window.hrContext.executionHistory = ctx.executionHistory;
+    // ── Memory update — lit sessionMemory/sessionHistory au niveau racine, fallback vers context ──
+    function updateMemory(data) {
+        if (!data) return;
+        const mem  = data.sessionMemory || data.context || null;
+        const hist = Array.isArray(data.sessionHistory)    ? data.sessionHistory
+                   : Array.isArray(data.executionHistory)  ? data.executionHistory
+                   : null;
+        if (mem) {
+            if (mem.lastCollaborateurId  != null) window.hrContext.lastCollaborateurId  = mem.lastCollaborateurId;
+            if (mem.lastCollaborateurNom != null) window.hrContext.lastCollaborateurNom = mem.lastCollaborateurNom;
+            if (mem.lastIntent           != null) window.hrContext.lastIntent           = mem.lastIntent;
+        }
+        if (hist) window.hrContext.executionHistory = hist;
         window.hrContext.timestamp = new Date().toISOString();
     }
 
