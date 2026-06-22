@@ -1,4 +1,4 @@
-@* EY HR Copilot v2 — conversational memory + structured cards *@
+@* EY HR Copilot v3 — Premium Enterprise Edition *@
 <div id="chatbot-widget-container" class="chatbot-widget-container">
 
     <button id="chatbot-launcher" class="chatbot-launcher shadow-lg" aria-label="Ouvrir l'assistant RH IA">
@@ -6,16 +6,14 @@
         <i class="fas fa-times chatbot-close-icon" style="display:none"></i>
     </button>
 
-
     <div id="chatbot-panel" class="chatbot-panel shadow-lg" style="display:none">
-
 
         <div class="chatbot-header">
             <div class="chatbot-header-info">
                 <div class="chatbot-avatar"><i class="fas fa-robot"></i></div>
                 <div class="chatbot-header-text">
                     <div class="chatbot-title">EY HR Copilot</div>
-                    <div class="chatbot-status">En ligne</div>
+                    <div class="chatbot-status" id="chatbot-status-text">En ligne</div>
                 </div>
             </div>
             <div class="chatbot-header-actions">
@@ -32,7 +30,6 @@
             </div>
         </div>
 
-
         <div id="chatbot-exec-history" class="chatbot-exec-history" style="display:none">
             <div class="chatbot-exec-history-hdr">
                 <span><i class="fas fa-history" style="margin-right:6px"></i>Historique d'exécution</span>
@@ -45,77 +42,107 @@
             </div>
         </div>
 
+        <div id="cp-session-strip" class="cp-session-strip" style="display:none">
+            <div id="cp-session-items" class="cp-session-items"></div>
+        </div>
 
         <div id="chatbot-messages" class="chatbot-messages">
-            <div class="chat-message bot-message">
-                <div class="message-content">
-                    <p class="ey-answer-text">
-                        <strong>Bonjour&nbsp;!</strong> Je suis votre <strong>EY HR Copilot</strong>.<br>
-                        Je peux analyser vos <strong>talents</strong>, <strong>successions</strong>,
-                        <strong>promotions</strong>, <strong>formations</strong> et <strong>effectifs</strong> en temps réel.
-                    </p>
+            <div id="cp-welcome-screen" class="cp-welcome-screen">
+                <div>
+                    <div class="cp-welcome-title">Bonjour</div>
+                    <div class="cp-welcome-subtitle">Votre assistant RH stratégique</div>
                 </div>
-            </div>
-            <div id="chatbot-quick-prompts" class="chatbot-quick-prompts">
-                <button class="quick-prompt-btn" data-prompt="Quels sont les hauts potentiels ?">
-                    <i class="fas fa-star" style="color:#FFE600;margin-right:7px;font-size:11px"></i>Top talents &amp; hauts potentiels
-                </button>
-                <button class="quick-prompt-btn" data-prompt="Qui est prêt pour une promotion ?">
-                    <i class="fas fa-arrow-up" style="color:#4ade80;margin-right:7px;font-size:11px"></i>Candidats à la promotion
-                </button>
-                <button class="quick-prompt-btn" data-prompt="Quels postes sont sans successeur ?">
-                    <i class="fas fa-exclamation-triangle" style="color:#f59e0b;margin-right:7px;font-size:11px"></i>Postes sans successeur
-                </button>
-                <button class="quick-prompt-btn" data-prompt="Montre la répartition par département">
-                    <i class="fas fa-chart-pie" style="color:#60a5fa;margin-right:7px;font-size:11px"></i>Répartition des effectifs
-                </button>
+                <div class="cp-welcome-caps">
+                    <button class="cp-welcome-cap-tile" data-prompt="Qui est prêt pour une promotion ?">
+                        <i class="fas fa-arrow-up"></i><span>Promotions</span>
+                    </button>
+                    <button class="cp-welcome-cap-tile" data-prompt="Quels postes sont sans successeur ?">
+                        <i class="fas fa-sitemap"></i><span>Successions</span>
+                    </button>
+                    <button class="cp-welcome-cap-tile" data-prompt="Quels sont les hauts potentiels ?">
+                        <i class="fas fa-star"></i><span>Talents</span>
+                    </button>
+                    <button class="cp-welcome-cap-tile" data-prompt="Quelles formations sont en cours ?">
+                        <i class="fas fa-graduation-cap"></i><span>Formations</span>
+                    </button>
+                    <button class="cp-welcome-cap-tile" data-prompt="Montre la répartition par département">
+                        <i class="fas fa-chart-pie"></i><span>Reporting RH</span>
+                    </button>
+                    <button class="cp-welcome-cap-tile" data-prompt="Quels postes sont à risque ?">
+                        <i class="fas fa-exclamation-triangle"></i><span>Alertes</span>
+                    </button>
+                </div>
+                <div class="cp-welcome-suggestions-label">Commencer avec</div>
+                <div class="cp-welcome-suggestions">
+                    <button class="cp-welcome-suggestion-btn" data-prompt="Qui mérite une promotion aujourd'hui ?">Qui mérite une promotion aujourd'hui ?</button>
+                    <button class="cp-welcome-suggestion-btn" data-prompt="Qui peut remplacer un Manager dans nos équipes ?">Qui peut remplacer un Manager dans nos équipes ?</button>
+                    <button class="cp-welcome-suggestion-btn" data-prompt="Quels sont nos hauts potentiels ?">Quels sont nos hauts potentiels ?</button>
+                    <button class="cp-welcome-suggestion-btn" data-prompt="Quel département présente le plus de risques ?">Quel département présente le plus de risques ?</button>
+                </div>
             </div>
         </div>
 
-
         <div class="chatbot-input-area">
-            <input type="text" id="chatbot-input" class="chatbot-input form-control"
-                   placeholder="Posez votre question RH…" autocomplete="off" />
-            <button id="chatbot-send-btn" class="chatbot-send-btn" disabled aria-label="Envoyer">
-                <i class="fas fa-paper-plane"></i>
-            </button>
+            <div id="cp-context-row" class="cp-context-row" style="display:none">
+                <span class="cp-context-chip">
+                    <i class="fas fa-user-circle"></i>
+                    <span id="cp-context-name-label"></span>
+                </span>
+                <button id="cp-context-clear-btn" class="cp-context-clear-btn" aria-label="Effacer le contexte" title="Effacer le contexte">×</button>
+            </div>
+            <div class="chatbot-input-row">
+                <input type="text" id="chatbot-input" class="chatbot-input form-control"
+                       placeholder="Posez votre question RH…" autocomplete="off" />
+                <button id="chatbot-send-btn" class="chatbot-send-btn" disabled aria-label="Envoyer">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
         </div>
     </div>
 </div>
 
 <script>
 // ════════════════════════════════════════════════════════════════════════════
-// EY HR COPILOT v2 — Conversational memory + structured cards
+// EY HR COPILOT v3 — Premium Enterprise Edition
 // ════════════════════════════════════════════════════════════════════════════
 (function () {
     'use strict';
 
     // ── Conversational memory ────────────────────────────────────────────────
     window.hrContext = {
-        lastCollaborateurId:  null,
-        lastCollaborateurNom: null,
-        lastIntent:           null,
-        lastEndpoint:         null,
-        timestamp:            null,
-        executionHistory:     []
+        sessionMemory: {
+            lastCollaborateurId:  null,
+            lastCollaborateurNom: null,
+            lastIntent:           null
+        },
+        lastEndpoint:     null,
+        timestamp:        null,
+        executionHistory: [],
+        sessionTimeline:  []
     };
 
     // ── DOM refs ─────────────────────────────────────────────────────────────
-    const launcher    = document.getElementById('chatbot-launcher');
-    const panel       = document.getElementById('chatbot-panel');
-    const closeBtn    = document.getElementById('chatbot-close-btn');
-    const clearBtn    = document.getElementById('chatbot-clear-btn');
-    const histBtn     = document.getElementById('chatbot-history-btn');
-    const execPanel   = document.getElementById('chatbot-exec-history');
-    const execClose   = document.getElementById('chatbot-exec-close');
-    const execList    = document.getElementById('chatbot-exec-list');
-    const messages    = document.getElementById('chatbot-messages');
-    const input       = document.getElementById('chatbot-input');
-    const sendBtn     = document.getElementById('chatbot-send-btn');
-    const launchIcon  = launcher.querySelector('.chatbot-launcher-icon');
-    const closeIcon   = launcher.querySelector('.chatbot-close-icon');
+    const launcher        = document.getElementById('chatbot-launcher');
+    const panel           = document.getElementById('chatbot-panel');
+    const closeBtn        = document.getElementById('chatbot-close-btn');
+    const clearBtn        = document.getElementById('chatbot-clear-btn');
+    const histBtn         = document.getElementById('chatbot-history-btn');
+    const execPanel       = document.getElementById('chatbot-exec-history');
+    const execClose       = document.getElementById('chatbot-exec-close');
+    const execList        = document.getElementById('chatbot-exec-list');
+    const messages        = document.getElementById('chatbot-messages');
+    const input           = document.getElementById('chatbot-input');
+    const sendBtn         = document.getElementById('chatbot-send-btn');
+    const launchIcon      = launcher.querySelector('.chatbot-launcher-icon');
+    const closeIcon       = launcher.querySelector('.chatbot-close-icon');
+    const statusText      = document.getElementById('chatbot-status-text');
+    const sessionStrip    = document.getElementById('cp-session-strip');
+    const sessionItemsEl  = document.getElementById('cp-session-items');
+    const contextRow      = document.getElementById('cp-context-row');
+    const contextNameEl   = document.getElementById('cp-context-name-label');
+    const contextClearBtn = document.getElementById('cp-context-clear-btn');
 
-    let isOpen = false;
+    let isOpen   = false;
     let isTyping = false;
 
     // ── Open / close ─────────────────────────────────────────────────────────
@@ -139,35 +166,52 @@
     launcher.addEventListener('click', () => isOpen ? closePanel() : openPanel());
     closeBtn.addEventListener('click', closePanel);
 
-    // ── Clear conversation ────────────────────────────────────────────────────
-    clearBtn.addEventListener('click', () => {
-        messages.innerHTML = `
-        <div class="chat-message bot-message">
-          <div class="message-content">
-            <p class="ey-answer-text"><strong>Nouvelle conversation démarrée.</strong><br>
-            Comment puis-je vous aider&nbsp;?</p>
-          </div>
-        </div>
-        <div id="chatbot-quick-prompts" class="chatbot-quick-prompts">
-          <button class="quick-prompt-btn" data-prompt="Quels sont les hauts potentiels ?">
-            <i class="fas fa-star" style="color:#FFE600;margin-right:7px;font-size:11px"></i>Top talents &amp; hauts potentiels
-          </button>
-          <button class="quick-prompt-btn" data-prompt="Qui est prêt pour une promotion ?">
-            <i class="fas fa-arrow-up" style="color:#4ade80;margin-right:7px;font-size:11px"></i>Candidats à la promotion
-          </button>
-          <button class="quick-prompt-btn" data-prompt="Quels postes sont sans successeur ?">
-            <i class="fas fa-exclamation-triangle" style="color:#f59e0b;margin-right:7px;font-size:11px"></i>Postes sans successeur
-          </button>
-          <button class="quick-prompt-btn" data-prompt="Montre la répartition par département">
-            <i class="fas fa-chart-pie" style="color:#60a5fa;margin-right:7px;font-size:11px"></i>Répartition des effectifs
-          </button>
-        </div>`;
-        window.hrContext = { lastCollaborateurId: null, lastCollaborateurNom: null, lastIntent: null, lastEndpoint: null, timestamp: null, executionHistory: [] };
-        execList.innerHTML = '<div style="font-size:11px;color:#9ca3af;padding:4px 0">Aucune exécution dans cette session.</div>';
-        bindQuickPrompts();
-    });
+    // ── Clear / reset ─────────────────────────────────────────────────────────
+    clearBtn.addEventListener('click', resetConversation);
 
-    // ── Execution History panel ───────────────────────────────────────────────
+    function resetConversation() {
+        messages.innerHTML = '';
+        messages.appendChild(buildWelcomeScreen());
+        window.hrContext = {
+            sessionMemory: { lastCollaborateurId: null, lastCollaborateurNom: null, lastIntent: null },
+            lastEndpoint: null, timestamp: null,
+            executionHistory: [], sessionTimeline: []
+        };
+        execList.innerHTML = '<div style="font-size:11px;color:#9ca3af;padding:4px 0">Aucune exécution dans cette session.</div>';
+        sessionStrip.style.display = 'none';
+        sessionItemsEl.innerHTML   = '';
+        updateContextChip();
+        updateHeaderStatus();
+    }
+
+    function buildWelcomeScreen() {
+        const div = document.createElement('div');
+        div.id = 'cp-welcome-screen';
+        div.className = 'cp-welcome-screen';
+        div.innerHTML = `
+            <div>
+                <div class="cp-welcome-title">Bonjour</div>
+                <div class="cp-welcome-subtitle">Votre assistant RH stratégique</div>
+            </div>
+            <div class="cp-welcome-caps">
+                <button class="cp-welcome-cap-tile" data-prompt="Qui est prêt pour une promotion ?"><i class="fas fa-arrow-up"></i><span>Promotions</span></button>
+                <button class="cp-welcome-cap-tile" data-prompt="Quels postes sont sans successeur ?"><i class="fas fa-sitemap"></i><span>Successions</span></button>
+                <button class="cp-welcome-cap-tile" data-prompt="Quels sont les hauts potentiels ?"><i class="fas fa-star"></i><span>Talents</span></button>
+                <button class="cp-welcome-cap-tile" data-prompt="Quelles formations sont en cours ?"><i class="fas fa-graduation-cap"></i><span>Formations</span></button>
+                <button class="cp-welcome-cap-tile" data-prompt="Montre la répartition par département"><i class="fas fa-chart-pie"></i><span>Reporting RH</span></button>
+                <button class="cp-welcome-cap-tile" data-prompt="Quels postes sont à risque ?"><i class="fas fa-exclamation-triangle"></i><span>Alertes</span></button>
+            </div>
+            <div class="cp-welcome-suggestions-label">Commencer avec</div>
+            <div class="cp-welcome-suggestions">
+                <button class="cp-welcome-suggestion-btn" data-prompt="Qui mérite une promotion aujourd'hui ?">Qui mérite une promotion aujourd'hui ?</button>
+                <button class="cp-welcome-suggestion-btn" data-prompt="Qui peut remplacer un Manager dans nos équipes ?">Qui peut remplacer un Manager dans nos équipes ?</button>
+                <button class="cp-welcome-suggestion-btn" data-prompt="Quels sont nos hauts potentiels ?">Quels sont nos hauts potentiels ?</button>
+                <button class="cp-welcome-suggestion-btn" data-prompt="Quel département présente le plus de risques ?">Quel département présente le plus de risques ?</button>
+            </div>`;
+        return div;
+    }
+
+    // ── Execution History ─────────────────────────────────────────────────────
     histBtn.addEventListener('click', () => {
         const visible = execPanel.style.display !== 'none';
         execPanel.style.display = visible ? 'none' : 'flex';
@@ -178,29 +222,43 @@
         histBtn.classList.remove('active');
     });
 
+    const INTENT_META = {
+        TALENT:               { label: 'Hauts potentiels',  icon: 'fa-star' },
+        SUCCESSION:           { label: 'Succession',        icon: 'fa-sitemap' },
+        PROMOTION:            { label: 'Promotion',         icon: 'fa-arrow-up' },
+        FORMATION:            { label: 'Formation',         icon: 'fa-graduation-cap' },
+        POSTES_CRITIQUES:     { label: 'Postes à risque',   icon: 'fa-exclamation-triangle' },
+        ANALYTICS:            { label: 'Statistiques',      icon: 'fa-chart-pie' },
+        PROFIL:               { label: 'Profil',            icon: 'fa-user' },
+        SIMULATION_FORMATION: { label: 'Simul. formation',  icon: 'fa-flask' },
+        SIMULATION_DEPARTS:   { label: 'Simul. départs',    icon: 'fa-user-slash' },
+        EVOLUTION:            { label: 'Évolution',         icon: 'fa-chart-line' }
+    };
+
+    const INTENT_TIMELINE = {
+        TALENT:               'Hauts potentiels analysés',
+        SUCCESSION:           'Succession analysée',
+        PROMOTION:            'Promotion analysée',
+        FORMATION:            'Formation consultée',
+        POSTES_CRITIQUES:     'Postes à risque identifiés',
+        ANALYTICS:            'Stats RH consultées',
+        PROFIL:               'Profil consulté',
+        SIMULATION_FORMATION: 'Simulation formation',
+        SIMULATION_DEPARTS:   'Simulation départs',
+        EVOLUTION:            'Évolution consultée'
+    };
+
     function refreshExecHistory(history) {
         if (!history || !history.length) return;
-        const INTENT_META = {
-            TALENT:               { label: 'Hauts potentiels',    icon: 'fa-star' },
-            SUCCESSION:           { label: 'Succession',          icon: 'fa-sitemap' },
-            PROMOTION:            { label: 'Promotion',           icon: 'fa-arrow-up' },
-            FORMATION:            { label: 'Formation',           icon: 'fa-graduation-cap' },
-            POSTES_CRITIQUES:     { label: 'Postes à risque', icon: 'fa-exclamation-triangle' },
-            ANALYTICS:            { label: 'Statistiques',        icon: 'fa-chart-pie' },
-            PROFIL:               { label: 'Profil',              icon: 'fa-user' },
-            SIMULATION_FORMATION: { label: 'Simul. formation', icon: 'fa-flask' },
-            SIMULATION_DEPARTS:   { label: 'Simul. départs', icon: 'fa-user-slash' },
-            EVOLUTION:            { label: 'Évolution',       icon: 'fa-chart-line' }
-        };
         execList.innerHTML = history.slice().reverse().map(function(e) {
             const ts   = e.timestamp ? new Date(e.timestamp).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '';
             const ep   = (e.endpoint || '').replace('http://localhost:5000', '');
-            const cnt  = typeof e.resultCount === 'number' ? e.resultCount + ' rés.' : '';
+            const cnt  = typeof e.resultCount === 'number' ? e.resultCount + ' rés.' : '';
             const meta = INTENT_META[e.intent] || { label: e.intent || '?', icon: 'fa-circle' };
             const ok   = e.error !== true;
             return `<div class="cp-exec-item">
               <span class="cp-exec-badge"><i class="fas ${meta.icon}"></i> ${escHtml(meta.label)}</span>
-              <i class="fas ${ok ? 'fa-check-circle cp-exec-ok' : 'fa-times-circle cp-exec-err'}" title="${ok ? 'Succès' : 'Erreur'}"></i>
+              <i class="fas ${ok ? 'fa-check-circle cp-exec-ok' : 'fa-times-circle cp-exec-err'}"></i>
               <span class="cp-exec-endpoint">${escHtml(ep)}</span>
               ${cnt ? `<span class="cp-exec-count">${cnt}</span>` : ''}
               <span class="cp-exec-ts">${ts}</span>
@@ -208,10 +266,56 @@
         }).join('');
     }
 
-    // ── Input enable/disable ──────────────────────────────────────────────────
-    input.addEventListener('input', () => {
-        sendBtn.disabled = !input.value.trim();
+    // ── Session Intelligence Strip ────────────────────────────────────────────
+    function addToSessionTimeline(data) {
+        const hist = data.sessionHistory || data.executionHistory;
+        if (!hist || !hist.length) return;
+        const last = hist[hist.length - 1];
+        if (!last || last.error === true) return;
+        const nom = window.hrContext.sessionMemory.lastCollaborateurNom;
+        window.hrContext.sessionTimeline.push({ intent: last.intent || 'ANALYSE', nom: nom || null });
+        renderSessionStrip();
+    }
+
+    function renderSessionStrip() {
+        const tl = window.hrContext.sessionTimeline;
+        if (!tl.length) { sessionStrip.style.display = 'none'; return; }
+        sessionStrip.style.display = '';
+        sessionItemsEl.innerHTML = tl.map(function(item, i) {
+            const lbl = INTENT_TIMELINE[item.intent] || item.intent;
+            const txt  = item.nom
+                ? escHtml(lbl) + ' : <strong>' + escHtml(item.nom) + '</strong>'
+                : escHtml(lbl);
+            const sep  = i < tl.length - 1 ? '<span class="cp-session-sep">·</span>' : '';
+            return '<span class="cp-session-item"><span class="cp-session-dot"></span>' + txt + '</span>' + sep;
+        }).join('');
+    }
+
+    // ── Context chip ──────────────────────────────────────────────────────────
+    contextClearBtn.addEventListener('click', function() {
+        window.hrContext.sessionMemory.lastCollaborateurId  = null;
+        window.hrContext.sessionMemory.lastCollaborateurNom = null;
+        updateContextChip();
+        updateHeaderStatus();
     });
+
+    function updateContextChip() {
+        const nom = window.hrContext.sessionMemory.lastCollaborateurNom;
+        if (nom) {
+            contextNameEl.textContent  = nom;
+            contextRow.style.display   = '';
+        } else {
+            contextRow.style.display   = 'none';
+        }
+    }
+
+    function updateHeaderStatus() {
+        const nom = window.hrContext.sessionMemory.lastCollaborateurNom;
+        statusText.textContent = nom ? 'Contexte : ' + nom : 'En ligne';
+    }
+
+    // ── Input ─────────────────────────────────────────────────────────────────
+    input.addEventListener('input', () => { sendBtn.disabled = !input.value.trim(); });
     input.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && !e.shiftKey && !sendBtn.disabled && !isTyping) {
             e.preventDefault();
@@ -220,27 +324,20 @@
     });
     sendBtn.addEventListener('click', () => { if (!isTyping) handleSend(); });
 
-    // ── Quick prompts (delegated, survives clear) ─────────────────────────────
+    // ── Delegated click — welcome + prompt buttons ────────────────────────────
     messages.addEventListener('click', (e) => {
-    const btn = e.target.closest('.quick-prompt-btn, .copilot-suggestion-btn');
-    if (!btn) return;
-
-    const raw = btn.dataset.prompt || btn.textContent.trim();
-    if (!raw) return;
-
-    // Extraire le contextId embarqué après le pipe, s'il existe
-    const parts = raw.split('|');
-    const promptText = parts[0].trim();
-    const embeddedId = parts.length > 1 ? parts[1].trim() : null;
-
-    if (embeddedId) {
-        window.hrContext.lastCollaborateurId = embeddedId;
-    }
-
-    sendMessage(promptText);
-});
-
-    function bindQuickPrompts() { /* handled via delegation above */ }
+        const btn = e.target.closest(
+            '.cp-welcome-cap-tile,.cp-welcome-suggestion-btn,.quick-prompt-btn,.copilot-suggestion-btn'
+        );
+        if (!btn) return;
+        const raw = btn.dataset.prompt || btn.textContent.trim();
+        if (!raw) return;
+        const parts = raw.split('|');
+        const promptText = parts[0].trim();
+        const embeddedId = parts.length > 1 ? parts[1].trim() : null;
+        if (embeddedId) window.hrContext.sessionMemory.lastCollaborateurId = embeddedId;
+        sendMessage(promptText);
+    });
 
     // ── Send flow ─────────────────────────────────────────────────────────────
     async function handleSend() {
@@ -249,9 +346,8 @@
         input.value = '';
         sendBtn.disabled = true;
 
-        // Remove quick prompts on first real interaction
-        const qp = document.getElementById('chatbot-quick-prompts');
-        if (qp) qp.remove();
+        const ws = document.getElementById('cp-welcome-screen');
+        if (ws) ws.remove();
 
         appendUserMessage(text);
         const typingEl = appendTyping();
@@ -263,6 +359,7 @@
             isTyping = false;
             renderResponse(data);
             updateMemory(data);
+            addToSessionTimeline(data);
             const hist = data.sessionHistory || data.executionHistory;
             if (hist) refreshExecHistory(hist);
         } catch (err) {
@@ -278,13 +375,11 @@
         handleSend();
     }
 
-    // ── Extract collaborateur ID from the current page URL ────────────────────
+    // ── Page context ID detection ─────────────────────────────────────────────
     function detectPageContextId() {
         const path = window.location.pathname;
-        // Matches /Collaborateurs/Details/3, /Succession/Plan/5, etc.
         const m = path.match(/\/(\d+)(?:\/|$)/);
         if (m) return m[1];
-        // Fallback: data attribute set by the view
         const el = document.querySelector('[data-collab-id],[data-succession-id]');
         return el ? (el.dataset.collabId || el.dataset.successionId || null) : null;
     }
@@ -292,46 +387,72 @@
     // ── API call ──────────────────────────────────────────────────────────────
     async function postMessage(text) {
         const pageCtxId = detectPageContextId();
+        const mem = window.hrContext.sessionMemory;
         const payload = {
-            message:   text,
-            page:      window.location.pathname,
-            contextId: pageCtxId || window.hrContext.lastCollaborateurId || null,
-            sessionMemory: {
-                lastCollaborateurId:  window.hrContext.lastCollaborateurId,
-                lastCollaborateurNom: window.hrContext.lastCollaborateurNom,
-                lastIntent:           window.hrContext.lastIntent
-            },
+            message:        text,
+            page:           window.location.pathname,
+            contextId:      pageCtxId || mem.lastCollaborateurId || null,
+            sessionMemory:  mem,
             sessionHistory: window.hrContext.executionHistory
         };
-
         const res = await fetch('/api/chatbot/ask', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
-
         if (!res.ok) throw new Error('HTTP ' + res.status);
         return await res.json();
     }
 
-    // ── Memory update — lit sessionMemory/sessionHistory au niveau racine, fallback vers context ──
+    // ── Memory update ─────────────────────────────────────────────────────────
     function updateMemory(data) {
         if (!data) return;
-        const mem  = data.sessionMemory || data.context || null;
-        const hist = Array.isArray(data.sessionHistory)    ? data.sessionHistory
-                   : Array.isArray(data.executionHistory)  ? data.executionHistory
-                   : null;
-        if (mem) {
-            if (mem.lastCollaborateurId  != null) window.hrContext.lastCollaborateurId  = mem.lastCollaborateurId;
-            if (mem.lastCollaborateurNom != null) window.hrContext.lastCollaborateurNom = mem.lastCollaborateurNom;
-            if (mem.lastIntent           != null) window.hrContext.lastIntent           = mem.lastIntent;
+        const mem = data.sessionMemory || data.context || null;
+        if (mem && typeof mem === 'object') {
+            window.hrContext.sessionMemory = Object.assign({}, window.hrContext.sessionMemory, mem);
         }
-        if (hist) window.hrContext.executionHistory = hist;
+        const hist = Array.isArray(data.sessionHistory)   ? data.sessionHistory
+                   : Array.isArray(data.executionHistory) ? data.executionHistory
+                   : null;
+        if (hist && hist.length) window.hrContext.executionHistory = hist;
         window.hrContext.timestamp = new Date().toISOString();
+        updateContextChip();
+        updateHeaderStatus();
     }
 
     // ════════════════════════════════════════════════════════════════════════════
-    // RENDER RESPONSE
+    // MARKDOWN RENDERER — no external lib
+    // ════════════════════════════════════════════════════════════════════════════
+    function renderMarkdown(text) {
+        if (!text) return '';
+        const escaped = String(text)
+            .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        const lines = escaped.split('\n');
+        const out = [];
+        let inList = false;
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i]
+                .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*([^*\n]+)\*/g,   '<em>$1</em>');
+            const bullet = line.match(/^[\s]*[-•]\s+(.+)$/);
+            if (bullet) {
+                if (!inList) { out.push('<ul class="cp-md-list">'); inList = true; }
+                out.push('<li>' + bullet[1] + '</li>');
+            } else {
+                if (inList) { out.push('</ul>'); inList = false; }
+                if (line.trim() === '') {
+                    out.push('<span class="cp-md-br"></span>');
+                } else {
+                    out.push('<span>' + line + '</span><br>');
+                }
+            }
+        }
+        if (inList) out.push('</ul>');
+        return out.join('');
+    }
+
+    // ════════════════════════════════════════════════════════════════════════════
+    // RENDER RESPONSE — DECISION FIRST
     // ════════════════════════════════════════════════════════════════════════════
     function renderResponse(data) {
         const answer      = data.answer      || '';
@@ -348,23 +469,7 @@
         const mc = document.createElement('div');
         mc.className = 'message-content copilot-card';
 
-        // ── 1. Answer ──
-        if (answer) {
-            const p = document.createElement('div');
-            p.className = 'copilot-answer';
-            p.textContent = answer;
-            mc.appendChild(p);
-        }
-
-        // ── 2. Analysis strip ──
-        if (analysis) {
-            const a = document.createElement('div');
-            a.className = 'copilot-analysis';
-            a.innerHTML = `<i class="fas fa-lightbulb copilot-icon"></i><span>${escHtml(analysis)}</span>`;
-            mc.appendChild(a);
-        }
-
-        // ── 3. Cards ──
+        // 1 — Cards (decision first)
         if (cards.length) {
             const cc = document.createElement('div');
             cc.className = 'cp-cards-container';
@@ -372,7 +477,23 @@
             mc.appendChild(cc);
         }
 
-        // ── 4. Actions ──
+        // 2 — Answer narrative (markdown)
+        if (answer) {
+            const p = document.createElement('div');
+            p.className = 'copilot-answer';
+            p.innerHTML = renderMarkdown(answer);
+            mc.appendChild(p);
+        }
+
+        // 3 — Analysis strip
+        if (analysis) {
+            const a = document.createElement('div');
+            a.className = 'copilot-analysis';
+            a.innerHTML = `<i class="fas fa-lightbulb copilot-icon"></i><span>${escHtml(analysis)}</span>`;
+            mc.appendChild(a);
+        }
+
+        // 4 — Actions
         if (actions.length) {
             const lbl = document.createElement('div');
             lbl.className = 'copilot-section-label';
@@ -385,7 +506,7 @@
             mc.appendChild(al);
         }
 
-        // ── 5. Suggestions (clickable pills) ──
+        // 5 — Suggestions
         if (suggestions.length) {
             const lbl2 = document.createElement('div');
             lbl2.className = 'copilot-section-label';
@@ -400,144 +521,125 @@
             mc.appendChild(sl);
         }
 
-        // ── 6. Reasoning (collapsible) ──
-      if (reasoning.length) {
-    const det = document.createElement('details');
-    det.className = 'cp-reasoning';
-
-    const itemsHtml = reasoning.map(r => {
-        // reasoning peut être une string simple OU un objet { critere, detail } / { collaborateur, pourquoi, lacunes }
-        let text = '';
-        if (typeof r === 'string') {
-            text = r;
-        } else if (r && typeof r === 'object') {
-            if (r.collaborateur) {
-                text = `${r.collaborateur}${r.rang ? ' (rang ' + r.rang + ')' : ''} — ${r.pourquoi || ''}`;
-                if (r.lacunes) text += ` · Lacunes : ${r.lacunes}`;
-            } else if (r.critere) {
-                text = `${r.critere} — ${r.detail || ''}`;
-            } else {
-                text = JSON.stringify(r);
-            }
-        }
-        return `<div class="cp-reasoning-item"><i class="fas fa-check-circle cp-reasoning-icon"></i><span>${escHtml(text)}</span></div>`;
-    }).join('');
-
-    det.innerHTML =
-        `<summary><i class="fas fa-brain"></i> Raisonnement IA (${reasoning.length} étapes)</summary>` +
-        `<div class="cp-reasoning-list">${itemsHtml}</div>`;
-    mc.appendChild(det);
-}
-
-        // ── 7. Sources ──
-       if (sources.length) {
+        // 6 — Sources
+        if (sources.length) {
             const sc = document.createElement('div');
             sc.className = 'cp-sources';
             sc.innerHTML = sources.map(function(s) {
-                var label = '';
-                if (typeof s === 'string') {
-                    label = s;
-                } else if (s && typeof s === 'object') {
-                    label = s.label || s.api || JSON.stringify(s);
-                }
+                const label = typeof s === 'string' ? s : (s && typeof s === 'object' ? (s.label || s.api || '') : '');
                 return '<span class="cp-source-chip">' + escHtml(label) + '</span>';
             }).join('');
             mc.appendChild(sc);
+        }
+
+        // 7 — Reasoning (subtle, last)
+        if (reasoning.length) {
+            const det = document.createElement('details');
+            det.className = 'cp-reasoning';
+            const itemsHtml = reasoning.map(r => {
+                let text = '';
+                if (typeof r === 'string') {
+                    text = r;
+                } else if (r && typeof r === 'object') {
+                    if (r.collaborateur) {
+                        text = r.collaborateur + (r.rang ? ' (rang ' + r.rang + ')' : '') + ' — ' + (r.pourquoi || '');
+                        if (r.lacunes) text += ' · Lacunes : ' + r.lacunes;
+                    } else if (r.critere) {
+                        text = r.critere + ' — ' + (r.detail || '');
+                    } else {
+                        text = JSON.stringify(r);
+                    }
+                }
+                return `<div class="cp-reasoning-item"><i class="fas fa-check-circle cp-reasoning-icon"></i><span>${escHtml(text)}</span></div>`;
+            }).join('');
+            det.innerHTML =
+                `<summary><i class="fas fa-brain"></i> Voir le raisonnement IA (${reasoning.length} étapes)</summary>` +
+                `<div class="cp-reasoning-list">${itemsHtml}</div>`;
+            mc.appendChild(det);
         }
 
         wrapper.appendChild(mc);
         messages.appendChild(wrapper);
         scrollToBottom();
     }
+
     // ════════════════════════════════════════════════════════════════════════════
     // CARD RENDERERS
     // ════════════════════════════════════════════════════════════════════════════
-   function renderCard(card) {
-    switch (card.type) {
-        case 'collaborateur': return renderPersonCard(card);
-        case 'succession':    return renderSuccessionCard(card);
-        case 'promotion':     return renderPromotionCard(card);
-        case 'analytics':     return renderAnalyticsCard(card);
-        case 'alerte':        return renderAlerteCard(card);
-        case 'simulation_card': return renderSimulationCard(card);
-        case 'impact_card':     return renderImpactCard(card);
-        case 'evolution_card':  return renderEvolutionCard(card);
-        default:              return '';
+    function renderCard(card) {
+        switch (card.type) {
+            case 'collaborateur':   return renderPersonCard(card);
+            case 'succession':      return renderSuccessionCard(card);
+            case 'promotion':       return renderPromotionCard(card);
+            case 'analytics':       return renderAnalyticsCard(card);
+            case 'alerte':          return renderAlerteCard(card);
+            case 'simulation_card': return renderSimulationCard(card);
+            case 'impact_card':     return renderImpactCard(card);
+            case 'evolution_card':  return renderEvolutionCard(card);
+            default:                return '';
+        }
     }
-}
 
-function renderSimulationCard(card) {
-    const pct = Math.max(0, Math.min(100, card.scoreApres || 0));
-    const gainColor = (card.gain || 0) >= 20 ? '#16a34a' : (card.gain || 0) >= 5 ? '#ca8a04' : '#9ca3af';
-    return `<div class="cp-card cp-card-simulation">
-      <div class="cp-card-header"><span><i class="fas fa-flask"></i>Simulation — ${escHtml(card.nom || '')}</span></div>
-      <div style="padding:10px 4px">
-        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px">
-          <span>Avant : <strong>${card.scoreAvant || 0}%</strong></span>
-          <span>Après : <strong style="color:${gainColor}">${card.scoreApres || 0}%</strong></span>
-        </div>
-        <div class="cp-score-bar"><div class="cp-score-fill" style="width:${pct}%;background:${gainColor}"></div></div>
-        <div style="font-size:11px;color:${gainColor};margin-top:6px;font-weight:600">Gain : ${(card.gain || 0) >= 0 ? '+' : ''}${card.gain || 0} points sur "${escHtml(card.competence || '')}"</div>
-      </div>
-    </div>`;
-}
+    // ── Score ring SVG ────────────────────────────────────────────────────────
+    function renderScoreRing(pct) {
+        const r    = 22;
+        const circ = 2 * Math.PI * r;
+        const clamped = Math.max(0, Math.min(100, pct));
+        const offset  = circ * (1 - clamped / 100);
+        return `<svg class="cp-score-ring" viewBox="0 0 52 52" aria-hidden="true">
+            <circle cx="26" cy="26" r="${r}" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="4.5"/>
+            <circle cx="26" cy="26" r="${r}" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="4.5"
+                stroke-dasharray="${circ.toFixed(2)}" stroke-dashoffset="${offset.toFixed(2)}"
+                stroke-linecap="round" transform="rotate(-90 26 26)" class="cp-ring-arc"/>
+            <text x="26" y="23" text-anchor="middle" dominant-baseline="middle"
+                fill="white" font-size="11.5" font-weight="800" font-family="Inter,sans-serif">${clamped}%</text>
+            <text x="26" y="36" text-anchor="middle" dominant-baseline="middle"
+                fill="rgba(255,255,255,0.65)" font-size="6.5" font-family="Inter,sans-serif" letter-spacing="0.5">SCORE</text>
+        </svg>`;
+    }
 
-function renderImpactCard(card) {
-    const riskColor = card.niveauAlerte === 'Risque critique' ? '#ef4444' : card.niveauAlerte === 'Risque modéré' ? '#f59e0b' : '#16a34a';
-    const manquantes = (card.competencesPerdues || []).slice(0, 3);
-    return `<div class="cp-card cp-card-impact" style="border-left-color:${riskColor}">
-      <div style="color:${riskColor};font-weight:600;font-size:12px"><i class="fas fa-building"></i> ${escHtml(card.departement || '')} — ${escHtml(card.niveauAlerte || '')}</div>
-      <div style="font-size:11px;color:#6b7280;margin-top:4px">Effectif restant : ${card.effectifRestant || 0}</div>
-      ${manquantes.length ? `<div style="font-size:11px;color:#9ca3af;margin-top:4px">Compétences perdues : ${manquantes.map(escHtml).join(', ')}</div>` : ''}
-    </div>`;
-}
+    // ── Status meta helper ────────────────────────────────────────────────────
+    function getStatusMeta(score) {
+        const pct = Math.round(score / 5 * 100);
+        if (score >= 4.5) return { cls: 'cp-sb--green', label: 'READY NOW',   pct };
+        if (score >= 3.5) return { cls: 'cp-sb--amber', label: 'IN PROGRESS', pct };
+        return               { cls: 'cp-sb--red',   label: 'AT RISK',     pct };
+    }
 
-function renderEvolutionCard(card) {
-    const timeline = card.timeline || [];
-    const rows = timeline.map(t => {
-        const evs = (t.evolutions || []).map(e => `${escHtml(e.competence || '')} : ${e.avant}→${e.apres}`).join(' · ');
-        return `<div style="padding:6px 0;border-bottom:0.5px solid #f1f1f1;font-size:11px">
-                  <strong>${escHtml(t.periode || '')}</strong><br>${evs}
-                </div>`;
-    }).join('');
-    return `<div class="cp-card cp-card-evolution">
-      <div class="cp-card-header"><span><i class="fas fa-chart-line"></i>Évolution — ${escHtml(card.nom || '')}</span></div>
-      <div style="font-size:12px;font-weight:600;color:#16a34a;padding:6px 0">${escHtml(card.tendance || '')}</div>
-      <div>${rows || '<div style="font-size:11px;color:#9ca3af">Aucune donnée.</div>'}</div>
-    </div>`;
-}
+    // ── PROMOTION card v3 ─────────────────────────────────────────────────────
+    function renderPromotionCard(card) {
+        const d     = card.data || {};
+        const nom   = d.nom || '';
+        const score = typeof d.score === 'number' ? d.score : 0;
+        const sm    = getStatusMeta(score);
+        const roleStr = [d.poste || d.grade, d.departement].filter(Boolean).join(' · ');
 
-    function renderPersonCard(card) {
-        const d   = card.data || {};
-        const nom = d.nom || '';
-        const initials = nom.split(' ').filter(Boolean).map(n => n[0]).join('').substring(0, 2).toUpperCase() || '?';
-        const rankHtml = card.rank != null ? `<span class="cp-rank">#${card.rank}</span>` : '';
-        const scoreHtml = d.score != null
-            ? `<div class="cp-score-bar"><div class="cp-score-fill" style="width:${Math.round(d.score / 5 * 100)}%"></div></div>
-               <div class="cp-score-label">${d.score}/5</div>`
-            : '';
-        const badgeCls = d.badgeLevel === 'critical' ? 'cp-badge-critical' : 'cp-badge-talent';
-        const badgeHtml = d.badge ? `<span class="cp-badge ${badgeCls}">${escHtml(d.badge)}</span>` : '';
-        return `<div class="cp-card cp-card-person">
-          ${rankHtml}
-          <div class="cp-avatar">${escHtml(initials)}</div>
-          <div class="cp-info">
-            <div class="cp-name">${escHtml(nom)}</div>
-            <div class="cp-role">${escHtml([d.poste || d.grade, d.departement].filter(Boolean).join(' · '))}</div>
-            ${scoreHtml}
-            ${badgeHtml}
-          </div>
+        return `<div class="cp-card cp-card-promotion-v2">
+            <div class="cp-status-banner ${sm.cls}">
+                <div class="cp-sb-left">
+                    ${card.rank != null ? `<span class="cp-sb-rank">#${card.rank}</span>` : ''}
+                    <div style="min-width:0">
+                        <div class="cp-sb-name">${escHtml(nom)}</div>
+                        <div class="cp-sb-role">${escHtml(roleStr)}</div>
+                        <span class="cp-sb-status-pill">${escHtml(sm.label)}</span>
+                    </div>
+                </div>
+                <div class="cp-sb-right">${renderScoreRing(sm.pct)}</div>
+            </div>
+            ${d.readinessLabel ? `<div class="cp-promo-meta"><span class="cp-badge ${score >= 4.5 ? 'cp-badge-talent' : 'cp-badge-ready'}">${escHtml(d.readinessLabel)}</span></div>` : ''}
         </div>`;
     }
 
+    // ── SUCCESSION card ───────────────────────────────────────────────────────
     function renderSuccessionCard(card) {
-        const d  = card.data || {};
-        const colors = ['#1A1A24', '#3B3B4F', '#6B7280'];
+        const d      = card.data || {};
+        const colors = ['#14532d','#78350f','#1e3a5f'];
         const cands  = (d.candidats || []).map(function(c, i) {
-            const manq = (c.competencesManquantes || []).slice(0, 2);
+            const score    = c.scoreMatch || 0;
+            const fillCls  = score >= 70 ? 'cp-fill-green' : score >= 40 ? 'cp-fill-amber' : 'cp-fill-red';
+            const manq     = (c.competencesManquantes || []).slice(0, 2);
             const manqHtml = manq.length
-                ? `<div style="font-size:10px;color:#9ca3af;margin-top:3px">Gaps&nbsp;: ${manq.map(escHtml).join(', ')}</div>`
-                : '';
+                ? `<div style="font-size:10px;color:#9ca3af;margin-top:3px">Gaps : ${manq.map(escHtml).join(', ')}</div>` : '';
             const transHtml = c.profilTransversal
                 ? `<span class="cp-badge cp-badge-transversal" style="margin-top:4px">Transversal</span>` : '';
             return `<div class="cp-succession-cand">
@@ -546,11 +648,10 @@ function renderEvolutionCard(card) {
                 <div class="cp-succ-name">${escHtml(c.nom || '')}</div>
                 <div class="cp-succ-role">${escHtml([c.grade, c.departement].filter(Boolean).join(' · '))}</div>
                 <div class="cp-succ-bar-wrap">
-                  <div class="cp-succ-bar"><div style="width:${c.scoreMatch || 0}%"></div></div>
-                  <span class="cp-succ-pct">${c.scoreMatch || 0}%</span>
+                  <div class="cp-succ-bar"><div class="${fillCls}" style="width:${score}%;height:100%;border-radius:4px"></div></div>
+                  <span class="cp-succ-pct">${score}%</span>
                 </div>
-                ${transHtml}
-                ${manqHtml}
+                ${transHtml}${manqHtml}
                 <div class="cp-succ-delay">${escHtml(c.delaiEstime || '')}</div>
               </div>
             </div>`;
@@ -565,25 +666,31 @@ function renderEvolutionCard(card) {
         </div>`;
     }
 
-    function renderPromotionCard(card) {
-        const d = card.data || {};
-        const nom = d.nom || '';
+    // ── PERSON card ───────────────────────────────────────────────────────────
+    function renderPersonCard(card) {
+        const d        = card.data || {};
+        const nom      = d.nom || '';
         const initials = nom.split(' ').filter(Boolean).map(n => n[0]).join('').substring(0, 2).toUpperCase() || '?';
-        const badgeCls = d.score >= 4.5 ? 'cp-badge-talent' : 'cp-badge-ready';
-        return `<div class="cp-card cp-card-promotion">
-          <div class="cp-promo-rank">#${card.rank || '?'}</div>
-          <div class="cp-avatar" style="margin-right:4px">${escHtml(initials)}</div>
+        const rankHtml = card.rank != null ? `<span class="cp-rank">#${card.rank}</span>` : '';
+        const score    = d.score != null ? d.score : null;
+        const pct      = score != null ? Math.round(score / 5 * 100) : null;
+        const scoreHtml = pct != null
+            ? `<div class="cp-score-bar" style="margin-top:7px"><div class="cp-score-fill" style="width:${pct}%"></div></div>
+               <div class="cp-score-label">${score}/5</div>` : '';
+        const badgeCls  = d.badgeLevel === 'critical' ? 'cp-badge-critical' : 'cp-badge-talent';
+        const badgeHtml = d.badge ? `<span class="cp-badge ${badgeCls}">${escHtml(d.badge)}</span>` : '';
+        return `<div class="cp-card cp-card-person">
+          ${rankHtml}
+          <div class="cp-avatar">${escHtml(initials)}</div>
           <div class="cp-info">
             <div class="cp-name">${escHtml(nom)}</div>
             <div class="cp-role">${escHtml([d.poste || d.grade, d.departement].filter(Boolean).join(' · '))}</div>
-            <div class="cp-promo-score">
-              <span class="cp-badge ${badgeCls}">${escHtml(d.readinessLabel || 'Prêt')}</span>
-              <span class="cp-score-text">${d.score != null ? d.score + '/5' : ''}</span>
-            </div>
+            ${scoreHtml}${badgeHtml}
           </div>
         </div>`;
     }
 
+    // ── ANALYTICS card ────────────────────────────────────────────────────────
     function renderAnalyticsCard(card) {
         const d = card.data || {};
         const kpisHtml = (d.kpis || []).map(k =>
@@ -591,10 +698,8 @@ function renderEvolutionCard(card) {
                <i class="fas ${escHtml(k.icon || 'fa-chart-bar')} cp-kpi-icon"></i>
                <div class="cp-kpi-value">${escHtml(String(k.value))}</div>
                <div class="cp-kpi-label">${escHtml(k.label)}</div>
-             </div>`
-        ).join('');
-
-        const maxDept = (d.departments || [])[0];
+             </div>`).join('');
+        const maxDept  = (d.departments || [])[0];
         const deptsHtml = (d.departments || []).map(dept => {
             const pct = maxDept && maxDept.value > 0 ? Math.round(dept.value / maxDept.value * 100) : 0;
             return `<div class="ey-dept-row">
@@ -603,18 +708,17 @@ function renderEvolutionCard(card) {
               <div class="ey-dept-count">${dept.value}</div>
             </div>`;
         }).join('');
-
         return `<div class="cp-card cp-card-analytics">
           ${kpisHtml ? `<div class="cp-kpi-grid">${kpisHtml}</div>` : ''}
           ${deptsHtml ? `<div class="cp-dept-section"><div class="cp-section-label">Répartition départements</div><div class="ey-dept-list">${deptsHtml}</div></div>` : ''}
         </div>`;
     }
 
+    // ── ALERTE card ───────────────────────────────────────────────────────────
     function renderAlerteCard(card) {
-        const d = card.data || {};
+        const d        = card.data || {};
         const riskColor = d.niveauRisque === 'Élevé' ? '#ef4444' : '#f59e0b';
         const nom = d.nom || '';
-        const initials = nom.split(' ').filter(Boolean).map(n => n[0]).join('').substring(0, 2).toUpperCase() || '?';
         return `<div class="cp-card cp-card-alerte" style="border-left-color:${riskColor}">
           <div class="cp-alerte-risk" style="color:${riskColor}">
             <i class="fas fa-exclamation-triangle"></i> Risque ${escHtml(d.niveauRisque || '')}
@@ -627,6 +731,53 @@ function renderEvolutionCard(card) {
             &emsp;Écart&nbsp;: <strong style="color:${riskColor}">−${d.ecart ?? '?'}</strong>
           </div>
           ${d.anciennete != null ? `<div class="cp-alerte-anciennete">Ancienneté&nbsp;: ${d.anciennete} an(s)</div>` : ''}
+        </div>`;
+    }
+
+    // ── SIMULATION card ───────────────────────────────────────────────────────
+    function renderSimulationCard(card) {
+        const pct      = Math.max(0, Math.min(100, card.scoreApres || 0));
+        const gain     = card.gain || 0;
+        const fillCls  = gain >= 20 ? 'cp-fill-green' : gain >= 5 ? 'cp-fill-amber' : 'cp-fill-red';
+        const gainColor = gain >= 20 ? '#16a34a' : gain >= 5 ? '#ca8a04' : '#9ca3af';
+        return `<div class="cp-card cp-card-simulation">
+          <div class="cp-card-header"><span><i class="fas fa-flask"></i>Simulation — ${escHtml(card.nom || '')}</span></div>
+          <div style="padding:10px 4px">
+            <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:8px">
+              <span>Avant : <strong>${card.scoreAvant || 0}%</strong></span>
+              <span>Après : <strong style="color:${gainColor}">${card.scoreApres || 0}%</strong></span>
+            </div>
+            <div class="cp-score-bar"><div class="cp-score-fill ${fillCls}" style="width:${pct}%"></div></div>
+            <div style="font-size:11px;color:${gainColor};margin-top:7px;font-weight:600">Gain : ${gain >= 0 ? '+' : ''}${gain} points sur "${escHtml(card.competence || '')}"</div>
+          </div>
+        </div>`;
+    }
+
+    // ── IMPACT card ───────────────────────────────────────────────────────────
+    function renderImpactCard(card) {
+        const riskColor = card.niveauAlerte === 'Risque critique' ? '#ef4444'
+                        : card.niveauAlerte === 'Risque modéré'   ? '#f59e0b' : '#16a34a';
+        const manquantes = (card.competencesPerdues || []).slice(0, 3);
+        return `<div class="cp-card cp-card-impact" style="border-left-color:${riskColor}">
+          <div style="color:${riskColor};font-weight:600;font-size:12px"><i class="fas fa-building"></i> ${escHtml(card.departement || '')} — ${escHtml(card.niveauAlerte || '')}</div>
+          <div style="font-size:11px;color:#6b7280;margin-top:4px">Effectif restant : ${card.effectifRestant || 0}</div>
+          ${manquantes.length ? `<div style="font-size:11px;color:#9ca3af;margin-top:4px">Compétences perdues : ${manquantes.map(escHtml).join(', ')}</div>` : ''}
+        </div>`;
+    }
+
+    // ── EVOLUTION card ────────────────────────────────────────────────────────
+    function renderEvolutionCard(card) {
+        const timeline = card.timeline || [];
+        const rows = timeline.map(t => {
+            const evs = (t.evolutions || []).map(e => `${escHtml(e.competence || '')} : ${e.avant}→${e.apres}`).join(' · ');
+            return `<div style="padding:6px 0;border-bottom:0.5px solid #f1f1f1;font-size:11px">
+                      <strong>${escHtml(t.periode || '')}</strong><br>${evs}
+                    </div>`;
+        }).join('');
+        return `<div class="cp-card cp-card-evolution">
+          <div class="cp-card-header"><span><i class="fas fa-chart-line"></i>Évolution — ${escHtml(card.nom || '')}</span></div>
+          <div style="font-size:12px;font-weight:600;color:#16a34a;padding:6px 0">${escHtml(card.tendance || '')}</div>
+          <div>${rows || '<div style="font-size:11px;color:#9ca3af">Aucune donnée.</div>'}</div>
         </div>`;
     }
 
