@@ -284,16 +284,34 @@ public class ReportingController : Controller
 
     private async Task<List<ProgressionData>> CalculateProgressionTimeAsync()
     {
-        // Simulation de données de progression (à remplacer par vraies données historiques)
-        return new List<ProgressionData>
+        var maintenant = DateTime.Now;
+        var debut = maintenant.AddMonths(-5);
+
+        var inscriptions = await _context.Inscriptions
+            .Where(i => i.DateInscription >= debut)
+            .ToListAsync();
+
+        var result = new List<ProgressionData>();
+        for (int offset = 5; offset >= 0; offset--)
         {
-            new ProgressionData { Mois = "M-6", NiveauMoyen = 2.1 },
-            new ProgressionData { Mois = "M-5", NiveauMoyen = 2.3 },
-            new ProgressionData { Mois = "M-4", NiveauMoyen = 2.6 },
-            new ProgressionData { Mois = "M-3", NiveauMoyen = 2.9 },
-            new ProgressionData { Mois = "M-2", NiveauMoyen = 3.2 },
-            new ProgressionData { Mois = "M-1", NiveauMoyen = 3.5 }
-        };
+            var moisCible = maintenant.AddMonths(-offset);
+            var label = offset == 0
+                ? moisCible.ToString("MMM")
+                : moisCible.ToString("MMM yy");
+
+            var inscriptionsDuMois = inscriptions
+                .Where(i => i.DateInscription.Year == moisCible.Year
+                         && i.DateInscription.Month == moisCible.Month)
+                .ToList();
+
+            var niveauMoyen = inscriptionsDuMois.Any()
+                ? Math.Round(inscriptionsDuMois.Average(i => i.Progression) / 20.0, 1)
+                : 0;
+
+            result.Add(new ProgressionData { Mois = label, NiveauMoyen = niveauMoyen });
+        }
+
+        return result;
     }
 }
 

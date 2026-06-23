@@ -7,6 +7,8 @@ using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using SIRH.EY.Services;
+using SIRH.EY.Services.PowerAutomate;
 
 namespace SIRH.EY.Controllers
 {
@@ -16,11 +18,19 @@ namespace SIRH.EY.Controllers
     {
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly ApplicationDbContext _context;
+        private readonly IPowerAutomateService _powerAutomate;
+        private readonly ILogger<ChatbotController> _logger;
 
-        public ChatbotController(IHttpClientFactory httpClientFactory, ApplicationDbContext context)
+        public ChatbotController(
+            IHttpClientFactory httpClientFactory,
+            ApplicationDbContext context,
+            IPowerAutomateService powerAutomate,
+            ILogger<ChatbotController> logger)
         {
             _httpClientFactory = httpClientFactory;
             _context = context;
+            _powerAutomate = powerAutomate;
+            _logger = logger;
         }
 
         public class ChatRequest
@@ -844,6 +854,37 @@ var competencesRequises = competencesRequisesRaw
                 .OrderBy(cc => cc.DateExpiration)
                 .ToListAsync();
 
+            // Trigger Power Automate for certifications expiring within 30 days (Critique urgency)
+            var critiques = expirantes
+                .Where(cc => (cc.DateExpiration!.Value.Date - DateTime.Today).TotalDays <= 30)
+                .ToList();
+
+            foreach (var cc in critiques)
+            {
+                var notification = CertificationExpirationNotification.Create(
+                    cc.CollaborateurId,
+                    cc.Collaborateur != null ? $"{cc.Collaborateur.Prenom} {cc.Collaborateur.Nom}".Trim() : "?",
+                    cc.Collaborateur?.Email,
+                    cc.Collaborateur?.Poste,
+                    cc.Collaborateur?.Grade,
+                    cc.Collaborateur?.Departement,
+                    cc.Certification?.Nom ?? "Certification",
+                    cc.Certification?.Organisme,
+                    cc.Certification?.Domaine,
+                    cc.Certification?.CodeExamen,
+                    cc.DateExpiration!.Value);
+
+                var paResult = await _powerAutomate.NotifyCertificationExpirationAsync(notification, HttpContext.RequestAborted);
+                if (!paResult.Success)
+                    _logger.LogWarning(
+                        "Power Automate CertificationExpiration notification failed for collaborateur {CollabId}, certification '{Cert}': {Error}",
+                        cc.CollaborateurId, cc.Certification?.Nom, paResult.ErrorMessage);
+            }
+
+            if (critiques.Count > 0)
+                _logger.LogInformation(
+                    "{Count} critical certification expiration notification(s) triggered.", critiques.Count);
+
             return Ok(new
             {
                 periode          = $"Dans les {jours} prochains jours",
@@ -1036,6 +1077,7 @@ var competencesRequises = competencesRequisesRaw
                 .Include(c => c.Competences)
                 .Include(c => c.CollaborateurCertifications!)
                     .ThenInclude(cc => cc.Certification)
+                .Include(c => c.Manager)
                 .FirstOrDefaultAsync(c => c.Id == collaborateurId);
 
             if (collab == null) return NotFound(new { error = "Collaborateur introuvable." });
@@ -1094,6 +1136,45 @@ var competencesRequises = competencesRequisesRaw
                 .Select(cc => cc.Certification?.Nom).Where(n => n != null).ToList() ?? new List<string?>();
 
             var scoreActuel = reqs.Count > 0 ? Math.Round(gaps.Count(g => g.gap == 0) * 100.0 / reqs.Count, 1) : 0.0;
+
+            // Build typed formation list for notification before anonymous projection
+            var notifFormations = gaps
+                .Where(g => g.gap > 0)
+                .Take(5)
+                .Select(g =>
+                {
+                    var f = formations.FirstOrDefault(x =>
+                        (!string.IsNullOrEmpty(x.CompetenceVisee)
+                            && x.CompetenceVisee.Contains(g.competence, StringComparison.OrdinalIgnoreCase))
+                        || x.Titre.Contains(g.competence, StringComparison.OrdinalIgnoreCase));
+
+                    return new DevelopmentPlanFormation(
+                        f?.Titre ?? $"Parcours — {g.competence}",
+                        g.competence,
+                        g.gap,
+                        g.gap >= 3 ? "Critique" : g.gap == 2 ? "Haute" : "Normale",
+                        f?.DureeHeures);
+                })
+                .ToList();
+
+            var planNotification = DevelopmentPlanNotification.Create(
+                collaborateurId,
+                $"{collab.Prenom} {collab.Nom}".Trim(),
+                collab.Email,
+                managerEmail: collab.Manager?.Email,
+                gradeActuel: collab.Grade ?? "N/A",
+                posteCible: posteCible,
+                departement: collab.Departement,
+                scoreCouvertureActuel: scoreActuel,
+                nombreCompetencesADevelopper: gaps.Count(g => g.gap > 0),
+                dureeEstimeeSemaines: gaps.Where(g => g.gap > 0).Sum(g => Math.Max(2, g.gap * 3)),
+                formations: notifFormations);
+
+            var paDevResult = await _powerAutomate.NotifyDevelopmentPlanCreatedAsync(planNotification, HttpContext.RequestAborted);
+            if (!paDevResult.Success)
+                _logger.LogWarning(
+                    "Power Automate DevelopmentPlanCreated notification failed for collaborateur {Id}: {Error}",
+                    collaborateurId, paDevResult.ErrorMessage);
 
             return Ok(new
             {

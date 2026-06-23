@@ -85,6 +85,21 @@ builder.Services.AddTransient<IEmailSender, EmailSender>();
 builder.Services.AddHttpClient<FlowiseService>();
 builder.Services.AddHttpClient();
 
+// ── Power Automate integration ────────────────────────────────────────────────
+builder.Services.Configure<PowerAutomateSettings>(
+    builder.Configuration.GetSection(PowerAutomateSettings.SectionName));
+
+builder.Services.AddHttpClient("PowerAutomate", client =>
+{
+    var timeoutSeconds = builder.Configuration
+        .GetValue<int?>($"{PowerAutomateSettings.SectionName}:TimeoutSeconds") ?? 30;
+    client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
+    client.DefaultRequestHeaders.Add("Accept", "application/json");
+    client.DefaultRequestHeaders.Add("User-Agent", "SIRH-EY/1.0");
+});
+
+builder.Services.AddScoped<IPowerAutomateService, PowerAutomateService>();
+
 var app = builder.Build();
 
 // ── SEED ─────────────────────────────────────────────────────────────────────

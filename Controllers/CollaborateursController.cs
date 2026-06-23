@@ -31,16 +31,20 @@ public class CollaborateursController : Controller
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ITeamAccessService _teamAccess;
 
+    private readonly Microsoft.AspNetCore.Identity.UI.Services.IEmailSender _emailSender;
+
     public CollaborateursController(
         ApplicationDbContext context,
         FlowiseService flowiseService,
         UserManager<ApplicationUser> userManager,
-        ITeamAccessService teamAccess)
+        ITeamAccessService teamAccess,
+        Microsoft.AspNetCore.Identity.UI.Services.IEmailSender emailSender)
     {
         _context = context;
         _flowiseService = flowiseService;
         _userManager = userManager;
         _teamAccess = teamAccess;
+        _emailSender = emailSender;
     }
 
     // public CollaborateursController(ApplicationDbContext context, FlowiseService flowiseService)
@@ -712,19 +716,24 @@ public async Task<IActionResult> AskIA([FromBody] RecommendationRequest request)
     {
 
         var partant = await _context.Collaborateurs.FindAsync(idPartant);
+        var remplacant = await _context.Collaborateurs.FindAsync(idRemplacant);
 
         if (partant != null)
-
         {
-
             partant.Actif = false;
-
             _context.Update(partant);
+
+            if (remplacant != null)
+            {
+                remplacant.Poste = partant.Poste;
+                remplacant.Departement = partant.Departement;
+                _context.Update(remplacant);
+            }
 
             await _context.SaveChangesAsync();
 
-            TempData["Success"] = $"Départ de {partant.Prenom} {partant.Nom} enregistré. Le remplaçant est maintenant actif.";
-
+            var nomRemplacant = remplacant != null ? $"{remplacant.Prenom} {remplacant.Nom}" : "le remplaçant désigné";
+            TempData["Success"] = $"Départ de {partant.Prenom} {partant.Nom} enregistré. {nomRemplacant} est maintenant affecté au poste.";
         }
 
         return RedirectToAction(nameof(Index));
@@ -794,26 +803,22 @@ public async Task<IActionResult> AskIA([FromBody] RecommendationRequest request)
 
 
         var rhEmail = "rh@ey.com";
+        var sujet = $"Demande d'entretiens — remplacement de {partant.Prenom} {partant.Nom}";
 
-        var sujet = $"Demande d'entretiens pour remplacement de {partant.Prenom} {partant.Nom}";
+        var lignesCandidats = string.Join("\n", candidats.Select(c => $"  • {c.Prenom} {c.Nom} ({c.Poste}, {c.Departement})"));
+        var commentaireBloc = !string.IsNullOrEmpty(request.Commentaire)
+            ? $"<p><strong>Commentaire du manager :</strong><br/>{System.Net.WebUtility.HtmlEncode(request.Commentaire)}</p>"
+            : "";
 
-        var corps = $"Bonjour,\n\nUne demande d'entretien a été soumise pour le remplacement de {partant.Prenom} {partant.Nom}.\n\n";
+        var html = $@"<p>Bonjour,</p>
+<p>Une demande d'entretien a été soumise pour le remplacement de <strong>{partant.Prenom} {partant.Nom}</strong>.</p>
+<p><strong>Candidats sélectionnés :</strong></p>
+<ul>{string.Join("", candidats.Select(c => $"<li>{c.Prenom} {c.Nom} — {c.Poste}, {c.Departement}</li>"))}</ul>
+{commentaireBloc}
+<p>Merci de préparer les entretiens physiques.</p>
+<p>Cordialement.</p>";
 
-        corps += "Candidats sélectionnés :\n";
-
-        foreach (var c in candidats)
-
-            corps += $"- {c.Prenom} {c.Nom} ({c.Poste}, {c.Departement})\n";
-
-        if (!string.IsNullOrEmpty(request.Commentaire))
-
-            corps += $"\nCommentaire du manager : {request.Commentaire}\n";
-
-        corps += "\nMerci de préparer les entretiens physiques.\n\nCordialement.";
-
-
-
-        System.Diagnostics.Debug.WriteLine($"Email à {rhEmail} : {sujet}\n{corps}");
+        await _emailSender.SendEmailAsync(rhEmail, sujet, html);
 
         return Ok(new { success = true });
 

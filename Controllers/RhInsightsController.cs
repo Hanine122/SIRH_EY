@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using SIRH.EY.Services.PowerAutomate;
 
 namespace SIRH.EY.Controllers;
 
@@ -19,15 +20,21 @@ public class RhInsightsController : Controller
     private readonly ApplicationDbContext _context;
     private readonly IPromotionReadinessService _promotionReadinessService;
     private readonly IWorkforceImpactService _workforceImpactService;
+    private readonly IPowerAutomateService _powerAutomate;
+    private readonly ILogger<RhInsightsController> _logger;
 
     public RhInsightsController(
         ApplicationDbContext context,
         IPromotionReadinessService promotionReadinessService,
-        IWorkforceImpactService workforceImpactService)
+        IWorkforceImpactService workforceImpactService,
+        IPowerAutomateService powerAutomate,
+        ILogger<RhInsightsController> logger)
     {
         _context = context;
         _promotionReadinessService = promotionReadinessService;
         _workforceImpactService = workforceImpactService;
+        _powerAutomate = powerAutomate;
+        _logger = logger;
     }
 
     // GET: RhInsights
@@ -302,6 +309,37 @@ public class RhInsightsController : Controller
         if (result == null)
             return NotFound(new { message = "Collaborateur introuvable." });
 
+        if (result.MultiCriteriaScore > 80)
+        {
+            var collab = await _context.Collaborateurs
+                .AsNoTracking()
+                .Where(c => c.Id == request.CollaborateurId)
+                .Select(c => new { c.Email, c.Departement })
+                .FirstOrDefaultAsync();
+
+            var notification = PromotionReadyNotification.Create(
+                result.CollaborateurId,
+                result.CollaborateurNom,
+                collab?.Email,
+                poste: result.CurrentRole.Split('-').FirstOrDefault()?.Trim() ?? result.CurrentRole,
+                grade: result.CurrentRole.Split('-').LastOrDefault()?.Trim() ?? "",
+                gradeCible: result.TargetRole,
+                departement: collab?.Departement,
+                result.MultiCriteriaScore,
+                result.ReadinessPercentage,
+                result.PromotionPotential,
+                result.EstimatedMonthsMin,
+                result.EstimatedMonthsMax,
+                competencesManquantes: result.MissingCompetencies.Select(c => c.Competence),
+                formationsRecommandees: result.RecommendedFormations.Select(f => f.FormationTitre));
+
+            var paResult = await _powerAutomate.NotifyPromotionReadyAsync(notification, HttpContext.RequestAborted);
+            if (!paResult.Success)
+                _logger.LogWarning(
+                    "Power Automate PromotionReady notification failed for collaborateur {Id}: {Error}",
+                    result.CollaborateurId, paResult.ErrorMessage);
+        }
+
         return Ok(result);
     }
 
@@ -315,6 +353,35 @@ public class RhInsightsController : Controller
         var result = await _workforceImpactService.SimulateAsync(request.CollaborateurId);
         if (result == null)
             return NotFound(new { message = "Collaborateur introuvable." });
+
+        if (result.StrategicDependencyScore > 75)
+        {
+            var collab = await _context.Collaborateurs
+                .AsNoTracking()
+                .Where(c => c.Id == request.CollaborateurId)
+                .Select(c => new { c.Email })
+                .FirstOrDefaultAsync();
+
+            var notification = SuccessionRiskNotification.Create(
+                result.CollaborateurId,
+                result.CollaborateurNom,
+                collab?.Email,
+                poste: result.Role.Split('-').FirstOrDefault()?.Trim() ?? result.Role,
+                grade: result.Role.Split('-').LastOrDefault()?.Trim(),
+                departement: result.Departement,
+                continuityRisk: result.ContinuityRisk,
+                operationalImpact: result.OperationalImpact,
+                strategicDependencyScore: result.StrategicDependencyScore,
+                riskLevel: result.RiskLevel,
+                immediateSuccessorsCount: result.ImmediateSuccessors.Count,
+                competencesCritiques: result.CompetenciesLost);
+
+            var paResult = await _powerAutomate.NotifySuccessionRiskAsync(notification, HttpContext.RequestAborted);
+            if (!paResult.Success)
+                _logger.LogWarning(
+                    "Power Automate SuccessionRisk notification failed for collaborateur {Id}: {Error}",
+                    result.CollaborateurId, paResult.ErrorMessage);
+        }
 
         return Ok(result);
     }
