@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SIRH.EY.Data;
 
@@ -11,9 +12,11 @@ using SIRH.EY.Data;
 namespace SIRH.EY.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260622233955_AddCertifications")]
+    partial class AddCertifications
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -267,7 +270,7 @@ namespace SIRH.EY.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("BusinessUnits", (string)null);
+                    b.ToTable("BusinessUnits");
                 });
 
             modelBuilder.Entity("SIRH.EY.Models.CategorieCompetence", b =>
@@ -284,7 +287,7 @@ namespace SIRH.EY.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("CategoriesCompetences", (string)null);
+                    b.ToTable("CategoriesCompetences");
                 });
 
             modelBuilder.Entity("SIRH.EY.Models.Certification", b =>
@@ -317,7 +320,7 @@ namespace SIRH.EY.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Certifications", (string)null);
+                    b.ToTable("Certifications");
                 });
 
             modelBuilder.Entity("SIRH.EY.Models.Collaborateur", b =>
@@ -471,7 +474,7 @@ namespace SIRH.EY.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Collaborateurs", (string)null);
+                    b.ToTable("Collaborateurs");
                 });
 
             modelBuilder.Entity("SIRH.EY.Models.CollaborateurCertification", b =>
@@ -503,7 +506,7 @@ namespace SIRH.EY.Migrations
 
                     b.HasIndex("CollaborateurId");
 
-                    b.ToTable("CollaborateurCertifications", (string)null);
+                    b.ToTable("CollaborateurCertifications");
                 });
 
             modelBuilder.Entity("SIRH.EY.Models.Competence", b =>
@@ -539,7 +542,7 @@ namespace SIRH.EY.Migrations
 
                     b.HasIndex("CollaborateurId");
 
-                    b.ToTable("Competences", (string)null);
+                    b.ToTable("Competences");
                 });
 
             modelBuilder.Entity("SIRH.EY.Models.CompetenceRequiseParPoste", b =>
@@ -563,7 +566,7 @@ namespace SIRH.EY.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("CompetencesRequisesParPoste", (string)null);
+                    b.ToTable("CompetencesRequisesParPoste");
                 });
 
             modelBuilder.Entity("SIRH.EY.Models.ContractType", b =>
@@ -610,7 +613,7 @@ namespace SIRH.EY.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ContractTypes", (string)null);
+                    b.ToTable("ContractTypes");
                 });
 
             modelBuilder.Entity("SIRH.EY.Models.Department", b =>
@@ -654,7 +657,7 @@ namespace SIRH.EY.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Departments", (string)null);
+                    b.ToTable("Departments");
                 });
 
             modelBuilder.Entity("SIRH.EY.Models.EvaluationCompetence", b =>
@@ -704,7 +707,7 @@ namespace SIRH.EY.Migrations
 
                     b.HasIndex("InscriptionId");
 
-                    b.ToTable("EvaluationsCompetences", (string)null);
+                    b.ToTable("EvaluationsCompetences");
                 });
 
             modelBuilder.Entity("SIRH.EY.Models.EvaluationHistorique", b =>
@@ -735,7 +738,7 @@ namespace SIRH.EY.Migrations
 
                     b.HasIndex("CompetenceId");
 
-                    b.ToTable("EvaluationsHistoriques", (string)null);
+                    b.ToTable("EvaluationsHistoriques");
                 });
 
             modelBuilder.Entity("SIRH.EY.Models.Formation", b =>
@@ -827,7 +830,7 @@ namespace SIRH.EY.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Formations", (string)null);
+                    b.ToTable("Formations");
                 });
 
             modelBuilder.Entity("SIRH.EY.Models.FormationCompetence", b =>
@@ -842,7 +845,7 @@ namespace SIRH.EY.Migrations
 
                     b.HasIndex("CompetenceId");
 
-                    b.ToTable("FormationCompetences", (string)null);
+                    b.ToTable("FormationCompetences");
                 });
 
             modelBuilder.Entity("SIRH.EY.Models.GradeEntity", b =>
@@ -885,7 +888,7 @@ namespace SIRH.EY.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Grades", (string)null);
+                    b.ToTable("Grades");
                 });
 
             modelBuilder.Entity("SIRH.EY.Models.GradeReferentiel", b =>
@@ -925,7 +928,7 @@ namespace SIRH.EY.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("GradeReferentiels", (string)null);
+                    b.ToTable("GradeReferentiels");
                 });
 
             modelBuilder.Entity("SIRH.EY.Models.Inscription", b =>
@@ -970,7 +973,7 @@ namespace SIRH.EY.Migrations
 
                     b.HasIndex("FormationId");
 
-                    b.ToTable("Inscriptions", (string)null);
+                    b.ToTable("Inscriptions");
                 });
 
             modelBuilder.Entity("SIRH.EY.Models.KeyResult", b =>
@@ -1011,7 +1014,7 @@ namespace SIRH.EY.Migrations
 
                     b.HasIndex("OKRId");
 
-                    b.ToTable("KeyResults", (string)null);
+                    b.ToTable("KeyResults");
                 });
 
             modelBuilder.Entity("SIRH.EY.Models.LocationEntity", b =>
@@ -1056,7 +1059,7 @@ namespace SIRH.EY.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Locations", (string)null);
+                    b.ToTable("Locations");
                 });
 
             modelBuilder.Entity("SIRH.EY.Models.OKR", b =>
@@ -1114,7 +1117,7 @@ namespace SIRH.EY.Migrations
 
                     b.HasIndex("ManagerId");
 
-                    b.ToTable("OKRs", (string)null);
+                    b.ToTable("OKRs");
                 });
 
             modelBuilder.Entity("SIRH.EY.Models.Parametre", b =>
@@ -1148,7 +1151,7 @@ namespace SIRH.EY.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Parametres", (string)null);
+                    b.ToTable("Parametres");
                 });
 
             modelBuilder.Entity("SIRH.EY.Models.PlanDeveloppement", b =>
@@ -1181,7 +1184,7 @@ namespace SIRH.EY.Migrations
 
                     b.HasIndex("FormationId");
 
-                    b.ToTable("PlansDeveloppement", (string)null);
+                    b.ToTable("PlansDeveloppement");
                 });
 
             modelBuilder.Entity("SIRH.EY.Models.Position", b =>
@@ -1230,7 +1233,7 @@ namespace SIRH.EY.Migrations
 
                     b.HasIndex("SubDepartmentId");
 
-                    b.ToTable("Positions", (string)null);
+                    b.ToTable("Positions");
                 });
 
             modelBuilder.Entity("SIRH.EY.Models.PositionGradeEligibility", b =>
@@ -1256,7 +1259,7 @@ namespace SIRH.EY.Migrations
 
                     b.HasIndex("PositionId");
 
-                    b.ToTable("PositionGradeEligibilities", (string)null);
+                    b.ToTable("PositionGradeEligibilities");
                 });
 
             modelBuilder.Entity("SIRH.EY.Models.PositionMandatoryFormation", b =>
@@ -1282,7 +1285,7 @@ namespace SIRH.EY.Migrations
 
                     b.HasIndex("PositionId");
 
-                    b.ToTable("PositionMandatoryFormations", (string)null);
+                    b.ToTable("PositionMandatoryFormations");
                 });
 
             modelBuilder.Entity("SIRH.EY.Models.PositionRequiredCompetence", b =>
@@ -1315,7 +1318,7 @@ namespace SIRH.EY.Migrations
 
                     b.HasIndex("PositionId");
 
-                    b.ToTable("PositionRequiredCompetences", (string)null);
+                    b.ToTable("PositionRequiredCompetences");
                 });
 
             modelBuilder.Entity("SIRH.EY.Models.SubDepartment", b =>
@@ -1364,7 +1367,7 @@ namespace SIRH.EY.Migrations
 
                     b.HasIndex("DepartmentId");
 
-                    b.ToTable("SubDepartments", (string)null);
+                    b.ToTable("SubDepartments");
                 });
 
             modelBuilder.Entity("SIRH.EY.Models.SystemParameter", b =>
@@ -1409,7 +1412,7 @@ namespace SIRH.EY.Migrations
                     b.HasIndex("Key")
                         .IsUnique();
 
-                    b.ToTable("SystemParameters", (string)null);
+                    b.ToTable("SystemParameters");
                 });
 
             modelBuilder.Entity("SIRH.EY.Models.TalentEvaluation", b =>
@@ -1453,7 +1456,7 @@ namespace SIRH.EY.Migrations
 
                     b.HasIndex("EvaluateurId");
 
-                    b.ToTable("TalentEvaluations", (string)null);
+                    b.ToTable("TalentEvaluations");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>

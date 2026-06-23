@@ -404,18 +404,35 @@ namespace SIRH.EY.Controllers
         {
             var c = await _context.Collaborateurs
                 .Include(x => x.Competences)
+                .Include(x => x.CollaborateurCertifications!)
+                    .ThenInclude(cc => cc.Certification)
                 .FirstOrDefaultAsync(x => x.Id == id);
 
             if (c == null) return NotFound(new { error = "Collaborateur non trouvé." });
 
             return Ok(new
             {
-                id          = c.Id,
-                nom         = $"{c.Prenom} {c.Nom}",
-                poste       = c.Poste,
-                grade       = c.Grade,
-                departement = c.Departement,
-                competences = c.Competences.Select(x => new { x.Nom, x.NiveauActuel })
+                id                     = c.Id,
+                nom                    = $"{c.Prenom} {c.Nom}",
+                poste                  = c.Poste,
+                grade                  = c.Grade,
+                departement            = c.Departement,
+                competences            = c.Competences?.Select(x => new { x.Nom, x.NiveauActuel }),
+                // Phase 2 — certifications
+                certifications         = c.CollaborateurCertifications?.Select(cc => new
+                {
+                    nom            = cc.Certification?.Nom,
+                    organisme      = cc.Certification?.Organisme,
+                    domaine        = cc.Certification?.Domaine,
+                    codeExamen     = cc.Certification?.CodeExamen,
+                    dateObtention  = cc.DateObtention?.ToString("yyyy-MM-dd"),
+                    dateExpiration = cc.DateExpiration?.ToString("yyyy-MM-dd"),
+                    statut         = cc.Statut,
+                }) ?? Enumerable.Empty<object>(),
+                // Phase 3 — champs CRM / Promotion Readiness
+                nombreImplementations  = c.NombreImplementations,
+                experienceDomainAnnees = c.ExperienceDomainAnnees,
+                modeDeploiement        = c.ModeDeploiement?.ToString(),
             });
         }
 
@@ -579,18 +596,33 @@ namespace SIRH.EY.Controllers
                     profilTransversal
                 };
             })
-            .OrderByDescending(c => c.profilTransversal)
-            .ThenByDescending(c => c.competencesCommunes)
-            .ThenBy(c => c.competencesManquantes.Count)
-            .Take(3)
             .ToList();
+
+            var candidatsPrincipaux = candidats
+                .Where(c => string.Equals(c.grade, partant.Grade, StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(c => c.profilTransversal)
+                .ThenByDescending(c => c.competencesCommunes)
+                .ThenBy(c => c.competencesManquantes.Count)
+                .Take(3)
+                .ToList();
+
+            var candidatsEnAttente = candidats
+                .Where(c => !string.Equals(c.grade, partant.Grade, StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(c => c.scoreMatch)
+                .Take(3)
+                .ToList();
 
             return Ok(new
             {
                 collaborateurNom    = $"{partant.Prenom} {partant.Nom}",
                 poste               = partant.Poste,
+                grade               = partant.Grade,
                 competencesRequises = requises,
-                top3                = candidats
+                top3                = candidatsPrincipaux,
+                candidatsEnAttente  = candidatsEnAttente,
+                avertissement       = candidatsEnAttente.Any()
+                    ? $"{candidatsEnAttente.Count} candidat(s) de grade différent identifié(s) — non éligibles au remplacement direct mais disponibles pour accompagnement ou montée en grade."
+                    : null
             });
         }
 
@@ -792,6 +824,356 @@ var competencesRequises = competencesRequisesRaw
             {
                 return StatusCode(500, BuildFallback("Service IA temporairement indisponible. Veuillez réessayer dans quelques instants."));
             }
+        }
+
+        // ── Certifications expirantes ─────────────────────────────────────────────
+        [AllowAnonymous]
+        [HttpGet("certifications-expirantes")]
+        public async Task<IActionResult> GetCertificationsExpirantes([FromQuery] int jours = 90)
+        {
+            var limite = DateTime.Today.AddDays(jours);
+
+            var expirantes = await _context.CollaborateurCertifications
+                .Include(cc => cc.Collaborateur)
+                .Include(cc => cc.Certification)
+                .Where(cc =>
+                    cc.Statut == "Active" &&
+                    cc.DateExpiration != null &&
+                    cc.DateExpiration >= DateTime.Today &&
+                    cc.DateExpiration <= limite)
+                .OrderBy(cc => cc.DateExpiration)
+                .ToListAsync();
+
+            return Ok(new
+            {
+                periode          = $"Dans les {jours} prochains jours",
+                total            = expirantes.Count,
+                certifications   = expirantes.Select(cc => new
+                {
+                    collaborateurId  = cc.CollaborateurId,
+                    collaborateur    = cc.Collaborateur != null ? $"{cc.Collaborateur.Prenom} {cc.Collaborateur.Nom}" : "?",
+                    poste            = cc.Collaborateur?.Poste,
+                    grade            = cc.Collaborateur?.Grade,
+                    certification    = cc.Certification?.Nom,
+                    organisme        = cc.Certification?.Organisme,
+                    domaine          = cc.Certification?.Domaine,
+                    dateExpiration   = cc.DateExpiration!.Value.ToString("yyyy-MM-dd"),
+                    joursRestants    = (int)(cc.DateExpiration!.Value - DateTime.Today).TotalDays,
+                    urgence          = (cc.DateExpiration.Value - DateTime.Today).TotalDays <= 30 ? "Critique"
+                                     : (cc.DateExpiration.Value - DateTime.Today).TotalDays <= 60 ? "Urgent"
+                                     : "À planifier",
+                })
+            });
+        }
+
+        // ── Staffing CRM — qui peut prendre quel rôle projet ─────────────────────
+        [AllowAnonymous]
+        [HttpGet("staffing-crm")]
+        public async Task<IActionResult> GetStaffingCRM([FromQuery] string role)
+        {
+            if (string.IsNullOrWhiteSpace(role))
+                return BadRequest(new { error = "Paramètre role requis, ex: ?role=Architect CRM" });
+
+            var competencesRequises = await _context.CompetencesRequisesParPoste
+                .Where(c => c.Poste == role)
+                .ToListAsync();
+
+            if (!competencesRequises.Any())
+                return NotFound(new { error = $"Rôle '{role}' inconnu dans le référentiel CRM." });
+
+            var collaborateurs = await _context.Collaborateurs
+                .Include(c => c.Competences)
+                .Include(c => c.CollaborateurCertifications!)
+                    .ThenInclude(cc => cc.Certification)
+                .Where(c => c.Actif)
+                .ToListAsync();
+
+            var nomsRequis = competencesRequises.Select(c => c.Competence).ToList();
+            var comparer   = StringComparer.OrdinalIgnoreCase;
+
+            var candidats = collaborateurs.Select(c =>
+            {
+                var comps = c.Competences?
+                    .Where(x => !string.IsNullOrWhiteSpace(x.Nom))
+                    .ToList() ?? new List<Competence>();
+
+                var matchDetails = nomsRequis.Select(req =>
+                {
+                    var found     = comps.FirstOrDefault(x => comparer.Equals(x.Nom.Trim(), req));
+                    var reqNiveau = competencesRequises.First(x => comparer.Equals(x.Competence, req)).NiveauRequis;
+                    return new { req, niveau = found?.NiveauActuel ?? 0, reqNiveau, gap = Math.Max(0, reqNiveau - (found?.NiveauActuel ?? 0)) };
+                }).ToList();
+
+                var covered   = matchDetails.Count(x => x.gap == 0);
+                var scoreComp = nomsRequis.Count > 0 ? Math.Round(covered * 100.0 / nomsRequis.Count, 1) : 0;
+                var certsActives = c.CollaborateurCertifications?
+                    .Count(cc => cc.Statut == "Active" && (cc.DateExpiration == null || cc.DateExpiration > DateTime.Today)) ?? 0;
+                var scoreCerts = Math.Min(100.0, certsActives * 25.0);
+                var scoreImpl  = Math.Min(100.0, (c.NombreImplementations ?? 0) * 20.0);
+                var scoreTotal = Math.Round(scoreComp * 0.55 + scoreCerts * 0.25 + scoreImpl * 0.20, 1);
+
+                return new
+                {
+                    id                    = c.Id,
+                    nom                   = $"{c.Prenom} {c.Nom}",
+                    poste                 = c.Poste,
+                    grade                 = c.Grade,
+                    departement           = c.Departement,
+                    scoreTotal,
+                    scoreCompetences      = scoreComp,
+                    scoreCertifications   = Math.Round(scoreCerts, 1),
+                    nombreImplementations = c.NombreImplementations ?? 0,
+                    nombreCertifications  = certsActives,
+                    competencesCouvertes  = covered,
+                    competencesRequises   = nomsRequis.Count,
+                    readiness             = scoreTotal >= 80 ? "Prêt" : scoreTotal >= 60 ? "Quasi-prêt" : scoreTotal >= 40 ? "En développement" : "Non éligible",
+                };
+            })
+            .Where(x => x.scoreTotal > 0)
+            .OrderByDescending(x => x.scoreTotal)
+            .Take(8)
+            .ToList();
+
+            return Ok(new
+            {
+                role,
+                competencesRequises = nomsRequis,
+                totalCandidats      = candidats.Count,
+                top                 = candidats,
+            });
+        }
+
+        // ── KPIs CRM — tableau de bord compétences CRM de l'équipe ───────────────
+        [AllowAnonymous]
+        [HttpGet("kpi-crm")]
+        public async Task<IActionResult> GetKpiCRM()
+        {
+            var collaborateurs = await _context.Collaborateurs
+                .Include(c => c.Competences)
+                .Include(c => c.CollaborateurCertifications!)
+                    .ThenInclude(cc => cc.Certification)
+                .Where(c => c.Actif)
+                .ToListAsync();
+
+            var rolesCRM = new[]
+            {
+                "Technical Consultant CRM", "Functional Consultant CRM", "Techno Functional CRM",
+                "Business Analyst CRM", "Quality Analyst CRM", "Project Manager CRM", "Architect CRM"
+            };
+            var competencesCRMCles = new[]
+            {
+                "Microsoft Dynamics 365 CRM", "Power Platform", "Intégration ERP/CRM",
+                "D365 Sales & Customer Service", "Architecture solution"
+            };
+
+            var totalCollabs = collaborateurs.Count;
+
+            var avecCertsCRM = collaborateurs.Count(c =>
+                c.CollaborateurCertifications?.Any(cc =>
+                    cc.Statut == "Active" &&
+                    (cc.DateExpiration == null || cc.DateExpiration > DateTime.Today) &&
+                    cc.Certification?.Domaine != null &&
+                    cc.Certification.Domaine.Contains("CRM", StringComparison.OrdinalIgnoreCase)
+                ) == true);
+
+            var avgImpl = collaborateurs.Any(c => c.NombreImplementations.HasValue)
+                ? Math.Round(collaborateurs.Where(c => c.NombreImplementations.HasValue).Average(c => (double)c.NombreImplementations!.Value), 1)
+                : 0.0;
+
+            var distModes = collaborateurs
+                .Where(c => c.ModeDeploiement.HasValue)
+                .GroupBy(c => c.ModeDeploiement!.Value.ToString())
+                .Select(g => new { mode = g.Key, count = g.Count() })
+                .ToList();
+
+            var referentielCRM = await _context.CompetencesRequisesParPoste
+                .Where(c => rolesCRM.Contains(c.Poste))
+                .ToListAsync();
+
+            var couvertureRoles = rolesCRM.Select(role =>
+            {
+                var reqRole = referentielCRM.Where(c => c.Poste == role).Select(c => c.Competence).ToList();
+                var eligible = collaborateurs.Count(c =>
+                {
+                    var noms = c.Competences?.Select(x => x.Nom?.Trim()).Where(n => n != null).ToList() ?? new List<string?>();
+                    var covered = reqRole.Count(req => noms.Any(n => string.Equals(n, req, StringComparison.OrdinalIgnoreCase)));
+                    return reqRole.Count > 0 && covered * 100.0 / reqRole.Count >= 50;
+                });
+                return new { role, eligible, couverturePct = totalCollabs > 0 ? Math.Round(eligible * 100.0 / totalCollabs, 0) : 0.0 };
+            }).ToList();
+
+            var niveauxCles = competencesCRMCles.Select(comp =>
+            {
+                var vals = collaborateurs
+                    .SelectMany(c => c.Competences ?? Enumerable.Empty<Competence>())
+                    .Where(c => string.Equals(c.Nom?.Trim(), comp, StringComparison.OrdinalIgnoreCase))
+                    .Select(c => (double)c.NiveauActuel)
+                    .ToList();
+                return new { competence = comp, nCollaborateurs = vals.Count, niveauMoyen = vals.Any() ? Math.Round(vals.Average(), 1) : 0.0 };
+            }).ToList();
+
+            return Ok(new
+            {
+                totalCollaborateurs             = totalCollabs,
+                tauxCertificationCRM            = totalCollabs > 0 ? Math.Round(avecCertsCRM * 100.0 / totalCollabs, 1) : 0.0,
+                nombreCollabsCertifiesCRM       = avecCertsCRM,
+                moyenneImplementations          = avgImpl,
+                distributionModeDeploiement     = distModes,
+                couvertureRolesCRM              = couvertureRoles,
+                niveauxCompetencesCRMCles       = niveauxCles,
+            });
+        }
+
+        // ── Plan de développement intelligent — gap rôle CRM → formations ─────────
+        [AllowAnonymous]
+        [HttpGet("plan-developpement/{collaborateurId}")]
+        public async Task<IActionResult> GetPlanDeveloppement(int collaborateurId, [FromQuery] string posteCible)
+        {
+            if (string.IsNullOrWhiteSpace(posteCible))
+                return BadRequest(new { error = "Paramètre posteCible requis, ex: ?posteCible=Architect CRM" });
+
+            var collab = await _context.Collaborateurs
+                .Include(c => c.Competences)
+                .Include(c => c.CollaborateurCertifications!)
+                    .ThenInclude(cc => cc.Certification)
+                .FirstOrDefaultAsync(c => c.Id == collaborateurId);
+
+            if (collab == null) return NotFound(new { error = "Collaborateur introuvable." });
+
+            var reqs = await _context.CompetencesRequisesParPoste
+                .Where(c => c.Poste == posteCible)
+                .ToListAsync();
+
+            if (!reqs.Any())
+                return NotFound(new { error = $"Rôle cible '{posteCible}' introuvable dans le référentiel." });
+
+            var nomsActuels = (collab.Competences ?? Enumerable.Empty<Competence>())
+                .Where(c => !string.IsNullOrWhiteSpace(c.Nom))
+                .ToDictionary(c => c.Nom.Trim(), c => c.NiveauActuel, StringComparer.OrdinalIgnoreCase);
+
+            var gaps = reqs.Select(req =>
+            {
+                nomsActuels.TryGetValue(req.Competence, out var niveau);
+                var gap = Math.Max(0, req.NiveauRequis - niveau);
+                return new { competence = req.Competence, niveauActuel = niveau, niveauRequis = req.NiveauRequis, gap, statut = niveau >= req.NiveauRequis ? "Couvert" : niveau > 0 ? "À renforcer" : "Manquant" };
+            })
+            .OrderByDescending(g => g.gap)
+            .ToList();
+
+            var formations = await _context.Formations
+                .Where(f => f.Categorie == "CRM" || (f.DomaineCompetence != null && f.DomaineCompetence.Contains("CRM")))
+                .ToListAsync();
+
+            var plan = gaps.Where(g => g.gap > 0).Select(g =>
+            {
+                var f = formations.FirstOrDefault(x =>
+                    (!string.IsNullOrEmpty(x.CompetenceVisee) && x.CompetenceVisee.Contains(g.competence, StringComparison.OrdinalIgnoreCase))
+                    || x.Titre.Contains(g.competence, StringComparison.OrdinalIgnoreCase));
+
+                return new
+                {
+                    competence = g.competence,
+                    gap        = g.gap,
+                    statut     = g.statut,
+                    priorite   = g.gap >= 3 ? "Critique" : g.gap == 2 ? "Haute" : "Normale",
+                    formation  = f == null ? null : (object)new
+                    {
+                        id              = f.Id,
+                        titre           = f.Titre,
+                        dureeHeures     = f.DureeHeures,
+                        plateforme      = f.Plateforme,
+                        certificationVisee = f.CertificationNom,
+                        estCertifiante  = f.EstCertifiante,
+                        niveauDifficulte = f.NiveauDifficulte,
+                    },
+                };
+            }).ToList();
+
+            var certsActives = collab.CollaborateurCertifications?
+                .Where(cc => cc.Statut == "Active" && (cc.DateExpiration == null || cc.DateExpiration > DateTime.Today))
+                .Select(cc => cc.Certification?.Nom).Where(n => n != null).ToList() ?? new List<string?>();
+
+            var scoreActuel = reqs.Count > 0 ? Math.Round(gaps.Count(g => g.gap == 0) * 100.0 / reqs.Count, 1) : 0.0;
+
+            return Ok(new
+            {
+                collaborateurNom         = $"{collab.Prenom} {collab.Nom}",
+                gradeActuel              = collab.Grade,
+                posteCible,
+                scoreCouverte            = scoreActuel,
+                totalCompetences         = reqs.Count,
+                competencesCouvertes     = gaps.Count(g => g.gap == 0),
+                competencesADevelopper   = gaps.Count(g => g.gap > 0),
+                certificationsDejaPossedees = certsActives,
+                nombreImplementations    = collab.NombreImplementations ?? 0,
+                planDeveloppement        = plan,
+                dureeEstimeeSemaines     = plan.Sum(p => Math.Max(2, p.gap * 3)),
+            });
+        }
+
+        // ── Phase 4 — Critères de promotion par grade ────────────────────────────
+        [AllowAnonymous]
+        [HttpGet("criteres-promotion")]
+        public async Task<IActionResult> GetCriteresPromotion([FromQuery] string? grade = null)
+        {
+            var tous = await _context.GradeReferentiels
+                .OrderBy(g => g.Niveau)
+                .ToListAsync();
+
+            if (!tous.Any())
+                return NotFound(new { error = "Référentiel de grades non initialisé." });
+
+            if (string.IsNullOrWhiteSpace(grade))
+            {
+                return Ok(new
+                {
+                    referentiel = tous.Select(g => new
+                    {
+                        grade                    = g.Grade,
+                        niveau                   = g.Niveau,
+                        niveauMinCompetences     = g.NiveauMinCompetences,
+                        ancienneteMinAns         = g.AncienneteMinAns,
+                        nombreImplementationsMin = g.NombreImplementationsMin,
+                        experienceDomainMinAns   = g.ExperienceDomainMinAns,
+                        gradeSuivant             = g.GradeSuivant,
+                        description              = g.Description,
+                    })
+                });
+            }
+
+            var actuel = tous.FirstOrDefault(g =>
+                string.Equals(g.Grade, grade.Trim(), StringComparison.OrdinalIgnoreCase));
+
+            if (actuel == null)
+                return NotFound(new { error = $"Grade '{grade}' non trouvé dans le référentiel." });
+
+            var suivant = string.IsNullOrEmpty(actuel.GradeSuivant)
+                ? null
+                : tous.FirstOrDefault(g =>
+                    string.Equals(g.Grade, actuel.GradeSuivant, StringComparison.OrdinalIgnoreCase));
+
+            return Ok(new
+            {
+                grade   = actuel.Grade,
+                niveau  = actuel.Niveau,
+                criteresPourMaintenir = new
+                {
+                    niveauMinCompetences     = actuel.NiveauMinCompetences,
+                    ancienneteMinAns         = actuel.AncienneteMinAns,
+                    nombreImplementationsMin = actuel.NombreImplementationsMin,
+                    experienceDomainMinAns   = actuel.ExperienceDomainMinAns,
+                    description              = actuel.Description,
+                },
+                gradeSuivant = suivant == null ? null : (object)new
+                {
+                    grade                    = suivant.Grade,
+                    niveauMinCompetences     = suivant.NiveauMinCompetences,
+                    ancienneteMinAns         = suivant.AncienneteMinAns,
+                    nombreImplementationsMin = suivant.NombreImplementationsMin,
+                    experienceDomainMinAns   = suivant.ExperienceDomainMinAns,
+                    description              = suivant.Description,
+                },
+            });
         }
 
         private static object BuildFallback(string message) => new

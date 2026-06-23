@@ -344,29 +344,26 @@ public async Task<IActionResult> AskIA([FromBody] RecommendationRequest request)
 
 
         var ordre = candidats
-
+            .Where(c => string.Equals(c.Grade, partant.Grade, StringComparison.OrdinalIgnoreCase))
             .OrderByDescending(c => c.ProfilTransversal)
-
             .ThenByDescending(c => c.NbCompetencesCommunes)
-
             .ThenBy(c => c.CompetencesManquantes.Count)
-
             .ThenBy(c => c.Nom)
-
             .ToList();
 
-
+        var enAttente = candidats
+            .Where(c => !string.Equals(c.Grade, partant.Grade, StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(c => c.NbCompetencesCommunes)
+            .ThenBy(c => c.CompetencesManquantes.Count)
+            .Take(3)
+            .ToList();
 
         var vm = new ChoisirRemplacantViewModel
-
         {
-
             Partant = partant,
-
             CompetencesRequises = requises,
-
-            Candidats = ordre
-
+            Candidats = ordre,
+            CandidatsEnAttente = enAttente
         };
 
 

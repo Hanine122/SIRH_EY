@@ -126,6 +126,33 @@
     </div>
 }
 
+@if (Model.CandidatsEnAttente.Any())
+{
+    <div class="ey-card p-4 mb-4">
+        <div class="text-uppercase small text-muted fw-semibold mb-2">Candidats en attente — grade différent</div>
+        <div class="alert alert-warning py-2 small mb-3">
+            Ces @Model.CandidatsEnAttente.Count candidat(s) ont été identifiés comme compatibles en compétences
+            mais ne sont pas du même grade que @Model.Partant.Prenom @Model.Partant.Nom.
+            Ils ne sont pas éligibles au remplacement direct. Une montée en grade ou un accompagnement
+            spécifique serait nécessaire avant transition.
+        </div>
+        <div class="row g-3">
+            @foreach (var c in Model.CandidatsEnAttente)
+            {
+                <div class="col-md-4">
+                    <div class="ey-detector-card" style="opacity:0.75;border:1px dashed #ccc">
+                        <div class="ey-detector-rank text-muted">En attente</div>
+                        <div class="fw-bold">@c.Prenom @c.Nom</div>
+                        <div class="small text-muted">@c.Poste · @c.Departement</div>
+                        <div class="small mt-1">Grade : <strong>@c.Grade</strong> (vs @Model.Partant.Grade requis)</div>
+                        <div class="small">@c.NbCompetencesCommunes compétence(s) commune(s)</div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+}
+
 @if (!Model.Candidats.Any())
 {
     <div class="alert alert-secondary">Aucun collaborateur actif disponible pour la comparaison.</div>

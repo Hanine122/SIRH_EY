@@ -44,6 +44,13 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<PositionMandatoryFormation> PositionMandatoryFormations { get; set; }
     public DbSet<PositionGradeEligibility> PositionGradeEligibilities { get; set; }
 
+    // ── Phase 2 — Certifications ──────────────────────────────────────────────
+    public DbSet<Certification> Certifications { get; set; }
+    public DbSet<CollaborateurCertification> CollaborateurCertifications { get; set; }
+
+    // ── Phase 4 — Grade Référentiel ───────────────────────────────────────────
+    public DbSet<GradeReferentiel> GradeReferentiels { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -184,5 +191,24 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         modelBuilder.Entity<SystemParameter>()
             .HasIndex(p => p.Key)
             .IsUnique();
+
+        // ── Phase 2 : CollaborateurCertification → Collaborateur ──────────────
+        modelBuilder.Entity<CollaborateurCertification>()
+            .HasOne(cc => cc.Collaborateur)
+            .WithMany(c => c.CollaborateurCertifications)
+            .HasForeignKey(cc => cc.CollaborateurId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<CollaborateurCertification>()
+            .HasOne(cc => cc.Certification)
+            .WithMany(cert => cert.CollaborateurCertifications)
+            .HasForeignKey(cc => cc.CertificationId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // ── Phase 3 : ModeDeploiement stocké en string lisible ────────────────
+        modelBuilder.Entity<Collaborateur>()
+            .Property(c => c.ModeDeploiement)
+            .HasConversion<string>()
+            .HasMaxLength(20);
     }
 }

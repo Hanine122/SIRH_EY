@@ -258,6 +258,18 @@ using (var scope = app.Services.CreateScope())
     // 10. Postes référentiel — CompetencesRequisesParPoste for Partner, Director, Senior Manager
     await PostesReferentielSeeder.SeedAsync(context);
 
+    // 11. Compétences IT/CRM — 7 profils CRM issus de la matrice de compétences PDF
+    await CompetencesITCRMSeeder.SeedAsync(context);
+
+    // 12. Formations CRM — 12 formations D365 / Power Platform / Azure
+    await FormationsCRMSeeder.SeedAsync(context);
+
+    // 13. Certifications — catalogue + liaisons collaborateurs
+    await CertificationsSeeder.SeedAsync(context);
+
+    // 14. Grade Référentiel — seuils de promotion par grade EY
+    await GradeReferentielSeeder.SeedAsync(context);
+
 }
 
 // ── MIDDLEWARE ────────────────────────────────────────────────────────────────

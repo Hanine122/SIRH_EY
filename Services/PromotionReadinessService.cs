@@ -50,6 +50,8 @@ public class PromotionReadinessService : IPromotionReadinessService
         var collaborateur = await _context.Collaborateurs
             .Include(c => c.Competences)
             .Include(c => c.Inscriptions)
+            .Include(c => c.CollaborateurCertifications!)
+                .ThenInclude(cc => cc.Certification)
             .FirstOrDefaultAsync(c => c.Id == collaborateurId && c.Actif);
 
         if (collaborateur == null)
@@ -94,9 +96,35 @@ public class PromotionReadinessService : IPromotionReadinessService
             .Count(i => i.Terminee || i.Progression >= 80);
         var leadershipIndicators = ResolveLeadershipIndicators(collaborateur, currentSkills, completedTrainings);
         var transversalSkills = ResolveTransversalSkills(currentSkills.Keys.ToList());
-        var promotionPotential = Math.Round(Math.Min(98, readiness * 0.58 + compatibilityScore * 0.24 + leadershipIndicators.Count * 5 + completedTrainings * 2), 1);
         var recommendations = BuildFormationRecommendations(missing, formations);
         var months = EstimateMonths(totalGap, completedTrainings, recommendations.Count);
+
+        // ── Score multi-critères (Phase 3+4) ─────────────────────────────────
+       var gradeRef = await _context.GradeReferentiels
+    .AsNoTracking()
+    .FirstOrDefaultAsync(g => g.Grade == target.Grade);
+
+        var certsActives = (collaborateur.CollaborateurCertifications ?? Enumerable.Empty<CollaborateurCertification>())
+            .Count(cc => cc.Statut == "Active" && (cc.DateExpiration == null || cc.DateExpiration > DateTime.Today));
+
+        var nbImplem = collaborateur.NombreImplementations ?? 0;
+        var ancienneteAns = (DateTime.Today - collaborateur.DateEmbauche).TotalDays / 365.25;
+
+        var scoreComp  = readiness;
+        var scoreCerts = Math.Min(100.0, certsActives * 25.0);
+        var scoreImpl  = gradeRef is { NombreImplementationsMin: > 0 }
+            ? Math.Min(100.0, nbImplem * 100.0 / gradeRef.NombreImplementationsMin)
+            : Math.Min(100.0, nbImplem * 20.0);
+        var scoreAnc   = gradeRef is { AncienneteMinAns: > 0 }
+            ? Math.Min(100.0, ancienneteAns * 100.0 / gradeRef.AncienneteMinAns)
+            : Math.Min(100.0, ancienneteAns * 25.0);
+
+        var multiCriteriaScore = Math.Round(0.40 * scoreComp + 0.25 * scoreCerts + 0.20 * scoreImpl + 0.15 * scoreAnc, 1);
+
+        // Mise à jour de PromotionPotential — intègre les nouveaux critères quand les données CRM sont présentes
+        var promotionPotential = (certsActives > 0 || nbImplem > 0)
+            ? Math.Round(Math.Min(98, multiCriteriaScore * 0.75 + leadershipIndicators.Count * 4 + completedTrainings * 1.5), 1)
+            : Math.Round(Math.Min(98, readiness * 0.58 + compatibilityScore * 0.24 + leadershipIndicators.Count * 5 + completedTrainings * 2), 1);
 
         return new PromotionReadinessResultViewModel
         {
@@ -113,7 +141,23 @@ public class PromotionReadinessService : IPromotionReadinessService
             LeadershipIndicators = leadershipIndicators,
             MissingCompetencies = gaps,
             RecommendedFormations = recommendations,
-            ExecutiveSummary = BuildExecutiveSummary(collaborateur, target, missing, transversalSkills, leadershipIndicators, months)
+            ExecutiveSummary = BuildExecutiveSummary(collaborateur, target, missing, transversalSkills, leadershipIndicators, months),
+            MultiCriteriaScore = multiCriteriaScore,
+            CriteriaBreakdown = new MultiCriteriaBreakdownViewModel
+            {
+                ScoreCompetences        = Math.Round(scoreComp, 1),
+                ScoreCertifications     = Math.Round(scoreCerts, 1),
+                ScoreImplementations    = Math.Round(scoreImpl, 1),
+                ScoreAnciennete         = Math.Round(scoreAnc, 1),
+                NombreCertificationsActives   = certsActives,
+                NombreImplementations         = nbImplem,
+                AncienneteAns                 = Math.Round(ancienneteAns, 1),
+                GradeReferentielNom           = gradeRef?.Grade,
+                GradeSuivant                  = gradeRef?.GradeSuivant,
+                SeuilCompetencesRequis        = gradeRef?.NiveauMinCompetences,
+                SeuilImplementationsRequis    = gradeRef?.NombreImplementationsMin,
+                SeuilAncienneteRequis         = gradeRef?.AncienneteMinAns,
+            }
         };
     }
 

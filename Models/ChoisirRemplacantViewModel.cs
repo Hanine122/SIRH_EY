@@ -5,6 +5,7 @@ namespace SIRH.EY.Models
         public Collaborateur Partant { get; set; } = null!;
         public List<string> CompetencesRequises { get; set; } = new();
         public List<CandidatDetail> Candidats { get; set; } = new();
+        public List<CandidatDetail> CandidatsEnAttente { get; set; } = new();
     }
 
     public class CandidatDetail

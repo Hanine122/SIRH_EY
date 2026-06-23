@@ -139,6 +139,31 @@ namespace SIRH.EY.Models.InsightsAI
         public List<PromotionCompetencyGapViewModel> MissingCompetencies { get; set; } = new();
         public List<PromotionFormationRecommendationViewModel> RecommendedFormations { get; set; } = new();
         public string ExecutiveSummary { get; set; } = "";
+
+        // Score multi-critères (Phase 3+4) — additive, n'écrase pas les champs existants
+        public double MultiCriteriaScore { get; set; }
+        public MultiCriteriaBreakdownViewModel? CriteriaBreakdown { get; set; }
+    }
+
+    public class MultiCriteriaBreakdownViewModel
+    {
+        // Sous-scores pondérés (sur 100 chacun)
+        public double ScoreCompetences { get; set; }      // poids 40%
+        public double ScoreCertifications { get; set; }   // poids 25%
+        public double ScoreImplementations { get; set; }  // poids 20%
+        public double ScoreAnciennete { get; set; }       // poids 15%
+
+        // Données brutes
+        public int NombreCertificationsActives { get; set; }
+        public int NombreImplementations { get; set; }
+        public double AncienneteAns { get; set; }
+
+        // Seuils du référentiel pour le grade cible
+        public string? GradeReferentielNom { get; set; }
+        public string? GradeSuivant { get; set; }
+        public double? SeuilCompetencesRequis { get; set; }
+        public int? SeuilImplementationsRequis { get; set; }
+        public int? SeuilAncienneteRequis { get; set; }
     }
 
     public class PromotionCompetencyGapViewModel

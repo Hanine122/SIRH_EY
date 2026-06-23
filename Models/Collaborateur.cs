@@ -87,8 +87,14 @@ public class Collaborateur
         ? 0
         : (int)((DateTime.Today - DateEmbauche.Date).TotalDays / 365.25);
 
+    // ── Phase 3 — Champs CRM / Promotion Readiness ──────────────────────────
+    public int? NombreImplementations { get; set; }
+    public int? ExperienceDomainAnnees { get; set; }
+    public ModeDeploiement? ModeDeploiement { get; set; }
+
     public Collaborateur? Manager { get; set; }
     public ICollection<Collaborateur>? Equipe { get; set; }
     public ICollection<Competence>? Competences { get; set; }
     public ICollection<Inscription>? Inscriptions { get; set; }
+    public ICollection<CollaborateurCertification>? CollaborateurCertifications { get; set; }
 }
