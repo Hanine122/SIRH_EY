@@ -288,6 +288,12 @@ using (var scope = app.Services.CreateScope())
     // 15. Succession enrichment — cross-compétences pour pools de succession cohérents
     await SuccessionEnrichmentSeeder.SeedAsync(context);
 
+    // 16. HR Data Correction — PotentielCarriere fr→en, RoleRH SM, Leadership Seniors
+    await HrDataCorrectionSeeder.SeedAsync(context);
+
+    // 17. Postes référentiel completion — 7 postes manquants (Manager, Senior Consultant…)
+    await MissingReferentielSeeder.SeedAsync(context);
+
 }
 
 // ── MIDDLEWARE ────────────────────────────────────────────────────────────────

@@ -99,64 +99,81 @@ public class PromotionReadinessService : IPromotionReadinessService
         var recommendations = BuildFormationRecommendations(missing, formations);
         var months = EstimateMonths(totalGap, completedTrainings, recommendations.Count);
 
-        // ── Score multi-critères (Phase 3+4) ─────────────────────────────────
-       var gradeRef = await _context.GradeReferentiels
-    .AsNoTracking()
-    .FirstOrDefaultAsync(g => g.Grade == target.Grade);
+        // ── Score multi-critères — formule 40 / 25 / 20 / 15 ────────────────────
+        var gradeRef = await _context.GradeReferentiels
+            .AsNoTracking()
+            .FirstOrDefaultAsync(g => g.Grade == target.Grade);
 
-        var certsActives = (collaborateur.CollaborateurCertifications ?? Enumerable.Empty<CollaborateurCertification>())
-            .Count(cc => cc.Statut == "Active" && (cc.DateExpiration == null || cc.DateExpiration > DateTime.Today));
-
-        var nbImplem = collaborateur.NombreImplementations ?? 0;
         var ancienneteAns = (DateTime.Today - collaborateur.DateEmbauche).TotalDays / 365.25;
 
-        var scoreComp  = readiness;
-        var scoreCerts = Math.Min(100.0, certsActives * 25.0);
-        var scoreImpl  = gradeRef is { NombreImplementationsMin: > 0 }
-            ? Math.Min(100.0, nbImplem * 100.0 / gradeRef.NombreImplementationsMin)
-            : Math.Min(100.0, nbImplem * 20.0);
-        var scoreAnc   = gradeRef is { AncienneteMinAns: > 0 }
+        // 40 % — compétences (readiness déjà calculée : couverture pondérée des gaps)
+        var scoreComp = readiness;
+
+        // 25 % — performance : TalentEvaluation.PerformanceScore (1-5 → 20-100)
+        //         fallback : NiveauPreparationSuccession (0-100) ou 50 neutre
+        var talentEval = await _context.TalentEvaluations
+            .AsNoTracking()
+            .Where(t => t.CollaborateurId == collaborateur.Id && t.Actif)
+            .OrderByDescending(t => t.DateEvaluation)
+            .FirstOrDefaultAsync();
+
+        var scorePerformance = talentEval != null
+            ? Math.Min(100.0, talentEval.PerformanceScore * 20.0)
+            : collaborateur.NiveauPreparationSuccession ?? 50;
+
+        // 20 % — potentiel : TalentEvaluation.PotentielScore > PotentielCarriere string > neutre 40
+        var scorePotentiel = talentEval != null
+            ? Math.Min(100.0, talentEval.PotentielScore * 20.0)
+            : (collaborateur.PotentielCarriere?.Trim().ToLowerInvariant()) switch
+            {
+                "high"   => 100.0,
+                "medium" => 60.0,
+                "low"    => 20.0,
+                _        => 40.0
+            };
+
+        // 15 % — ancienneté relative au seuil du grade cible
+        var scoreAnc = gradeRef is { AncienneteMinAns: > 0 }
             ? Math.Min(100.0, ancienneteAns * 100.0 / gradeRef.AncienneteMinAns)
             : Math.Min(100.0, ancienneteAns * 25.0);
 
-        var multiCriteriaScore = Math.Round(0.40 * scoreComp + 0.25 * scoreCerts + 0.20 * scoreImpl + 0.15 * scoreAnc, 1);
+        var multiCriteriaScore = Math.Round(
+            0.40 * scoreComp + 0.25 * scorePerformance + 0.20 * scorePotentiel + 0.15 * scoreAnc, 1);
 
-        // Mise à jour de PromotionPotential — intègre les nouveaux critères quand les données CRM sont présentes
-        var promotionPotential = (certsActives > 0 || nbImplem > 0)
-            ? Math.Round(Math.Min(98, multiCriteriaScore * 0.75 + leadershipIndicators.Count * 4 + completedTrainings * 1.5), 1)
-            : Math.Round(Math.Min(98, readiness * 0.58 + compatibilityScore * 0.24 + leadershipIndicators.Count * 5 + completedTrainings * 2), 1);
+        // PromotionPotential = score directement (plus de coefficients magiques)
+        var promotionPotential = Math.Round(Math.Min(98.0, multiCriteriaScore), 1);
 
         return new PromotionReadinessResultViewModel
         {
-            CollaborateurId = collaborateur.Id,
+            CollaborateurId  = collaborateur.Id,
             CollaborateurNom = $"{collaborateur.Prenom} {collaborateur.Nom}".Trim(),
-            CurrentRole = $"{collaborateur.Poste} - {collaborateur.Grade}".Trim(' ', '-'),
-            TargetRole = $"{target.Poste} - {target.Grade}".Trim(' ', '-'),
-            ReadinessPercentage = readiness,
-            CompatibilityScore = compatibilityScore,
-            PromotionPotential = promotionPotential,
-            EstimatedMonthsMin = months.Min,
-            EstimatedMonthsMax = months.Max,
-            TransversalSkills = transversalSkills,
+            CurrentRole      = $"{collaborateur.Poste} - {collaborateur.Grade}".Trim(' ', '-'),
+            TargetRole       = $"{target.Poste} - {target.Grade}".Trim(' ', '-'),
+            ReadinessPercentage  = readiness,
+            CompatibilityScore   = compatibilityScore,
+            PromotionPotential   = promotionPotential,
+            EstimatedMonthsMin   = months.Min,
+            EstimatedMonthsMax   = months.Max,
+            TransversalSkills    = transversalSkills,
             LeadershipIndicators = leadershipIndicators,
-            MissingCompetencies = gaps,
+            MissingCompetencies  = gaps,
             RecommendedFormations = recommendations,
             ExecutiveSummary = BuildExecutiveSummary(collaborateur, target, missing, transversalSkills, leadershipIndicators, months),
             MultiCriteriaScore = multiCriteriaScore,
             CriteriaBreakdown = new MultiCriteriaBreakdownViewModel
             {
-                ScoreCompetences        = Math.Round(scoreComp, 1),
-                ScoreCertifications     = Math.Round(scoreCerts, 1),
-                ScoreImplementations    = Math.Round(scoreImpl, 1),
-                ScoreAnciennete         = Math.Round(scoreAnc, 1),
-                NombreCertificationsActives   = certsActives,
-                NombreImplementations         = nbImplem,
-                AncienneteAns                 = Math.Round(ancienneteAns, 1),
-                GradeReferentielNom           = gradeRef?.Grade,
-                GradeSuivant                  = gradeRef?.GradeSuivant,
-                SeuilCompetencesRequis        = gradeRef?.NiveauMinCompetences,
-                SeuilImplementationsRequis    = gradeRef?.NombreImplementationsMin,
-                SeuilAncienneteRequis         = gradeRef?.AncienneteMinAns,
+                ScoreCompetences  = Math.Round(scoreComp, 1),
+                ScorePerformance  = Math.Round(scorePerformance, 1),
+                ScorePotentiel    = Math.Round(scorePotentiel, 1),
+                ScoreAnciennete   = Math.Round(scoreAnc, 1),
+                PerformanceScore  = talentEval?.PerformanceScore,
+                PotentielScore    = talentEval?.PotentielScore,
+                PotentielCarriere = collaborateur.PotentielCarriere,
+                AncienneteAns     = Math.Round(ancienneteAns, 1),
+                GradeReferentielNom       = gradeRef?.Grade,
+                GradeSuivant              = gradeRef?.GradeSuivant,
+                SeuilCompetencesRequis    = gradeRef?.NiveauMinCompetences,
+                SeuilAncienneteRequis     = gradeRef?.AncienneteMinAns,
             }
         };
     }
@@ -217,24 +234,32 @@ public class PromotionReadinessService : IPromotionReadinessService
 
     private async Task<List<RequiredCompetency>> ResolveRequiredCompetenciesAsync(string poste, string grade)
     {
-        var required = await _context.CompetencesRequisesParPoste
+        // Utilise NiveauRequis réel depuis CompetencesRequisesParPoste
+        var fromDb = await _context.CompetencesRequisesParPoste
             .AsNoTracking()
             .Where(c => c.Poste == poste)
-            .Select(c => c.Competence)
+            .Select(c => new { c.Competence, c.NiveauRequis })
             .ToListAsync();
 
-        var names = required
-            .Where(c => !string.IsNullOrWhiteSpace(c))
-            .Select(c => c.Trim())
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .Take(8)
-            .ToList();
+        if (fromDb.Any())
+        {
+            return fromDb
+                .Where(c => !string.IsNullOrWhiteSpace(c.Competence))
+                .GroupBy(c => c.Competence.Trim(), StringComparer.OrdinalIgnoreCase)
+                .Select(g => new RequiredCompetency(g.Key, g.Max(x => x.NiveauRequis)))
+                .Take(8)
+                .ToList();
+        }
 
-        if (!names.Any())
-            names = BuildFallbackCompetencies(poste, grade);
-
-        var requiredLevel = grade.Contains("Manager", StringComparison.OrdinalIgnoreCase) ? 4 : grade.Contains("Senior", StringComparison.OrdinalIgnoreCase) ? 3 : 2;
-        return names.Select(n => new RequiredCompetency(n, requiredLevel)).ToList();
+        // Fallback : niveau générique calibré sur le grade cible
+        var names = BuildFallbackCompetencies(poste, grade);
+        var fallbackLevel = grade.Contains("Partner", StringComparison.OrdinalIgnoreCase)     ? 5
+            : grade.Contains("Director", StringComparison.OrdinalIgnoreCase)                  ? 5
+            : grade.Contains("Senior Manager", StringComparison.OrdinalIgnoreCase)            ? 4
+            : grade.Contains("Manager", StringComparison.OrdinalIgnoreCase)                   ? 4
+            : grade.Contains("Senior", StringComparison.OrdinalIgnoreCase)                    ? 3
+            : 2;
+        return names.Select(n => new RequiredCompetency(n, fallbackLevel)).ToList();
     }
 
     private static List<string> BuildFallbackCompetencies(string poste, string grade)

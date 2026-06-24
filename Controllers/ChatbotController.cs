@@ -329,31 +329,218 @@ namespace SIRH.EY.Controllers
                 .Where(c => c.Actif)
                 .ToListAsync();
 
+            var talentEvals = await _context.TalentEvaluations
+                .Where(t => t.Actif)
+                .ToListAsync();
+
+            var gradeRefs = await _context.GradeReferentiels.ToListAsync();
+
             var query = collaborateurs
-                .Select(c => new
+                .Select(c =>
                 {
-                    id          = c.Id,
-                    nom         = $"{c.Prenom} {c.Nom}",
-                    poste       = c.Poste,
-                    grade       = c.Grade,
-                    departement = c.Departement,
-                    score       = c.Competences.Any()
-                        ? Math.Round(c.Competences.Average(x => (double)x.NiveauActuel), 1)
-                        : 0
+                    var eval       = talentEvals.FirstOrDefault(t => t.CollaborateurId == c.Id);
+                    var gradeRef   = gradeRefs.FirstOrDefault(g => string.Equals(g.Grade, c.Grade, StringComparison.OrdinalIgnoreCase));
+                    var gradeNext  = gradeRef?.GradeSuivant != null
+                        ? gradeRefs.FirstOrDefault(g => string.Equals(g.Grade, gradeRef.GradeSuivant, StringComparison.OrdinalIgnoreCase))
+                        : null;
+                    var anciennete = (DateTime.Today - c.DateEmbauche).TotalDays / 365.25;
+
+                    // 40 % compétences — NiveauPreparationSuccession (0-100) ou moyenne normalisée
+                    var scoreComp = c.NiveauPreparationSuccession.HasValue
+                        ? (double)c.NiveauPreparationSuccession.Value
+                        : (c.Competences?.Any() == true
+                            ? Math.Min(100.0, c.Competences.Average(x => (double)x.NiveauActuel) / 5.0 * 100)
+                            : 50.0);
+
+                    // 25 % performance — TalentEvaluation (1-5 → 20-100), neutre 50 si absent
+                    var scorePerf = eval != null ? eval.PerformanceScore * 20.0 : 50.0;
+
+                    // 20 % potentiel — TalentEvaluation ou PotentielCarriere string corrigé
+                    var scorePot = eval != null
+                        ? eval.PotentielScore * 20.0
+                        : (c.PotentielCarriere?.Trim().ToLowerInvariant()) switch
+                        {
+                            "high"   => 100.0,
+                            "medium" => 60.0,
+                            "low"    => 20.0,
+                            _        => 40.0
+                        };
+
+                    // 15 % ancienneté — relative au seuil du grade suivant
+                    var scoreAnc = gradeNext is { AncienneteMinAns: > 0 }
+                        ? Math.Min(100.0, anciennete * 100.0 / gradeNext.AncienneteMinAns)
+                        : Math.Min(100.0, anciennete * 25.0);
+
+                    var scorePromotion = Math.Round(0.40 * scoreComp + 0.25 * scorePerf + 0.20 * scorePot + 0.15 * scoreAnc, 1);
+
+                    return new
+                    {
+                        id             = c.Id,
+                        nom            = $"{c.Prenom} {c.Nom}",
+                        poste          = c.Poste,
+                        gradeActuel    = c.Grade,
+                        gradeCible     = gradeRef?.GradeSuivant,
+                        departement    = c.Departement,
+                        scorePromotion,
+                        ancienneteAns  = Math.Round(anciennete, 1)
+                    };
                 })
-                .Where(x => x.score >= 4);
+                .Where(x => x.scorePromotion >= 60);
 
             if (!string.IsNullOrWhiteSpace(dept))
                 query = query.Where(x =>
                     x.departement != null &&
-                    x.departement.ToLower().Contains(dept.ToLower()));
+                    x.departement.Contains(dept, StringComparison.OrdinalIgnoreCase));
 
             var result = query
-                .OrderByDescending(x => x.score)
+                .OrderByDescending(x => x.scorePromotion)
                 .Take(10)
                 .ToList();
 
             return Ok(new { total = result.Count, collaborateurs = result });
+        }
+
+        // ── Score promotion individuel — JSON compatible n8n ─────────────────────
+        [AllowAnonymous]
+        [HttpGet("promotion/{id:int}")]
+        public async Task<IActionResult> GetPromotion(int id, [FromQuery] string? gradeCible = null)
+        {
+            var collaborateur = await _context.Collaborateurs
+                .Include(c => c.Competences)
+                .FirstOrDefaultAsync(c => c.Id == id && c.Actif);
+
+            if (collaborateur == null)
+                return NotFound(new { error = "Collaborateur introuvable." });
+
+            var gradeRefs   = await _context.GradeReferentiels.ToListAsync();
+            var gradeActuel = collaborateur.Grade ?? "Junior";
+
+            var gradeActuelRef = gradeRefs.FirstOrDefault(g =>
+                string.Equals(g.Grade, gradeActuel, StringComparison.OrdinalIgnoreCase));
+
+            var gradeCibleNom = !string.IsNullOrWhiteSpace(gradeCible)
+                ? gradeCible.Trim()
+                : gradeActuelRef?.GradeSuivant ?? "Senior";
+
+            var gradeCibleRef = gradeRefs.FirstOrDefault(g =>
+                string.Equals(g.Grade, gradeCibleNom, StringComparison.OrdinalIgnoreCase));
+
+            // Compétences requises : d'abord par poste actuel, sinon par grade cible générique
+            var poste = collaborateur.Poste ?? gradeActuel;
+            var competencesRequises = await _context.CompetencesRequisesParPoste
+                .Where(c => string.Equals(c.Poste, poste, StringComparison.Ordinal))
+                .ToListAsync();
+
+            if (!competencesRequises.Any())
+                competencesRequises = await _context.CompetencesRequisesParPoste
+                    .Where(c => string.Equals(c.Poste, gradeCibleNom, StringComparison.OrdinalIgnoreCase))
+                    .ToListAsync();
+
+            var currentSkills = (collaborateur.Competences ?? [])
+                .Where(c => !string.IsNullOrWhiteSpace(c.Nom))
+                .ToDictionary(c => c.Nom.Trim(), c => c.NiveauActuel, StringComparer.OrdinalIgnoreCase);
+
+            // Acquises = NiveauActuel >= NiveauRequis × 0.6 (seuil SuccessionEngine)
+            var acquises   = new List<string>();
+            var manquantes = new List<string>();
+            foreach (var req in competencesRequises)
+            {
+                if (currentSkills.TryGetValue(req.Competence, out var niv) && niv >= (int)(req.NiveauRequis * 0.6))
+                    acquises.Add(req.Competence);
+                else
+                    manquantes.Add(req.Competence);
+            }
+
+            // TalentEvaluation — source principale de performance et potentiel
+            var talentEval = await _context.TalentEvaluations
+                .Where(t => t.CollaborateurId == id && t.Actif)
+                .OrderByDescending(t => t.DateEvaluation)
+                .FirstOrDefaultAsync();
+
+            var anciennete = (DateTime.Today - collaborateur.DateEmbauche).TotalDays / 365.25;
+
+            // 40 % compétences — couverture pondérée (somme min(1, actuel/requis) / nb compétences)
+            var scoreComp = competencesRequises.Any()
+                ? competencesRequises.Sum(req =>
+                {
+                    currentSkills.TryGetValue(req.Competence, out var niv);
+                    return Math.Min(1.0, (double)niv / req.NiveauRequis);
+                }) / competencesRequises.Count * 100.0
+                : (collaborateur.NiveauPreparationSuccession ?? 50);
+
+            // 25 % performance
+            var scorePerformance = talentEval != null
+                ? Math.Min(100.0, talentEval.PerformanceScore * 20.0)
+                : (collaborateur.NiveauPreparationSuccession ?? 50);
+
+            // 20 % potentiel
+            var scorePotentiel = talentEval != null
+                ? Math.Min(100.0, talentEval.PotentielScore * 20.0)
+                : (collaborateur.PotentielCarriere?.Trim().ToLowerInvariant()) switch
+                {
+                    "high"   => 100.0,
+                    "medium" => 60.0,
+                    "low"    => 20.0,
+                    _        => 40.0
+                };
+
+            // 15 % ancienneté
+            var scoreAnciennete = gradeCibleRef is { AncienneteMinAns: > 0 }
+                ? Math.Min(100.0, anciennete * 100.0 / gradeCibleRef.AncienneteMinAns)
+                : Math.Min(100.0, anciennete * 25.0);
+
+            var scorePromotion = (int)Math.Round(
+                0.40 * scoreComp + 0.25 * scorePerformance + 0.20 * scorePotentiel + 0.15 * scoreAnciennete);
+
+            // Délai estimé
+            var gapTotal    = manquantes.Count;
+            var moisMin     = Math.Max(3, gapTotal * 3);
+            var delaiEstime = gapTotal == 0 ? "Prêt maintenant" : $"{moisMin}-{moisMin + 3} mois";
+
+            // Justification RH — texte narratif lisible par n8n et les RH
+            var perfLabel = talentEval != null
+                ? $"performance {talentEval.PerformanceScore}/5"
+                : "performance non évaluée";
+
+            var potLabel = talentEval != null
+                ? $"potentiel {talentEval.PotentielScore}/5"
+                : (collaborateur.PotentielCarriere?.ToLowerInvariant()) switch
+                {
+                    "high"   => "haut potentiel",
+                    "medium" => "potentiel solide",
+                    "low"    => "développement requis",
+                    _        => "potentiel non évalué"
+                };
+
+            var gapText = manquantes.Any()
+                ? $"À développer : {string.Join(", ", manquantes.Take(3))}{(manquantes.Count > 3 ? "…" : ".")} "
+                : "Toutes les compétences requises sont couvertes. ";
+
+            var justificationRH =
+                $"{collaborateur.Prenom} {collaborateur.Nom} — ancienneté {Math.Round(anciennete, 1)} an(s), " +
+                $"{perfLabel}, {potLabel}. " +
+                $"Couverture compétences {gradeCibleNom} : {acquises.Count}/{competencesRequises.Count}. " +
+                gapText +
+                $"Score promotion global : {scorePromotion}/100.";
+
+            return Ok(new
+            {
+                scorePromotion,
+                gradeActuel,
+                gradeCible        = gradeCibleNom,
+                competencesAcquises   = acquises,
+                competencesManquantes = manquantes,
+                delaiEstime,
+                justificationRH,
+                scoreDetail = new
+                {
+                    competences = Math.Round(scoreComp, 1),
+                    performance = Math.Round(scorePerformance, 1),
+                    potentiel   = Math.Round(scorePotentiel, 1),
+                    anciennete  = Math.Round(scoreAnciennete, 1),
+                    poids       = "40% comp + 25% perf + 20% pot + 15% anc"
+                }
+            });
         }
 
         [AllowAnonymous]

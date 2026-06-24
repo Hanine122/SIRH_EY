@@ -147,22 +147,22 @@ namespace SIRH.EY.Models.InsightsAI
 
     public class MultiCriteriaBreakdownViewModel
     {
-        // Sous-scores pondérés (sur 100 chacun)
-        public double ScoreCompetences { get; set; }      // poids 40%
-        public double ScoreCertifications { get; set; }   // poids 25%
-        public double ScoreImplementations { get; set; }  // poids 20%
-        public double ScoreAnciennete { get; set; }       // poids 15%
+        // Sous-scores pondérés (sur 100 chacun) — formule : 40/25/20/15
+        public double ScoreCompetences { get; set; }  // 40% — couverture compétences requises pondérée par NiveauRequis
+        public double ScorePerformance { get; set; }  // 25% — TalentEvaluation.PerformanceScore × 20 (1-5 → 20-100)
+        public double ScorePotentiel { get; set; }    // 20% — TalentEvaluation.PotentielScore × 20 ou PotentielCarriere
+        public double ScoreAnciennete { get; set; }   // 15% — ancienneté / seuil GradeReferentiel grade cible
 
-        // Données brutes
-        public int NombreCertificationsActives { get; set; }
-        public int NombreImplementations { get; set; }
+        // Données brutes (sources du calcul)
+        public int? PerformanceScore { get; set; }    // 1-5 (TalentEvaluation.PerformanceScore)
+        public int? PotentielScore { get; set; }      // 1-5 (TalentEvaluation.PotentielScore)
+        public string? PotentielCarriere { get; set; } // "High" / "Medium" / "Low"
         public double AncienneteAns { get; set; }
 
         // Seuils du référentiel pour le grade cible
         public string? GradeReferentielNom { get; set; }
         public string? GradeSuivant { get; set; }
         public double? SeuilCompetencesRequis { get; set; }
-        public int? SeuilImplementationsRequis { get; set; }
         public int? SeuilAncienneteRequis { get; set; }
     }
 
