@@ -285,6 +285,9 @@ using (var scope = app.Services.CreateScope())
     // 14. Grade Référentiel — seuils de promotion par grade EY
     await GradeReferentielSeeder.SeedAsync(context);
 
+    // 15. Succession enrichment — cross-compétences pour pools de succession cohérents
+    await SuccessionEnrichmentSeeder.SeedAsync(context);
+
 }
 
 // ── MIDDLEWARE ────────────────────────────────────────────────────────────────

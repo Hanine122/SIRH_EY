@@ -182,198 +182,100 @@ public async Task<IActionResult> AskIA([FromBody] RecommendationRequest request)
 
     [Authorize(Roles = Roles.ITAdminOrRH)]
     public async Task<IActionResult> ChoisirRemplacant(int id)
-
     {
-
         var partant = await _context.Collaborateurs
-
             .Include(c => c.Competences)
-
             .FirstOrDefaultAsync(c => c.Id == id);
 
         if (partant == null) return NotFound();
 
-
-
-        var surProfil = partant.Competences?
-
-            .Where(c => !string.IsNullOrWhiteSpace(c.Nom))
-
-            .Select(c => c.Nom.Trim())
-
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-
-            .ToList() ?? new List<string>();
-
-
-
-        var surPoste = await _context.CompetencesRequisesParPoste
-
+        // 1. Compétences exigées : référentiel poste → fallback profil partant ≥ niveau 3
+        var referentiel = await _context.CompetencesRequisesParPoste
             .AsNoTracking()
-
             .Where(cr => cr.Poste == partant.Poste)
-
-            .Select(cr => cr.Competence.Trim())
-
-            .Distinct()
-
             .ToListAsync();
 
+        var exigences = SuccessionEngine.BuildExigences(referentiel, partant.Competences);
+        var requisesNoms = exigences.Select(e => e.Nom).ToList();
 
-
-        var comparer = StringComparer.OrdinalIgnoreCase;
-
-        var requises = surProfil
-
-            .Union(surPoste, comparer)
-
-            .Distinct(comparer)
-
-            .ToList();
-
-
-
+        // 2. Formations disponibles pour les recommandations
         var formations = await _context.Formations.AsNoTracking().ToListAsync();
 
-
-
+        // 3. Pool de candidats (hors partant, actifs)
+        var deptPartant = (partant.Departement ?? "").Trim();
         var autres = await _context.Collaborateurs
-
             .Include(c => c.Competences)
-
             .Where(c => c.Id != id && c.Actif)
-
             .ToListAsync();
 
-
-
-        var deptPartant = (partant.Departement ?? "").Trim();
-
-
-
-        var candidats = new List<CandidatDetail>();
-
-        foreach (var autre in autres)
-
-        {
-
-            var nomsAutre = autre.Competences?
-
-                .Where(c => !string.IsNullOrWhiteSpace(c.Nom))
-
-                .Select(c => c.Nom.Trim())
-
-                .Distinct(comparer)
-
-                .ToList() ?? new List<string>();
-
-
-
-            var communes = requises.Count(r => nomsAutre.Any(a => comparer.Equals(a, r)));
-
-            var manquantes = requises.Where(r => !nomsAutre.Any(a => comparer.Equals(a, r))).ToList();
-
-            var deptAutre = (autre.Departement ?? "").Trim();
-
-            var autreDept = deptPartant.Length == 0 || deptAutre.Length == 0
-
-                ? !string.Equals(deptPartant, deptAutre, StringComparison.OrdinalIgnoreCase)
-
-                : !deptPartant.Equals(deptAutre, StringComparison.OrdinalIgnoreCase);
-
-
-
-            var profilTransversal = autreDept && communes > 0;
-
-
-
-            var titresFormations = new List<string>();
-
-            foreach (var m in manquantes)
-
-            {
-
-                var f = formations.FirstOrDefault(x =>
-
-                    !string.IsNullOrEmpty(x.CompetenceVisee) &&
-
-                    x.CompetenceVisee.Trim().Equals(m, StringComparison.OrdinalIgnoreCase));
-
-                f ??= formations.FirstOrDefault(x =>
-
-                    (x.Titre ?? "").Contains(m, StringComparison.OrdinalIgnoreCase));
-
-                if (f != null && !titresFormations.Contains(f.Titre))
-
-                    titresFormations.Add(f.Titre);
-
-                else if (f == null)
-
-                    titresFormations.Add($"Parcours recommandé — {m}");
-
-            }
-
-
-
-            candidats.Add(new CandidatDetail
-
-            {
-
-                Id = autre.Id,
-
-                Prenom = autre.Prenom ?? "",
-
-                Nom = autre.Nom ?? "",
-
-                Email = autre.Email ?? "",
-
-                Poste = autre.Poste ?? "",
-
-                Departement = autre.Departement ?? "",
-
-                Grade = autre.Grade ?? "",
-
-                CompetencesManquantes = manquantes,
-
-                FormationsRecommande = titresFormations.Distinct().ToList(),
-
-                NbCompetencesCommunes = communes,
-
-                ProfilTransversal = profilTransversal
-
-            });
-
-        }
-
-
-
-        var ordre = candidats
-            .Where(c => string.Equals(c.Grade, partant.Grade, StringComparison.OrdinalIgnoreCase))
-            .OrderByDescending(c => c.ProfilTransversal)
-            .ThenByDescending(c => c.NbCompetencesCommunes)
-            .ThenBy(c => c.CompetencesManquantes.Count)
-            .ThenBy(c => c.Nom)
+        // 4. Scoring via moteur partagé
+        var scores = autres
+            .Select(a => SuccessionEngine.Score(a, exigences, deptPartant))
             .ToList();
 
-        var enAttente = candidats
-            .Where(c => !string.Equals(c.Grade, partant.Grade, StringComparison.OrdinalIgnoreCase))
-            .OrderByDescending(c => c.NbCompetencesCommunes)
-            .ThenBy(c => c.CompetencesManquantes.Count)
+        // 5. Mapper ResultatScore → CandidatDetail
+        CandidatDetail ToDetail(ResultatScore s)
+        {
+            var titresFormations = new List<string>();
+            foreach (var m in s.Manquantes)
+            {
+                var f = formations.FirstOrDefault(x =>
+                    !string.IsNullOrEmpty(x.CompetenceVisee) &&
+                    x.CompetenceVisee.Trim().Equals(m, StringComparison.OrdinalIgnoreCase));
+                f ??= formations.FirstOrDefault(x =>
+                    (x.Titre ?? "").Contains(m, StringComparison.OrdinalIgnoreCase));
+                if (f != null && !titresFormations.Contains(f.Titre))
+                    titresFormations.Add(f.Titre);
+                else if (f == null)
+                    titresFormations.Add($"Parcours recommandé — {m}");
+            }
+
+            return new CandidatDetail
+            {
+                Id                    = s.Candidat.Id,
+                Prenom                = s.Candidat.Prenom ?? "",
+                Nom                   = s.Candidat.Nom ?? "",
+                Email                 = s.Candidat.Email ?? "",
+                Poste                 = s.Candidat.Poste ?? "",
+                Departement           = s.Candidat.Departement ?? "",
+                Grade                 = s.Candidat.Grade ?? "",
+                CompetencesManquantes = s.Manquantes,
+                FormationsRecommande  = titresFormations.Distinct().ToList(),
+                NbCompetencesCommunes = s.NbCommunes,
+                ProfilTransversal     = s.ProfilTransversal,
+                ScoreSuccession       = s.ScoreSuccession,
+                ScoreCouverture       = s.ScoreCouverture
+            };
+        }
+
+        // 6. Pool principal : même grade ET éligible ET au moins 1 compétence commune
+        var ordre = scores
+            .Where(s => string.Equals(s.Candidat.Grade, partant.Grade, StringComparison.OrdinalIgnoreCase)
+                     && s.EstEligible
+                     && s.NbCommunes > 0)
+            .OrderByDescending(s => s.ScoreSuccession)
+            .Select(ToDetail)
+            .ToList();
+
+        // 7. En attente : grade différent OU non éligible, avec au moins 1 compétence commune, max 3
+        var enAttente = scores
+            .Where(s => (!string.Equals(s.Candidat.Grade, partant.Grade, StringComparison.OrdinalIgnoreCase)
+                      || !s.EstEligible)
+                     && s.NbCommunes > 0)
+            .OrderByDescending(s => s.ScoreSuccession)
             .Take(3)
+            .Select(ToDetail)
             .ToList();
 
         var vm = new ChoisirRemplacantViewModel
         {
-            Partant = partant,
-            CompetencesRequises = requises,
-            Candidats = ordre,
-            CandidatsEnAttente = enAttente
+            Partant             = partant,
+            CompetencesRequises = requisesNoms,
+            Candidats           = ordre,
+            CandidatsEnAttente  = enAttente
         };
 
-
-
         return View(vm);
-
     }
 
 

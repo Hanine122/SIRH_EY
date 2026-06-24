@@ -24,5 +24,9 @@ namespace SIRH.EY.Models
         public int NbCompetencesCommunes { get; set; }
         /// <summary>Autre département mais recouvrement de compétences (profil transversal).</summary>
         public bool ProfilTransversal { get; set; }
+        /// <summary>Score global pondéré 0–100 (critère de classement principal).</summary>
+        public int ScoreSuccession { get; set; }
+        /// <summary>Couverture des compétences requises 0–100 (comparaison NiveauActuel / NiveauRequis).</summary>
+        public int ScoreCouverture { get; set; }
     }
 }

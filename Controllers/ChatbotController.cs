@@ -544,82 +544,57 @@ namespace SIRH.EY.Controllers
             if (partant == null)
                 return NotFound(new { error = "Collaborateur non trouvé." });
 
-            var comparer = StringComparer.OrdinalIgnoreCase;
-
-            var surProfil = partant.Competences?
-                .Where(c => !string.IsNullOrWhiteSpace(c.Nom))
-                .Select(c => c.Nom.Trim())
-                .Distinct(comparer)
-                .ToList() ?? new List<string>();
-
-            var surPoste = await _context.CompetencesRequisesParPoste
+            // Mêmes exigences que la vue Razor (moteur partagé)
+            var referentiel = await _context.CompetencesRequisesParPoste
                 .AsNoTracking()
                 .Where(cr => cr.Poste == partant.Poste)
-                .Select(cr => cr.Competence.Trim())
-                .Distinct()
                 .ToListAsync();
 
-            var requises = surProfil
-                .Union(surPoste, comparer)
-                .Distinct(comparer)
-                .ToList();
+            var exigences = SuccessionEngine.BuildExigences(referentiel, partant.Competences);
+
+            var deptPartant = (partant.Departement ?? "").Trim();
 
             var autres = await _context.Collaborateurs
                 .Include(c => c.Competences)
                 .Where(c => c.Id != collaborateurId && c.Actif)
                 .ToListAsync();
 
-            var deptPartant = (partant.Departement ?? "").Trim();
-
-            var candidats = autres.Select(autre => {
-                var nomsAutre = autre.Competences?
-                    .Where(c => !string.IsNullOrWhiteSpace(c.Nom))
-                    .Select(c => c.Nom.Trim())
-                    .Distinct(comparer)
-                    .ToList() ?? new List<string>();
-
-                var communes   = requises.Count(r => nomsAutre.Any(a => comparer.Equals(a, r)));
-                var manquantes = requises.Where(r => !nomsAutre.Any(a => comparer.Equals(a, r))).ToList();
-
-                var deptAutre = (autre.Departement ?? "").Trim();
-                var autreDept = deptPartant.Length == 0 || deptAutre.Length == 0
-                    ? !string.Equals(deptPartant, deptAutre, StringComparison.OrdinalIgnoreCase)
-                    : !deptPartant.Equals(deptAutre, StringComparison.OrdinalIgnoreCase);
-
-                var profilTransversal = autreDept && communes > 0;
-
-                var possedes    = requises.Count > 0 ? (requises.Count - manquantes.Count) : communes;
-                var scoreMatch  = requises.Count == 0
-                    ? Math.Min(100, communes * 25)
-                    : (int)Math.Round(100.0 * Math.Max(0, possedes) / requises.Count);
-
-                return new
-                {
-                    id                    = autre.Id,
-                    nom                   = $"{autre.Prenom} {autre.Nom}",
-                    poste                 = autre.Poste ?? "",
-                    grade                 = autre.Grade ?? "",
-                    departement           = autre.Departement ?? "",
-                    scoreMatch,
-                    competencesCommunes   = communes,
-                    competencesManquantes = manquantes,
-                    profilTransversal
-                };
-            })
-            .ToList();
-
-            var candidatsPrincipaux = candidats
-                .Where(c => string.Equals(c.grade, partant.Grade, StringComparison.OrdinalIgnoreCase))
-                .OrderByDescending(c => c.profilTransversal)
-                .ThenByDescending(c => c.competencesCommunes)
-                .ThenBy(c => c.competencesManquantes.Count)
-                .Take(3)
+            var scores = autres
+                .Select(a => SuccessionEngine.Score(a, exigences, deptPartant))
                 .ToList();
 
-            var candidatsEnAttente = candidats
-                .Where(c => !string.Equals(c.grade, partant.Grade, StringComparison.OrdinalIgnoreCase))
-                .OrderByDescending(c => c.scoreMatch)
+            object ToApiItem(ResultatScore s) => new
+            {
+                id                    = s.Candidat.Id,
+                nom                   = $"{s.Candidat.Prenom} {s.Candidat.Nom}",
+                poste                 = s.Candidat.Poste ?? "",
+                grade                 = s.Candidat.Grade ?? "",
+                departement           = s.Candidat.Departement ?? "",
+                scoreSuccession       = s.ScoreSuccession,
+                scoreCouverture       = s.ScoreCouverture,
+                competencesCommunes   = s.NbCommunes,
+                competencesManquantes = s.Manquantes,
+                profilTransversal     = s.ProfilTransversal,
+                ancienneteAns         = s.AnciennetéAns,
+                estEligible           = s.EstEligible
+            };
+
+            var top3 = scores
+                .Where(s => string.Equals(s.Candidat.Grade, partant.Grade, StringComparison.OrdinalIgnoreCase)
+                         && s.EstEligible
+                         && s.NbCommunes > 0)
+                .OrderByDescending(s => s.ScoreSuccession)
                 .Take(3)
+                .Select(ToApiItem)
+                .ToList();
+
+            var enAttente = scores
+                .Where(s => (!string.Equals(s.Candidat.Grade, partant.Grade, StringComparison.OrdinalIgnoreCase)
+                          || !s.EstEligible)
+                         && s.NbCommunes > 0)
+                .OrderByDescending(s => s.ScoreSuccession)
+                .Take(3)
+                .Select(ToApiItem)
                 .ToList();
 
             return Ok(new
@@ -627,11 +602,11 @@ namespace SIRH.EY.Controllers
                 collaborateurNom    = $"{partant.Prenom} {partant.Nom}",
                 poste               = partant.Poste,
                 grade               = partant.Grade,
-                competencesRequises = requises,
-                top3                = candidatsPrincipaux,
-                candidatsEnAttente  = candidatsEnAttente,
-                avertissement       = candidatsEnAttente.Any()
-                    ? $"{candidatsEnAttente.Count} candidat(s) de grade différent identifié(s) — non éligibles au remplacement direct mais disponibles pour accompagnement ou montée en grade."
+                competencesRequises = exigences.Select(e => new { e.Nom, e.NiveauRequis }),
+                top3,
+                candidatsEnAttente  = enAttente,
+                avertissement       = enAttente.Any()
+                    ? $"{enAttente.Count} candidat(s) non éligible(s) au remplacement direct — grade différent ou ancienneté < 2 ans."
                     : null
             });
         }

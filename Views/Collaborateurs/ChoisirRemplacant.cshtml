@@ -47,10 +47,7 @@
             {
                 var c = top3[i];
                 var nbManquantes = c.CompetencesManquantes.Count;
-                var possedes = totalCompetencesRequises == 0 ? c.NbCompetencesCommunes : (totalCompetencesRequises - nbManquantes);
-                var pourcentage = totalCompetencesRequises == 0
-                    ? Math.Min(100, c.NbCompetencesCommunes * 25)
-                    : (int)Math.Round(100.0 * Math.Max(0, possedes) / totalCompetencesRequises);
+                var pourcentage = c.ScoreCouverture;
                 var pillClass = pourcentage >= 80 ? "active" : (pourcentage >= 50 ? "in-progress" : "inactive");
                 <div class="col-md-4">
                     <div class="ey-detector-card">
@@ -66,7 +63,7 @@
                         </div>
 
                         <div class="d-flex flex-wrap gap-2 mt-3">
-                            <span class="ey-pill @pillClass">@pourcentage% match</span>
+                            <span class="ey-pill @pillClass">Score @c.ScoreSuccession</span>
                             @if (c.ProfilTransversal)
                             {
                                 <span class="ey-pill in-progress">Transversal</span>
@@ -129,12 +126,11 @@
 @if (Model.CandidatsEnAttente.Any())
 {
     <div class="ey-card p-4 mb-4">
-        <div class="text-uppercase small text-muted fw-semibold mb-2">Candidats en attente — grade différent</div>
+        <div class="text-uppercase small text-muted fw-semibold mb-2">Candidats en attente — non éligibles au remplacement direct</div>
         <div class="alert alert-warning py-2 small mb-3">
-            Ces @Model.CandidatsEnAttente.Count candidat(s) ont été identifiés comme compatibles en compétences
-            mais ne sont pas du même grade que @Model.Partant.Prenom @Model.Partant.Nom.
-            Ils ne sont pas éligibles au remplacement direct. Une montée en grade ou un accompagnement
-            spécifique serait nécessaire avant transition.
+            Ces @Model.CandidatsEnAttente.Count candidat(s) ont été écartés du pool principal car leur grade diffère
+            de celui de @Model.Partant.Prenom @Model.Partant.Nom, ou leur ancienneté est inférieure à 2 ans.
+            Un accompagnement spécifique (montée en grade, plan de développement) serait nécessaire avant transition.
         </div>
         <div class="row g-3">
             @foreach (var c in Model.CandidatsEnAttente)
@@ -155,7 +151,15 @@
 
 @if (!Model.Candidats.Any())
 {
-    <div class="alert alert-secondary">Aucun collaborateur actif disponible pour la comparaison.</div>
+    <div class="ey-card p-4 mb-4">
+        <div class="text-uppercase small text-muted fw-semibold mb-2">Résultat du matching</div>
+        <div class="alert alert-warning mb-0">
+            <strong>Aucun remplaçant direct disponible.</strong><br />
+            Aucun collaborateur actif de grade <strong>@Model.Partant.Grade</strong> ne couvre au moins une
+            compétence requise pour le poste <em>@Model.Partant.Poste</em>.
+            Consultez les candidats pipeline (ci-dessus) ou enrichissez les profils de compétences.
+        </div>
+    </div>
 }
 else
 {
@@ -163,10 +167,7 @@ else
         @foreach (var candidat in Model.Candidats)
         {
             var nbManquantes = candidat.CompetencesManquantes.Count;
-            var possedes = totalCompetencesRequises == 0 ? candidat.NbCompetencesCommunes : (totalCompetencesRequises - nbManquantes);
-            var pourcentage = totalCompetencesRequises == 0
-                ? Math.Min(100, candidat.NbCompetencesCommunes * 25)
-                : (int)Math.Round(100.0 * Math.Max(0, possedes) / totalCompetencesRequises);
+            var pourcentage = candidat.ScoreCouverture;
             var statusColor = pourcentage >= 80 ? "bg-success" : (pourcentage >= 50 ? "bg-warning" : "bg-danger");
             var statusText = pourcentage >= 80 ? "Très compatible" : (pourcentage >= 50 ? "Compatible sous condition" : "Écarts importants — plan de formation");
             var badgeColor = nbManquantes == 0 ? "bg-success" : (nbManquantes <= 2 ? "bg-warning text-dark" : "bg-danger");
@@ -284,9 +285,8 @@ else
                     nbManquantes = c.CompetencesManquantes.Count,
                     manquantes = c.CompetencesManquantes,
                     formations = c.FormationsRecommande,
-                    compat = (totalCompetencesRequises == 0)
-                        ? Math.Min(100, c.NbCompetencesCommunes * 25)
-                        : (int)Math.Round(100.0 * Math.Max(0, (totalCompetencesRequises - c.CompetencesManquantes.Count)) / totalCompetencesRequises)
+                    compat = c.ScoreCouverture,
+                    score = c.ScoreSuccession
                 })
             ));
             const competencesRequises = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.CompetencesRequises ?? new List<string>()));
