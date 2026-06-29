@@ -1,0 +1,1277 @@
+@{
+    ViewData["Title"] = "HR Copilot";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/chatbot-embedded.css" asp-append-version="true" />
+}
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     EY HR COPILOT — Premium AI Workspace
+     ═══════════════════════════════════════════════════════════════════════ -->
+<div class="ec-page" id="ec-root" role="main" aria-label="EY HR Copilot">
+
+    <!-- ── HEADER ──────────────────────────────────────────────────────── -->
+    <header class="ec-header">
+        <div class="ec-header-brand">
+            <div class="ec-header-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                    <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7H3a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"/>
+                    <line x1="9" y1="15" x2="9" y2="17"/><line x1="15" y1="15" x2="15" y2="17"/>
+                </svg>
+            </div>
+            <div>
+                <div class="ec-header-title">EY HR Copilot</div>
+                <div class="ec-header-sub">Assistant IA · Décision RH stratégique</div>
+            </div>
+        </div>
+
+        <div class="ec-header-controls">
+            <div class="ec-status-badge">
+                <div class="ec-status-dot" aria-hidden="true"></div>
+                En ligne
+            </div>
+            <div class="ec-model-badge">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="11" height="11"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                n8n · GPT-4o
+            </div>
+            <button class="ec-icon-btn" id="ec-palette-btn" title="Palette de commandes (⌘K)" aria-label="Ouvrir la palette de commandes">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            </button>
+            <button class="ec-icon-btn" id="ec-clear-btn" title="Nouvelle conversation" aria-label="Nouvelle conversation">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.5"/></svg>
+            </button>
+        </div>
+    </header>
+
+    <!-- ── MAIN WORKSPACE ──────────────────────────────────────────────── -->
+    <div class="ec-workspace">
+
+        <!-- ── CHAT COLUMN ──────────────────────────────────────────────── -->
+        <div class="ec-chat">
+
+            <!-- HERO WELCOME (shown until first message) -->
+            <div id="ec-hero" class="ec-hero">
+                <div class="ec-hero-mark" aria-hidden="true">
+                    <div class="ec-hero-mark-ring"></div>
+                    <div class="ec-hero-mark-core">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                            <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7H3a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"/>
+                            <line x1="9" y1="15" x2="9" y2="17"/><line x1="15" y1="15" x2="15" y2="17"/>
+                        </svg>
+                    </div>
+                </div>
+
+                <h1 class="ec-hero-heading">Bonjour, que puis-je<br><em>analyser pour vous ?</em></h1>
+                <p class="ec-hero-sub">Posez une question sur vos talents, successions, risques ou formations — obtenez une réponse décisionnelle en quelques secondes.</p>
+
+                <!-- Hero input -->
+                <div class="ec-hero-input-wrap">
+                    <div class="ec-hero-input-box" id="ec-hero-input-box">
+                        <input type="text" id="ec-hero-input" class="ec-hero-input"
+                               placeholder="Posez votre question RH stratégique…"
+                               autocomplete="off" aria-label="Votre question RH" />
+                        <div class="ec-hero-input-actions">
+                            <button class="ec-palette-trigger" id="ec-hero-palette-btn" aria-label="Palette de commandes" title="⌘K — Palette de commandes">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M18 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3H6a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3V6a3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3h12a3 3 0 0 0 3-3 3 3 0 0 0-3-3z"/></svg>
+                                <span class="ec-kbd">⌘K</span>
+                            </button>
+                            <button id="ec-hero-send" class="ec-send-hero" disabled aria-label="Envoyer">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Capability cards -->
+                <div class="ec-hero-caps" role="group" aria-label="Capacités">
+                    <button class="ec-cap-card" data-prompt="Qui mérite une promotion aujourd'hui ?" title="Analyser les promotions prêtes">
+                        <div class="ec-cap-card-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 11 12 6 7 11"/><polyline points="17 18 12 13 7 18"/></svg>
+                        </div>
+                        <div class="ec-cap-card-label">Promotions</div>
+                    </button>
+                    <button class="ec-cap-card" data-prompt="Quels postes sont sans successeur ?" title="Analyser la succession">
+                        <div class="ec-cap-card-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                        </div>
+                        <div class="ec-cap-card-label">Succession</div>
+                    </button>
+                    <button class="ec-cap-card" data-prompt="Quels sont nos hauts potentiels ?" title="Identifier les top talents">
+                        <div class="ec-cap-card-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                        </div>
+                        <div class="ec-cap-card-label">Top Talents</div>
+                    </button>
+                    <button class="ec-cap-card" data-prompt="Quels postes sont à risque de vacance ?" title="Voir les alertes risque">
+                        <div class="ec-cap-card-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                        </div>
+                        <div class="ec-cap-card-label">Alertes risque</div>
+                    </button>
+                </div>
+
+                <!-- Suggested prompts -->
+                <div class="ec-hero-suggestions" role="group" aria-label="Questions suggérées">
+                    <div class="ec-suggest-label">Commencer avec</div>
+                    <button class="ec-suggest-btn" data-prompt="Qui mérite une promotion aujourd'hui ?">
+                        <span class="ec-suggest-btn-dot"></span>Qui mérite une promotion aujourd'hui ?
+                    </button>
+                    <button class="ec-suggest-btn" data-prompt="Qui peut remplacer un Manager dans nos équipes ?">
+                        <span class="ec-suggest-btn-dot"></span>Qui peut remplacer un Manager dans nos équipes ?
+                    </button>
+                    <button class="ec-suggest-btn" data-prompt="Quels sont nos hauts potentiels ?">
+                        <span class="ec-suggest-btn-dot"></span>Quels sont nos hauts potentiels ?
+                    </button>
+                    <button class="ec-suggest-btn" data-prompt="Quel département présente le plus de risques ?">
+                        <span class="ec-suggest-btn-dot"></span>Quel département présente le plus de risques ?
+                    </button>
+                </div>
+            </div>
+
+            <!-- CONVERSATION (shown after first message) -->
+            <div id="ec-toolbar" class="ec-toolbar" style="display:none" role="toolbar" aria-label="Actions rapides">
+                <span class="ec-toolbar-label">Rapide</span>
+                <button class="ec-action-pill" data-prompt="Qui peut remplacer un Manager dans nos équipes ?">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    Trouver un successeur
+                </button>
+                <button class="ec-action-pill ec-pill-success" data-prompt="Quels sont nos hauts potentiels ?">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                    Top talents
+                </button>
+                <button class="ec-action-pill ec-pill-danger" data-prompt="Quels postes sont à risque de vacance ?">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/></svg>
+                    Alertes risque
+                </button>
+                <div class="ec-toolbar-divider" aria-hidden="true"></div>
+                <button class="ec-action-pill ec-pill-warning" data-prompt="Qui mérite une promotion aujourd'hui ?">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 11 12 6 7 11"/><polyline points="17 18 12 13 7 18"/></svg>
+                    Promotions
+                </button>
+                <button class="ec-action-pill" data-prompt="Quelles formations sont en cours ou à planifier ?">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+                    Formations
+                </button>
+                <button class="ec-action-pill" data-prompt="Montre la répartition RH par département">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                    Reporting
+                </button>
+            </div>
+
+            <!-- Session strip -->
+            <div id="ec-session-strip" class="ec-session-strip" role="status" aria-live="polite">
+                <div id="ec-session-crumbs"></div>
+            </div>
+
+            <!-- Messages -->
+            <div id="ec-messages" class="ec-messages" style="display:none" role="log" aria-label="Conversation" aria-live="polite"></div>
+
+            <!-- Context bar -->
+            <div id="ec-context-bar" class="ec-context-bar" role="status">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                <div class="ec-context-info">
+                    Contexte actif :&nbsp;<strong id="ec-context-name"></strong>
+                </div>
+                <button id="ec-context-dismiss" class="ec-context-dismiss" aria-label="Effacer le contexte">×</button>
+            </div>
+
+            <!-- Input area -->
+            <div id="ec-input-area" class="ec-input-area" style="display:none">
+                <div class="ec-input-box">
+                    <input type="text" id="ec-input" class="ec-input"
+                           placeholder="Posez votre question RH stratégique…"
+                           autocomplete="off" aria-label="Message" />
+                    <div class="ec-input-controls">
+                        <button class="ec-input-kbd" id="ec-palette-input-btn" aria-label="Palette de commandes" title="⌘K">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="11" height="11"><path d="M18 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3H6a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3V6a3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3h12a3 3 0 0 0 3-3 3 3 0 0 0-3-3z"/></svg>
+                            ⌘K
+                        </button>
+                        <button id="ec-send" class="ec-send-btn" disabled aria-label="Envoyer">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="ec-input-footer">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    Données confidentielles EY · Session chiffrée · Appuyez sur <span class="ec-kbd" style="margin:0 2px">⌘K</span> pour les commandes
+                </div>
+            </div>
+        </div>
+
+        <!-- ── RIGHT PANEL ──────────────────────────────────────────────── -->
+        <aside class="ec-panel" role="complementary" aria-label="Insights RH">
+
+            <!-- Tabs -->
+            <div class="ec-panel-tabs" role="tablist">
+                <button class="ec-tab active" id="ec-tab-insights" role="tab" aria-selected="true" aria-controls="ec-pane-insights">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+                    Insights
+                </button>
+                <button class="ec-tab" id="ec-tab-pinned" role="tab" aria-selected="false" aria-controls="ec-pane-pinned">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                    Épinglés
+                    <span class="ec-tab-badge" id="ec-pin-count"></span>
+                </button>
+            </div>
+
+            <!-- Insights pane -->
+            <div class="ec-panel-content active" id="ec-pane-insights" role="tabpanel" aria-labelledby="ec-tab-insights">
+
+                <!-- Employee card (hidden until context set) -->
+                <div id="ec-panel-emp" class="ec-panel-card" style="display:none">
+                    <div class="ec-panel-card-header">
+                        <div class="ec-panel-card-icon ec-pci-blue">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        </div>
+                        <div class="ec-panel-card-title">Collaborateur actif</div>
+                    </div>
+                    <div class="ec-emp-card">
+                        <div class="ec-emp-avatar" id="ec-emp-avatar">?</div>
+                        <div>
+                            <div class="ec-emp-name" id="ec-emp-name">—</div>
+                            <div class="ec-emp-role" id="ec-emp-role">—</div>
+                            <div class="ec-emp-dept" id="ec-emp-dept">—</div>
+                        </div>
+                        <div class="ec-emp-metrics">
+                            <div class="ec-emp-metric"><div class="ec-emp-metric-val" id="ec-emp-score">—</div><div class="ec-emp-metric-lbl">Score<br>talent</div></div>
+                            <div class="ec-emp-metric"><div class="ec-emp-metric-val" id="ec-emp-perf">—</div><div class="ec-emp-metric-lbl">Perf.<br>actuelle</div></div>
+                            <div class="ec-emp-metric"><div class="ec-emp-metric-val" id="ec-emp-risk">—</div><div class="ec-emp-metric-lbl">Niveau<br>risque</div></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Empty state (default) -->
+                <div id="ec-panel-empty" class="ec-panel-card">
+                    <div class="ec-panel-empty">
+                        <div class="ec-panel-empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/></svg></div>
+                        <div class="ec-panel-empty-title">Aucun contexte sélectionné</div>
+                        <div class="ec-panel-empty-sub">Mentionnez un collaborateur dans votre question pour voir ses insights ici.</div>
+                    </div>
+                </div>
+
+                <!-- Global KPIs -->
+                <div class="ec-panel-card" id="ec-panel-kpis">
+                    <div class="ec-panel-card-header">
+                        <div class="ec-panel-card-icon ec-pci-slate">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                        </div>
+                        <div class="ec-panel-card-title">Vue d'ensemble RH</div>
+                    </div>
+                    <div class="ec-panel-card-body">
+                        <div class="ec-kpi-row"><span class="ec-kpi-label">Collaborateurs actifs</span><span class="ec-kpi-value"><span class="ec-kpi-dot green"></span><span id="ec-kpi-collab">—</span></span></div>
+                        <div class="ec-kpi-row"><span class="ec-kpi-label">Hauts potentiels</span><span class="ec-kpi-value"><span class="ec-kpi-dot blue"></span><span id="ec-kpi-talents">—</span></span></div>
+                        <div class="ec-kpi-row"><span class="ec-kpi-label">Postes à risque</span><span class="ec-kpi-value"><span class="ec-kpi-dot red"></span><span id="ec-kpi-risques">—</span></span></div>
+                        <div class="ec-kpi-row"><span class="ec-kpi-label">Formations en cours</span><span class="ec-kpi-value"><span class="ec-kpi-dot amber"></span><span id="ec-kpi-formations">—</span></span></div>
+                        <div class="ec-progress" style="margin-top:10px"><div class="ec-progress-fill ec-progress-blue" id="ec-kpi-progress" style="width:0%"></div></div>
+                        <div style="font-size:10.5px;color:var(--ec-text-subtle);margin-top:5px" id="ec-kpi-progress-lbl">Taux de complétion formation</div>
+                    </div>
+                </div>
+
+                <!-- Succession risk (dynamic) -->
+                <div class="ec-panel-card" id="ec-panel-succession" style="display:none">
+                    <div class="ec-panel-card-header">
+                        <div class="ec-panel-card-icon ec-pci-amber">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/></svg>
+                        </div>
+                        <div class="ec-panel-card-title">Risque succession</div>
+                    </div>
+                    <div class="ec-panel-card-body" id="ec-panel-succession-body"></div>
+                </div>
+
+                <!-- Session history -->
+                <div class="ec-panel-card">
+                    <div class="ec-panel-card-header">
+                        <div class="ec-panel-card-icon ec-pci-slate">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        </div>
+                        <div class="ec-panel-card-title">Session en cours</div>
+                    </div>
+                    <div class="ec-panel-card-body" id="ec-panel-history">
+                        <div style="font-size:12px;color:var(--ec-text-subtle);text-align:center;padding:6px 0">Aucune activité.</div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Pinned pane -->
+            <div class="ec-panel-content" id="ec-pane-pinned" role="tabpanel" aria-labelledby="ec-tab-pinned">
+                <div id="ec-pinned-empty" class="ec-panel-card">
+                    <div class="ec-panel-empty">
+                        <div class="ec-panel-empty-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                        </div>
+                        <div class="ec-panel-empty-title">Aucune carte épinglée</div>
+                        <div class="ec-panel-empty-sub">Cliquez sur <strong>Épingler</strong> dans une réponse pour la retrouver ici.</div>
+                    </div>
+                </div>
+                <div id="ec-pinned-list" style="display:flex;flex-direction:column;gap:8px"></div>
+            </div>
+
+        </aside>
+    </div>
+</div>
+
+<!-- ── COMMAND PALETTE ──────────────────────────────────────────────────── -->
+<div id="ec-palette-overlay" class="ec-palette-overlay" style="display:none" role="dialog" aria-modal="true" aria-label="Palette de commandes">
+    <div class="ec-palette" role="document">
+        <div class="ec-palette-search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="ec-palette-search" class="ec-palette-input" placeholder="Rechercher une commande RH…" autocomplete="off" />
+            <span class="ec-palette-esc">ESC</span>
+        </div>
+        <div class="ec-palette-body" id="ec-palette-body">
+            <div class="ec-palette-section-label">Analyses rapides</div>
+
+            <button class="ec-palette-item" data-prompt="Qui mérite une promotion aujourd'hui ?" data-shortcut="PR">
+                <div class="ec-palette-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><polyline points="17 11 12 6 7 11"/><polyline points="17 18 12 13 7 18"/></svg></div>
+                <div style="flex:1;min-width:0"><div class="ec-palette-item-label">Analyse des promotions</div><div class="ec-palette-item-desc">Qui est prêt pour une promotion aujourd'hui ?</div></div>
+                <span class="ec-palette-item-shortcut">PR</span>
+            </button>
+
+            <button class="ec-palette-item" data-prompt="Quels postes sont sans successeur ?" data-shortcut="SC">
+                <div class="ec-palette-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+                <div style="flex:1;min-width:0"><div class="ec-palette-item-label">Plans de succession</div><div class="ec-palette-item-desc">Postes critiques sans successeur identifié</div></div>
+                <span class="ec-palette-item-shortcut">SC</span>
+            </button>
+
+            <button class="ec-palette-item" data-prompt="Quels sont nos hauts potentiels ?" data-shortcut="HP">
+                <div class="ec-palette-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
+                <div style="flex:1;min-width:0"><div class="ec-palette-item-label">Hauts potentiels</div><div class="ec-palette-item-desc">Identifier les talents à fort potentiel</div></div>
+                <span class="ec-palette-item-shortcut">HP</span>
+            </button>
+
+            <button class="ec-palette-item" data-prompt="Quels postes sont à risque de vacance ?" data-shortcut="RS">
+                <div class="ec-palette-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/></svg></div>
+                <div style="flex:1;min-width:0"><div class="ec-palette-item-label">Alertes de risque</div><div class="ec-palette-item-desc">Postes à risque de vacance ou de départ</div></div>
+                <span class="ec-palette-item-shortcut">RS</span>
+            </button>
+
+            <button class="ec-palette-item" data-prompt="Quelles formations sont en cours ou à planifier ?" data-shortcut="FO">
+                <div class="ec-palette-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg></div>
+                <div style="flex:1;min-width:0"><div class="ec-palette-item-label">Formations</div><div class="ec-palette-item-desc">Formations en cours, planifiées ou à recommander</div></div>
+                <span class="ec-palette-item-shortcut">FO</span>
+            </button>
+
+            <button class="ec-palette-item" data-prompt="Montre la répartition RH par département" data-shortcut="ST">
+                <div class="ec-palette-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
+                <div style="flex:1;min-width:0"><div class="ec-palette-item-label">Statistiques RH</div><div class="ec-palette-item-desc">Répartition par département, grade et BU</div></div>
+                <span class="ec-palette-item-shortcut">ST</span>
+            </button>
+
+            <div class="ec-palette-section-label">Actions</div>
+
+            <button class="ec-palette-item" data-action="clear">
+                <div class="ec-palette-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.5"/></svg></div>
+                <div style="flex:1;min-width:0"><div class="ec-palette-item-label">Nouvelle conversation</div><div class="ec-palette-item-desc">Réinitialiser le contexte et l'historique</div></div>
+            </button>
+
+        </div>
+        <div class="ec-palette-footer">
+            <span class="ec-palette-hint"><span class="ec-kbd">↑↓</span> Naviguer</span>
+            <span class="ec-palette-hint"><span class="ec-kbd">↵</span> Sélectionner</span>
+            <span class="ec-palette-hint"><span class="ec-kbd">ESC</span> Fermer</span>
+        </div>
+    </div>
+</div>
+
+<!-- Copy toast -->
+<div id="ec-toast" class="ec-toast" role="alert" aria-live="assertive"></div>
+
+@section Scripts {
+<script>
+// ════════════════════════════════════════════════════════════════════════════
+// EY HR COPILOT — Premium AI Workspace Engine
+// Microsoft Copilot × Salesforce Agentforce inspired
+// ════════════════════════════════════════════════════════════════════════════
+(function () {
+    'use strict';
+
+    // ── State ────────────────────────────────────────────────────────────────
+    const S = {
+        mem: { lastCollaborateurId: null, lastCollaborateurNom: null, lastIntent: null },
+        history:   [],
+        timeline:  [],
+        pinned:    [],
+        isTyping:  false,
+        started:   false,
+        startTime: null,
+    };
+
+    // ── DOM ──────────────────────────────────────────────────────────────────
+    const $  = id => document.getElementById(id);
+    const $$ = sel => document.querySelectorAll(sel);
+
+    const heroEl         = $('ec-hero');
+    const toolbarEl      = $('ec-toolbar');
+    const messagesEl     = $('ec-messages');
+    const inputAreaEl    = $('ec-input-area');
+    const inputEl        = $('ec-input');
+    const heroInputEl    = $('ec-hero-input');
+    const sendBtn        = $('ec-send');
+    const heroSendBtn    = $('ec-hero-send');
+    const clearBtn       = $('ec-clear-btn');
+    const contextBar     = $('ec-context-bar');
+    const contextName    = $('ec-context-name');
+    const contextDismiss = $('ec-context-dismiss');
+    const sessionStrip   = $('ec-session-strip');
+    const sessionCrumbs  = $('ec-session-crumbs');
+    const paletteOverlay = $('ec-palette-overlay');
+    const paletteSearch  = $('ec-palette-search');
+    const paletteBody    = $('ec-palette-body');
+    const toastEl        = $('ec-toast');
+
+    // Panel
+    const panelEmp       = $('ec-panel-emp');
+    const panelEmpty     = $('ec-panel-empty');
+    const empAvatar      = $('ec-emp-avatar');
+    const empName        = $('ec-emp-name');
+    const empRole        = $('ec-emp-role');
+    const empDept        = $('ec-emp-dept');
+    const empScore       = $('ec-emp-score');
+    const empPerf        = $('ec-emp-perf');
+    const empRisk        = $('ec-emp-risk');
+    const panelHistory   = $('ec-panel-history');
+    const panelSucc      = $('ec-panel-succession');
+    const panelSuccBody  = $('ec-panel-succession-body');
+    const pinnedList     = $('ec-pinned-list');
+    const pinnedEmpty    = $('ec-pinned-empty');
+    const pinCount       = $('ec-pin-count');
+
+    // ── Intent map ───────────────────────────────────────────────────────────
+    const INTENT_LABELS = {
+        TALENT: 'Hauts potentiels', SUCCESSION: 'Succession', PROMOTION: 'Promotion',
+        FORMATION: 'Formation', POSTES_CRITIQUES: 'Postes à risque', ANALYTICS: 'Stats RH',
+        PROFIL: 'Profil', SIMULATION_FORMATION: 'Simulation formation', EVOLUTION: 'Évolution'
+    };
+
+    // ── Initialization ───────────────────────────────────────────────────────
+    (function init() {
+        loadGlobalKpis();
+        wirePaletteItems();
+        wireQuickActions();
+        wireTabSwitching();
+        wireKeyboard();
+        wireHeroInput();
+        wireContextDismiss();
+        clearBtn.addEventListener('click', resetAll);
+        $('ec-palette-btn').addEventListener('click', openPalette);
+        $('ec-hero-palette-btn').addEventListener('click', openPalette);
+        $('ec-palette-input-btn').addEventListener('click', openPalette);
+        paletteOverlay.addEventListener('click', e => { if (e.target === paletteOverlay) closePalette(); });
+
+        // User initials
+        const ua = document.querySelector('.ey-user-avatar');
+        window._ecUserInit = ua ? ua.textContent.trim().substring(0, 2) : 'U';
+    })();
+
+    async function loadGlobalKpis() {
+        try {
+            const r = await fetch('/api/chatbot/stats');
+            if (!r.ok) return;
+            const d = await r.json();
+            const set = (id, v) => { const el = $(id); if (el && v != null) el.textContent = v; };
+            set('ec-kpi-collab',     d.nbCollaborateurs);
+            set('ec-kpi-talents',    d.nbHautsPotentiels);
+            set('ec-kpi-risques',    d.nbPostesRisque);
+            set('ec-kpi-formations', d.nbFormationsEnCours);
+            if (d.tauxCompletion != null) {
+                $('ec-kpi-progress').style.width = d.tauxCompletion + '%';
+                $('ec-kpi-progress-lbl').textContent = 'Taux complétion : ' + d.tauxCompletion + '%';
+            }
+        } catch (_) {}
+    }
+
+    // ── Hero input wiring ────────────────────────────────────────────────────
+    function wireHeroInput() {
+        heroInputEl.addEventListener('input', () => { heroSendBtn.disabled = !heroInputEl.value.trim(); });
+        heroInputEl.addEventListener('keydown', e => {
+            if (e.key === 'Enter' && !e.shiftKey && heroInputEl.value.trim()) { e.preventDefault(); sendMessage(heroInputEl.value.trim()); }
+            if (e.key === '/' && !heroInputEl.value) { e.preventDefault(); openPalette(); }
+        });
+        heroSendBtn.addEventListener('click', () => { if (heroInputEl.value.trim()) sendMessage(heroInputEl.value.trim()); });
+
+        // Hero delegated clicks
+        heroEl.addEventListener('click', e => {
+            const btn = e.target.closest('.ec-cap-card,.ec-suggest-btn');
+            if (!btn) return;
+            const prompt = btn.dataset.prompt || btn.textContent.replace(/^[•\s]+/, '').trim();
+            if (prompt) sendMessage(prompt);
+        });
+    }
+
+    // ── Main input wiring ────────────────────────────────────────────────────
+    function wireInput() {
+        inputEl.addEventListener('input', () => { sendBtn.disabled = !inputEl.value.trim(); });
+        inputEl.addEventListener('keydown', e => {
+            if (e.key === 'Enter' && !e.shiftKey && !sendBtn.disabled && !S.isTyping) { e.preventDefault(); handleSend(); }
+            if (e.key === '/' && !inputEl.value) { e.preventDefault(); openPalette(); }
+        });
+        sendBtn.addEventListener('click', () => { if (!S.isTyping) handleSend(); });
+    }
+
+    // ── Quick actions ────────────────────────────────────────────────────────
+    function wireQuickActions() {
+        document.addEventListener('click', e => {
+            const btn = e.target.closest('.ec-action-pill[data-prompt]');
+            if (btn) sendMessage(btn.dataset.prompt);
+        });
+    }
+
+    function wireContextDismiss() {
+        contextDismiss.addEventListener('click', () => {
+            S.mem.lastCollaborateurId = S.mem.lastCollaborateurNom = null;
+            contextBar.classList.remove('active');
+            panelEmp.style.display  = 'none';
+            panelEmpty.style.display = '';
+        });
+    }
+
+    // ── Tab switching ────────────────────────────────────────────────────────
+    function wireTabSwitching() {
+        $$('.ec-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                $$('.ec-tab').forEach(t => { t.classList.remove('active'); t.setAttribute('aria-selected', 'false'); });
+                $$('.ec-panel-content').forEach(p => p.classList.remove('active'));
+                tab.classList.add('active');
+                tab.setAttribute('aria-selected', 'true');
+                const pane = $(tab.getAttribute('aria-controls'));
+                if (pane) pane.classList.add('active');
+            });
+        });
+    }
+
+    // ── Keyboard shortcuts ────────────────────────────────────────────────────
+    function wireKeyboard() {
+        document.addEventListener('keydown', e => {
+            // ⌘K / Ctrl+K
+            if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); openPalette(); return; }
+            // Escape
+            if (e.key === 'Escape' && paletteOverlay.style.display !== 'none') { closePalette(); return; }
+        });
+
+        // Palette keyboard navigation
+        paletteSearch.addEventListener('keydown', e => {
+            const items = [...paletteBody.querySelectorAll('.ec-palette-item')].filter(i => i.style.display !== 'none');
+            const active = paletteBody.querySelector('.ec-palette-item.ec-active');
+            let idx = active ? items.indexOf(active) : -1;
+
+            if (e.key === 'ArrowDown')  { e.preventDefault(); idx = Math.min(idx + 1, items.length - 1); setActive(items, idx); }
+            if (e.key === 'ArrowUp')    { e.preventDefault(); idx = Math.max(idx - 1, 0); setActive(items, idx); }
+            if (e.key === 'Enter')      { e.preventDefault(); const a = items[idx] || items[0]; if (a) executePaletteItem(a); }
+            if (e.key === 'Escape')     { closePalette(); }
+        });
+
+        paletteSearch.addEventListener('input', filterPalette);
+    }
+
+    function setActive(items, idx) {
+        items.forEach(i => i.classList.remove('ec-active'));
+        if (items[idx]) { items[idx].classList.add('ec-active'); items[idx].scrollIntoView({ block: 'nearest' }); }
+    }
+
+    // ── Command palette ──────────────────────────────────────────────────────
+    function openPalette() {
+        paletteOverlay.style.display = 'flex';
+        paletteSearch.value = '';
+        filterPalette();
+        setTimeout(() => paletteSearch.focus(), 30);
+    }
+
+    function closePalette() {
+        paletteOverlay.style.display = 'none';
+        if (S.started) { setTimeout(() => inputEl.focus(), 50); }
+        else           { setTimeout(() => heroInputEl.focus(), 50); }
+    }
+
+    function wirePaletteItems() {
+        paletteBody.addEventListener('click', e => {
+            const item = e.target.closest('.ec-palette-item');
+            if (item) executePaletteItem(item);
+        });
+    }
+
+    function executePaletteItem(item) {
+        closePalette();
+        if (item.dataset.action === 'clear') { resetAll(); return; }
+        if (item.dataset.prompt) sendMessage(item.dataset.prompt);
+    }
+
+    function filterPalette() {
+        const q = paletteSearch.value.toLowerCase().trim();
+        paletteBody.querySelectorAll('.ec-palette-item').forEach(item => {
+            const text = (item.dataset.prompt || '') + (item.querySelector('.ec-palette-item-label')?.textContent || '');
+            item.style.display = !q || text.toLowerCase().includes(q) ? '' : 'none';
+        });
+        paletteBody.querySelectorAll('.ec-palette-section-label').forEach(lbl => {
+            const next = lbl.nextElementSibling;
+            lbl.style.display = next && next.style.display !== 'none' ? '' : 'none';
+        });
+        // Clear active
+        paletteBody.querySelectorAll('.ec-palette-item.ec-active').forEach(i => i.classList.remove('ec-active'));
+    }
+
+    // ── Transition to conversation mode ──────────────────────────────────────
+    function activateConversationMode() {
+        if (S.started) return;
+        S.started = true;
+        heroEl.style.transition = 'opacity .2s ease, transform .2s ease';
+        heroEl.style.opacity = '0';
+        heroEl.style.transform = 'translateY(-8px)';
+        setTimeout(() => {
+            heroEl.style.display  = 'none';
+            toolbarEl.style.display = '';
+            messagesEl.style.display = '';
+            inputAreaEl.style.display = '';
+            wireInput();
+            setTimeout(() => inputEl.focus(), 100);
+        }, 180);
+    }
+
+    // ── Send flow ────────────────────────────────────────────────────────────
+    async function handleSend() {
+        const text = inputEl.value.trim();
+        if (!text || S.isTyping) return;
+        inputEl.value = '';
+        sendBtn.disabled = true;
+        await doSend(text);
+    }
+
+    async function sendMessage(text) {
+        if (!text || S.isTyping) return;
+        if (!S.started) activateConversationMode();
+
+        // Small delay to let DOM update
+        await new Promise(r => setTimeout(r, S.started ? 0 : 200));
+        await doSend(text);
+    }
+
+    async function doSend(text) {
+        appendUserMessage(text);
+        const thinkingEl = appendThinking();
+        S.isTyping  = true;
+        S.startTime = Date.now();
+
+        try {
+            const data = await callApi(text);
+            const elapsed = ((Date.now() - S.startTime) / 1000).toFixed(1);
+            thinkingEl.remove();
+            S.isTyping = false;
+            await renderResponse(data, elapsed);
+            updateMemory(data);
+            updateSessionTimeline(data);
+            updateContextPanel(data);
+        } catch (err) {
+            thinkingEl.remove();
+            S.isTyping = false;
+            appendSimpleBot('Service momentanément indisponible. Veuillez réessayer dans quelques instants.');
+        }
+    }
+
+    // ── API ──────────────────────────────────────────────────────────────────
+    async function callApi(text) {
+        const path = window.location.pathname;
+        const m = path.match(/\/(\d+)(?:\/|$)/);
+        const payload = {
+            message:        text,
+            page:           path,
+            contextId:      (m ? m[1] : null) || S.mem.lastCollaborateurId || null,
+            sessionMemory:  S.mem,
+            sessionHistory: S.history
+        };
+        const res = await fetch('/api/chatbot/ask', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+    }
+
+    // ── Memory ───────────────────────────────────────────────────────────────
+    function updateMemory(data) {
+        if (!data) return;
+        const mem = data.sessionMemory || data.context;
+        if (mem && typeof mem === 'object') Object.assign(S.mem, mem);
+        const hist = data.sessionHistory || data.executionHistory;
+        if (Array.isArray(hist) && hist.length) S.history = hist;
+
+        const nom = S.mem.lastCollaborateurNom;
+        if (nom) {
+            contextName.textContent = nom;
+            contextBar.classList.add('active');
+        } else {
+            contextBar.classList.remove('active');
+        }
+    }
+
+    // ── Session timeline ──────────────────────────────────────────────────────
+    function updateSessionTimeline(data) {
+        const hist = data.sessionHistory || data.executionHistory;
+        if (!hist?.length) return;
+        const last = hist[hist.length - 1];
+        if (!last || last.error) return;
+        S.timeline.push({ intent: last.intent || 'ANALYSE', nom: S.mem.lastCollaborateurNom || null, ts: new Date() });
+        renderSessionStrip();
+        renderHistoryPanel();
+    }
+
+    function renderSessionStrip() {
+        if (!S.timeline.length) { sessionStrip.classList.remove('active'); return; }
+        sessionStrip.classList.add('active');
+        sessionCrumbs.innerHTML = S.timeline.map((item, i) => {
+            const lbl = INTENT_LABELS[item.intent] || item.intent;
+            const nm  = item.nom ? ` · <strong>${escHtml(item.nom)}</strong>` : '';
+            const sep = i < S.timeline.length - 1 ? `<span class="ec-session-sep">›</span>` : '';
+            return `<span class="ec-session-crumb"><span class="ec-session-crumb-dot"></span>${escHtml(lbl)}${nm}</span>${sep}`;
+        }).join('');
+    }
+
+    function renderHistoryPanel() {
+        if (!S.timeline.length) { panelHistory.innerHTML = '<div style="font-size:12px;color:var(--ec-text-subtle);text-align:center;padding:6px 0">Aucune activité.</div>'; return; }
+        panelHistory.innerHTML = S.timeline.slice().reverse().slice(0, 8).map(item => {
+            const lbl = INTENT_LABELS[item.intent] || item.intent;
+            const ts  = item.ts ? item.ts.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '';
+            const nm  = item.nom ? ` · <strong>${escHtml(item.nom)}</strong>` : '';
+            return `<div class="ec-hist-item"><div class="ec-hist-dot"></div><div class="ec-hist-text">${escHtml(lbl)}${nm}<span class="ec-hist-time">${ts}</span></div></div>`;
+        }).join('');
+    }
+
+    // ── Context panel ─────────────────────────────────────────────────────────
+    function updateContextPanel(data) {
+        const nom   = S.mem.lastCollaborateurNom;
+        const cards = Array.isArray(data.cards) ? data.cards : [];
+
+        if (nom) {
+            panelEmpty.style.display = 'none';
+            panelEmp.style.display   = '';
+            const initials = nom.split(' ').map(p => p[0] || '').join('').substring(0, 2).toUpperCase();
+            empAvatar.textContent = initials;
+            empName.textContent   = nom;
+            const pc = cards.find(c => c.type === 'collaborateur' || c.type === 'promotion');
+            if (pc?.data) {
+                const d = pc.data;
+                empRole.textContent = d.poste || d.grade || '—';
+                empDept.textContent = d.departement || '—';
+                if (typeof d.score === 'number') {
+                    const pct = Math.round(d.score / 5 * 100);
+                    empScore.textContent = pct + '%';
+                    empPerf.textContent  = d.score.toFixed(1) + '/5';
+                    empRisk.textContent  = pct >= 80 ? 'Bas' : pct >= 50 ? 'Moyen' : 'Élevé';
+                }
+            }
+        } else {
+            panelEmpty.style.display = '';
+            panelEmp.style.display   = 'none';
+        }
+
+        const sc = cards.find(c => c.type === 'succession');
+        if (sc?.data?.candidats?.length) {
+            panelSucc.style.display = '';
+            panelSuccBody.innerHTML = sc.data.candidats.slice(0, 3).map((c, i) => {
+                const pct = c.scoreMatch || 0;
+                const cls = pct >= 70 ? 'green' : pct >= 40 ? 'amber' : 'red';
+                return `<div class="ec-kpi-row"><span class="ec-kpi-label"><span style="color:var(--ec-text-subtle);font-size:10px;margin-right:4px">#${i+1}</span>${escHtml(c.nom || '—')}</span><span class="ec-kpi-value"><span class="ec-kpi-dot ${cls}"></span>${pct}%</span></div>`;
+            }).join('');
+        }
+    }
+
+    // ── Pin system ───────────────────────────────────────────────────────────
+    function pinCard(html, label) {
+        S.pinned.push({ html, label, id: Date.now() });
+        renderPinned();
+        switchTab('ec-pane-pinned');
+        showToast('Carte épinglée');
+    }
+
+    function renderPinned() {
+        const count = S.pinned.length;
+        pinCount.textContent = count;
+        pinCount.classList.toggle('visible', count > 0);
+        pinnedEmpty.style.display = count ? 'none' : '';
+        pinnedList.innerHTML = S.pinned.map(item => `
+            <div class="ec-pinned-item" data-pin-id="${item.id}">
+                <div class="ec-pinned-header">
+                    <div class="ec-pinned-label">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="11" height="11"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                        ${escHtml(item.label)}
+                    </div>
+                    <button class="ec-unpin-btn" data-pin-id="${item.id}" aria-label="Désépingler" title="Désépingler">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                </div>
+                <div style="padding:10px 12px">${item.html}</div>
+            </div>`).join('');
+
+        pinnedList.querySelectorAll('.ec-unpin-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const id = parseInt(btn.dataset.pinId);
+                S.pinned = S.pinned.filter(p => p.id !== id);
+                renderPinned();
+            });
+        });
+    }
+
+    function switchTab(paneId) {
+        $$('.ec-tab').forEach(t => { t.classList.remove('active'); t.setAttribute('aria-selected','false'); });
+        $$('.ec-panel-content').forEach(p => p.classList.remove('active'));
+        const pane = $(paneId);
+        if (!pane) return;
+        pane.classList.add('active');
+        const tab = document.querySelector(`[aria-controls="${paneId}"]`);
+        if (tab) { tab.classList.add('active'); tab.setAttribute('aria-selected','true'); }
+    }
+
+    // ── Toast ─────────────────────────────────────────────────────────────────
+    let toastTimer = null;
+    function showToast(msg) {
+        toastEl.textContent = msg;
+        toastEl.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2400);
+    }
+
+    // ── Reset ─────────────────────────────────────────────────────────────────
+    function resetAll() {
+        closePalette();
+        Object.assign(S, { mem: { lastCollaborateurId: null, lastCollaborateurNom: null, lastIntent: null }, history: [], timeline: [], pinned: [], isTyping: false });
+        S.started = false;
+
+        heroEl.style.cssText = '';
+        heroEl.style.display = '';
+        heroEl.style.opacity = '1';
+        heroEl.style.transform = '';
+        toolbarEl.style.display    = 'none';
+        messagesEl.style.display   = 'none';
+        inputAreaEl.style.display  = 'none';
+        messagesEl.innerHTML       = '';
+        heroInputEl.value          = '';
+        heroSendBtn.disabled       = true;
+
+        sessionStrip.classList.remove('active');
+        sessionCrumbs.innerHTML = '';
+        contextBar.classList.remove('active');
+        panelEmp.style.display  = 'none';
+        panelEmpty.style.display = '';
+        panelSucc.style.display  = 'none';
+        renderHistoryPanel();
+        renderPinned();
+        loadGlobalKpis();
+
+        setTimeout(() => heroInputEl.focus(), 100);
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // RENDER RESPONSE (with streaming simulation)
+    // ════════════════════════════════════════════════════════════════════════
+    async function renderResponse(data, elapsed) {
+        const answer      = data.answer      || '';
+        const analysis    = data.analysis    || '';
+        const reasoning   = Array.isArray(data.reasoning)   ? data.reasoning   : [];
+        const actions     = Array.isArray(data.actions)     ? data.actions     : [];
+        const suggestions = Array.isArray(data.suggestions) ? data.suggestions : [];
+        const cards       = Array.isArray(data.cards)       ? data.cards       : [];
+        const sources     = Array.isArray(data.sources)     ? data.sources     : [];
+
+        const row = document.createElement('div');
+        row.className = 'ec-msg';
+
+        const avatarDiv = document.createElement('div');
+        avatarDiv.className = 'ec-avatar ec-avatar-bot';
+        avatarDiv.setAttribute('aria-hidden', 'true');
+        avatarDiv.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7H3a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"/><line x1="9" y1="15" x2="9" y2="17"/><line x1="15" y1="15" x2="15" y2="17"/></svg>`;
+
+        const responseDiv = document.createElement('div');
+        responseDiv.className = 'ec-response';
+
+        const card = document.createElement('div');
+        card.className = 'ec-response-card';
+
+        // ── 1: Data cards ────
+        if (cards.length) {
+            const cc = document.createElement('div');
+            cc.className = 'ec-data-cards';
+            cc.innerHTML = cards.map(renderDataCard).join('');
+            card.appendChild(cc);
+        }
+
+        // ── 2: Answer — streamed ────
+        const answerEl = document.createElement('div');
+        answerEl.className = 'ec-answer';
+        card.appendChild(answerEl);
+
+        // ── 3: Analysis ────
+        if (analysis) {
+            const a = document.createElement('div');
+            a.className = 'ec-analysis';
+            a.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span>${escHtml(analysis)}</span>`;
+            card.appendChild(a);
+        }
+
+        // ── 4: Actions ────
+        if (actions.length) {
+            const lbl = document.createElement('div');
+            lbl.className = 'ec-section-label';
+            lbl.textContent = 'Actions recommandées';
+            card.appendChild(lbl);
+            const aw = document.createElement('div');
+            aw.className = 'ec-actions-wrap';
+            aw.innerHTML = actions.map(a => `<div class="ec-action-chip">${escHtml(a)}</div>`).join('');
+            card.appendChild(aw);
+        }
+
+        // ── 5: Suggestions ────
+        if (suggestions.length) {
+            const lbl2 = document.createElement('div');
+            lbl2.className = 'ec-section-label';
+            lbl2.textContent = 'Creuser davantage';
+            card.appendChild(lbl2);
+            const sw = document.createElement('div');
+            sw.className = 'ec-suggestions-wrap';
+            sw.innerHTML = suggestions.map(s =>
+                `<button class="ec-suggestion-pill" data-prompt="${escAttr(s)}">${escHtml(s)}</button>`
+            ).join('');
+            card.appendChild(sw);
+        }
+
+        // ── 6: Sources ────
+        if (sources.length) {
+            const sc = document.createElement('div');
+            sc.className = 'ec-sources';
+            sc.innerHTML = sources.map(s => {
+                const l = typeof s === 'string' ? s : (s?.label || s?.api || '');
+                return `<span class="ec-source-tag">${escHtml(l)}</span>`;
+            }).join('');
+            card.appendChild(sc);
+        }
+
+        // ── 7: Reasoning ────
+        if (reasoning.length) {
+            const det = document.createElement('details');
+            det.className = 'ec-reasoning';
+            const items = reasoning.map(r => {
+                let text = typeof r === 'string' ? r
+                    : r?.collaborateur ? `${r.collaborateur}${r.rang ? ' (rang ' + r.rang + ')' : ''} — ${r.pourquoi || ''}${r.lacunes ? ' · Lacunes : ' + r.lacunes : ''}`
+                    : r?.critere ? `${r.critere} — ${r.detail || ''}`
+                    : JSON.stringify(r);
+                return `<div class="ec-reasoning-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><polyline points="20 6 9 17 4 12"/></svg><span>${escHtml(text)}</span></div>`;
+            }).join('');
+            det.innerHTML = `<summary><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Raisonnement IA (${reasoning.length} étapes)</summary><div class="ec-reasoning-items">${items}</div>`;
+            card.appendChild(det);
+        }
+
+        // ── Footer: actions + timing ────
+        const footer = document.createElement('div');
+        footer.className = 'ec-response-footer';
+
+        const cardSnapshot = cards.map(renderDataCard).join('');
+
+        footer.innerHTML = `
+            <div class="ec-footer-actions">
+                <button class="ec-footer-btn" title="Copier" aria-label="Copier la réponse" data-action="copy">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                </button>
+                <button class="ec-footer-btn ec-footer-pin-btn" title="Épingler dans le panneau" aria-label="Épingler" data-action="pin">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                </button>
+            </div>
+            <div class="ec-response-timing">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                n8n · ${elapsed}s
+            </div>`;
+
+        footer.querySelector('[data-action="copy"]').addEventListener('click', () => {
+            const text = answerEl.textContent + (analysis ? '\n\n' + analysis : '');
+            navigator.clipboard.writeText(text).then(() => showToast('Copié dans le presse-papiers'));
+        });
+
+        footer.querySelector('[data-action="pin"]').addEventListener('click', () => {
+            const label = (answer || analysis || 'Réponse').substring(0, 48).trim() + (answer.length > 48 ? '…' : '');
+            pinCard(cardSnapshot || `<div style="font-size:12.5px;color:var(--ec-text-secondary)">${escHtml((answer || analysis).substring(0, 180))}</div>`, label);
+        });
+
+        card.appendChild(footer);
+
+        // Delegate suggestion chips
+        card.addEventListener('click', e => {
+            const btn = e.target.closest('.ec-suggestion-pill');
+            if (btn?.dataset.prompt) sendMessage(btn.dataset.prompt);
+        });
+
+        responseDiv.appendChild(card);
+        row.appendChild(avatarDiv);
+        row.appendChild(responseDiv);
+        messagesEl.appendChild(row);
+        scrollBottom();
+
+        // ── Stream the answer text ────
+        if (answer) {
+            await streamText(answerEl, answer);
+        } else {
+            answerEl.style.display = 'none';
+        }
+
+        scrollBottom();
+    }
+
+    // ── Streaming text reveal ─────────────────────────────────────────────────
+    async function streamText(container, markdown) {
+        const cursor = document.createElement('span');
+        cursor.className = 'ec-stream-cursor';
+        container.innerHTML = '';
+        container.appendChild(cursor);
+
+        const html   = renderMarkdown(markdown);
+        const tmpDiv = document.createElement('div');
+        tmpDiv.innerHTML = html;
+
+        // Extract text nodes for streaming, but show structure immediately
+        // Strategy: stream word by word on a plain text pass, then swap in rich HTML
+        const words = markdown.split(/(\s+)/);
+        let built = '';
+
+        for (let i = 0; i < words.length; i++) {
+            built += words[i];
+            container.innerHTML = renderMarkdown(built);
+            container.appendChild(cursor);
+            scrollBottom();
+
+            const delay = words[i].trim() ? 18 : 6;
+            await sleep(delay);
+        }
+
+        cursor.remove();
+    }
+
+    function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // CARD RENDERERS
+    // ════════════════════════════════════════════════════════════════════════
+    function renderDataCard(card) {
+        switch (card.type) {
+            case 'collaborateur': case 'promotion': return renderPersonCard(card);
+            case 'succession':   return renderSuccessionCard(card);
+            case 'analytics':    return renderAnalyticsCard(card);
+            case 'alerte':       return renderAlerteCard(card);
+            case 'simulation_card': return renderSimCard(card);
+            case 'impact_card':  return renderImpactCard(card);
+            case 'evolution_card': return renderEvolutionCard(card);
+            default: return '';
+        }
+    }
+
+    function getScoreCls(pct) { return pct >= 70 ? 'green' : pct >= 40 ? 'amber' : 'red'; }
+
+    function renderScoreRingMini(pct) {
+        const r = 16, circ = 2 * Math.PI * r;
+        const offset = circ * (1 - Math.max(0, Math.min(100, pct)) / 100);
+        const colors = { green: '#059669', amber: '#D97706', red: '#DC2626' };
+        const c = colors[getScoreCls(pct)];
+        return `<svg class="ec-score-svg" viewBox="0 0 38 38" width="40" height="40" aria-hidden="true">
+            <circle cx="19" cy="19" r="${r}" fill="none" stroke="#E2E8F0" stroke-width="3.5"/>
+            <circle cx="19" cy="19" r="${r}" fill="none" stroke="${c}" stroke-width="3.5"
+                stroke-dasharray="${circ.toFixed(2)}" stroke-dashoffset="${offset.toFixed(2)}"
+                stroke-linecap="round" transform="rotate(-90 19 19)"/>
+            <text x="19" y="22" text-anchor="middle" fill="#0F172A" font-size="9.5" font-weight="800" font-family="Inter,sans-serif">${pct}%</text>
+        </svg>`;
+    }
+
+    function renderPersonCard(card) {
+        const d = card.data || {};
+        const nom = d.nom || '';
+        const score = typeof d.score === 'number' ? d.score : 0;
+        const pct   = Math.round(score / 5 * 100);
+        const cls   = getScoreCls(pct);
+        const label = pct >= 80 ? 'PRÊT' : pct >= 50 ? 'EN COURS' : 'À RISQUE';
+        const role  = [d.poste || d.grade, d.departement].filter(Boolean).join(' · ');
+        const init  = nom.split(' ').map(p => p[0] || '').join('').substring(0, 2).toUpperCase();
+        return `<div class="ec-person-card">
+            <div style="position:relative;flex-shrink:0">
+                <div class="ec-person-avatar">${escHtml(init)}</div>
+                ${card.rank != null ? `<div class="ec-person-rank">${card.rank}</div>` : ''}
+            </div>
+            <div class="ec-person-info">
+                <div class="ec-person-name">${escHtml(nom)}</div>
+                <div class="ec-person-role">${escHtml(role)}</div>
+                <div class="ec-person-tags">
+                    <span class="ec-badge ec-badge-${cls}">${escHtml(label)}</span>
+                    ${d.readinessLabel ? `<span class="ec-badge ec-badge-blue">${escHtml(d.readinessLabel)}</span>` : ''}
+                </div>
+            </div>
+            <div class="ec-score-ring-wrap">${renderScoreRingMini(pct)}</div>
+        </div>`;
+    }
+
+    function renderSuccessionCard(card) {
+        const d = card.data || {};
+        const cands = (d.candidats || []).slice(0, 3);
+        if (!cands.length) return '';
+        return `<div style="border:1px solid var(--ec-border);border-radius:var(--ec-r-sm);overflow:hidden">
+            <div style="padding:8px 12px;background:var(--ec-primary);color:#fff;font-size:12px;font-weight:700">
+                Succession — ${escHtml(d.poste || d.titre || 'Poste')}
+            </div>
+            <div style="padding:8px 10px;display:flex;flex-direction:column;gap:6px">
+                ${cands.map((c, i) => {
+                    const pct = c.scoreMatch || 0;
+                    const cls = getScoreCls(pct);
+                    const init = (c.nom || '').split(' ').map(p => p[0] || '').join('').substring(0, 2).toUpperCase();
+                    const manq = (c.competencesManquantes || []).slice(0, 2);
+                    return `<div class="ec-person-card" style="padding:8px 10px">
+                        <div style="position:relative;flex-shrink:0">
+                            <div class="ec-person-avatar" style="width:34px;height:34px;font-size:11px">${escHtml(init)}</div>
+                            <div class="ec-person-rank">${i+1}</div>
+                        </div>
+                        <div class="ec-person-info">
+                            <div class="ec-person-name">${escHtml(c.nom || '')}</div>
+                            <div class="ec-person-role">${escHtml([c.grade, c.departement].filter(Boolean).join(' · '))}</div>
+                            ${manq.length ? `<div style="font-size:10.5px;color:var(--ec-text-subtle);margin-top:2px">Gaps : ${manq.map(escHtml).join(', ')}</div>` : ''}
+                        </div>
+                        <span class="ec-badge ec-badge-${cls}" style="flex-shrink:0">${pct}%</span>
+                    </div>`;
+                }).join('')}
+            </div>
+        </div>`;
+    }
+
+    function renderAnalyticsCard(card) {
+        const d = card.data || {};
+        const stats = d.stats || d.kpis || [];
+        if (!stats.length) return '';
+        return `<div class="ec-analytics-card">
+            <div class="ec-analytics-head">
+                <div><div class="ec-analytics-head-title">${escHtml(d.titre || card.title || 'Statistiques RH')}</div>${d.sous_titre ? `<div class="ec-analytics-head-sub">${escHtml(d.sous_titre)}</div>` : ''}</div>
+            </div>
+            <div class="ec-stats-grid">${stats.map(s => `<div class="ec-stat"><div class="ec-stat-val">${escHtml(String(s.valeur ?? s.value ?? '—'))}</div><div class="ec-stat-lbl">${escHtml(s.label || s.nom || '')}</div></div>`).join('')}</div>
+        </div>`;
+    }
+
+    function renderAlerteCard(card) {
+        const d = card.data || {};
+        const sev = (d.severite || d.severity || 'warning').toLowerCase();
+        const cls = sev === 'critique' || sev === 'critical' || sev === 'danger' ? 'danger' : 'warning';
+        const iconSvg = cls === 'danger'
+            ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`
+            : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
+        return `<div class="ec-alert-card ec-alert-${cls}"><div class="ec-alert-icon">${iconSvg}</div><div><div class="ec-alert-title">${escHtml(d.titre || d.poste || 'Alerte')}</div><div class="ec-alert-desc">${escHtml(d.description || d.message || '')}</div></div></div>`;
+    }
+
+    function renderSimCard(card) {
+        const d = card.data || {};
+        return `<div class="ec-sim-card">
+            <div class="ec-sim-head">Simulation — ${escHtml(d.collaborateur || d.nom || '')} · ${escHtml(d.formation || d.titre || '')}</div>
+            <div class="ec-stats-grid">
+                <div class="ec-stat"><div class="ec-stat-val">${escHtml(String(d.scoreAvant || '—'))}</div><div class="ec-stat-lbl">Avant</div></div>
+                <div class="ec-stat"><div class="ec-stat-val" style="color:var(--ec-success)">${escHtml(String(d.scoreApres || d.impact || '—'))}</div><div class="ec-stat-lbl">Après</div></div>
+                <div class="ec-stat"><div class="ec-stat-val" style="color:var(--ec-blue)">+${escHtml(String(d.gain || '—'))}</div><div class="ec-stat-lbl">Gain</div></div>
+            </div>
+        </div>`;
+    }
+
+    function renderImpactCard(card) {
+        return renderAnalyticsCard({ data: { titre: 'Impact RH', stats: (card.data || {}).impacts || [] } });
+    }
+
+    function renderEvolutionCard(card) {
+        const d = card.data || {};
+        return `<div style="border:1px solid var(--ec-border);border-radius:var(--ec-r-sm);overflow:hidden">
+            <div style="padding:8px 12px;background:var(--ec-primary);color:#fff;font-size:12px;font-weight:700">Évolution — ${escHtml(d.nom || d.collaborateur || '')}</div>
+            <div style="padding:8px 12px">${(d.jalons || []).map(j => `<div class="ec-kpi-row"><span class="ec-kpi-label">${escHtml(j.periode||j.date||'')}</span><span class="ec-kpi-value">${escHtml(String(j.score||j.valeur||''))}</span></div>`).join('')}</div>
+        </div>`;
+    }
+
+    // ── Message helpers ────────────────────────────────────────────────────────
+    function appendUserMessage(text) {
+        const ts = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        const row = document.createElement('div');
+        row.className = 'ec-msg ec-msg-user';
+        row.innerHTML = `
+            <div class="ec-user-bubble">
+                <div class="ec-user-text">${escHtml(text)}</div>
+                <div class="ec-msg-meta">${ts}</div>
+            </div>
+            <div class="ec-avatar ec-avatar-user" aria-hidden="true">${escHtml(window._ecUserInit || 'U')}</div>`;
+        messagesEl.appendChild(row);
+        scrollBottom();
+    }
+
+    function appendThinking() {
+        const row = document.createElement('div');
+        row.className = 'ec-thinking-row';
+        row.setAttribute('role', 'status');
+        row.setAttribute('aria-label', 'Analyse en cours');
+        row.innerHTML = `
+            <div class="ec-avatar ec-avatar-bot" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                    <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7H3a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"/>
+                    <line x1="9" y1="15" x2="9" y2="17"/><line x1="15" y1="15" x2="15" y2="17"/>
+                </svg>
+            </div>
+            <div class="ec-thinking-card">
+                <div class="ec-thinking-dots">
+                    <div class="ec-dot"></div><div class="ec-dot"></div><div class="ec-dot"></div>
+                </div>
+                <div class="ec-thinking-shimmer">
+                    <div class="ec-shimmer-line"></div>
+                    <div class="ec-shimmer-line"></div>
+                    <div class="ec-shimmer-line"></div>
+                </div>
+            </div>`;
+        messagesEl.appendChild(row);
+        scrollBottom();
+        return row;
+    }
+
+    function appendSimpleBot(text) {
+        const row = document.createElement('div');
+        row.className = 'ec-msg';
+        row.innerHTML = `
+            <div class="ec-avatar ec-avatar-bot" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                    <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7H3a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"/>
+                    <line x1="9" y1="15" x2="9" y2="17"/><line x1="15" y1="15" x2="15" y2="17"/>
+                </svg>
+            </div>
+            <div class="ec-response">
+                <div class="ec-response-card">
+                    <div class="ec-answer" style="color:var(--ec-danger)">${escHtml(text)}</div>
+                </div>
+            </div>`;
+        messagesEl.appendChild(row);
+        scrollBottom();
+    }
+
+    function scrollBottom() { requestAnimationFrame(() => { messagesEl.scrollTop = messagesEl.scrollHeight; }); }
+
+    // ── Markdown renderer ─────────────────────────────────────────────────────
+    function renderMarkdown(text) {
+        if (!text) return '';
+        const esc = String(text).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        const lines = esc.split('\n');
+        const out = [];
+        let inList = false;
+        for (const line of lines) {
+            const rich = line
+                .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*([^*\n]+)\*/g,   '<em>$1</em>');
+            const bullet = rich.match(/^[\s]*[-•]\s+(.+)$/);
+            if (bullet) {
+                if (!inList) { out.push('<ul style="margin:8px 0 4px;padding-left:20px">'); inList = true; }
+                out.push(`<li style="margin-bottom:3px;color:var(--ec-text-secondary)">${bullet[1]}</li>`);
+            } else {
+                if (inList) { out.push('</ul>'); inList = false; }
+                if (!rich.trim()) out.push('<span style="display:block;height:5px"></span>');
+                else out.push(`<span>${rich}</span><br>`);
+            }
+        }
+        if (inList) out.push('</ul>');
+        return out.join('');
+    }
+
+    // ── Safety escaping ───────────────────────────────────────────────────────
+    function escHtml(s)  { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+    function escAttr(s) { return escHtml(s); }
+
+})();
+</script>
+}
