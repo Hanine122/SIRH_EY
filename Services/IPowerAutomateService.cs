@@ -12,6 +12,9 @@ public interface IPowerAutomateService
         PromotionReadyNotification notification,
         CancellationToken ct = default);
 
+Task<PowerAutomateResult> NotifyTalentReviewCompletedAsync(
+    TalentReviewNotification notification,
+    CancellationToken ct = default);
     /// <summary>
     /// Triggers the "Succession Risk" Power Automate flow.
     /// Call this when a workforce impact simulation identifies a critical succession gap.

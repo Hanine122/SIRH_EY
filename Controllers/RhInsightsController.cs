@@ -82,12 +82,6 @@ public class RhInsightsController : Controller
         if (partant == null)
             return NotFound(new { message = "Collaborateur introuvable" });
 
-        var surProfil = partant.Competences?
-            .Where(c => !string.IsNullOrWhiteSpace(c.Nom))
-            .Select(c => c.Nom.Trim())
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList() ?? new List<string>();
-
         var surPoste = await _context.CompetencesRequisesParPoste
             .AsNoTracking()
             .Where(cr => cr.Poste == partant.Poste)
@@ -96,10 +90,7 @@ public class RhInsightsController : Controller
             .ToListAsync();
 
         var comparer = StringComparer.OrdinalIgnoreCase;
-        var competencesRequises = surProfil
-            .Union(surPoste, comparer)
-            .Distinct(comparer)
-            .ToList();
+        var competencesRequises = SuccessionEngine.BuildCompetencesRequisesUnion(partant.Competences, surPoste);
 
         var formations = await _context.Formations.AsNoTracking().ToListAsync();
 
@@ -112,15 +103,7 @@ public class RhInsightsController : Controller
 
         foreach (var candidat in tousActifs)
         {
-            var nomsCandidat = candidat.Competences?
-                .Where(c => !string.IsNullOrWhiteSpace(c.Nom))
-                .Select(c => c.Nom.Trim())
-                .Distinct(comparer)
-                .ToList() ?? new List<string>();
-
-            var communes = competencesRequises.Count(r => nomsCandidat.Any(a => comparer.Equals(a, r)));
-            var manquantes = competencesRequises.Where(r => !nomsCandidat.Any(a => comparer.Equals(a, r))).ToList();
-            var score = competencesRequises.Count > 0 ? Math.Round(100.0 * communes / competencesRequises.Count, 1) : 0;
+            var (communes, manquantes, score, nomsCandidat) = RemplacantMatchingEngine.ScoreMatching(competencesRequises, candidat.Competences);
 
             var deptPartant = (partant.Departement ?? "").Trim();
             var deptCandidat = (candidat.Departement ?? "").Trim();

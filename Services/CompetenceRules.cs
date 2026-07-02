@@ -23,5 +23,11 @@ namespace SIRH.EY.Services
                 _ => 3
             };
         }
+
+        /// <summary>Convertit un score d'évaluation (0-100) en niveau de compétence (1-5).</summary>
+        public static int NiveauFromScore(int score)
+        {
+            return Math.Max(1, Math.Min(5, (int)Math.Ceiling(score / 20.0)));
+        }
     }
 }

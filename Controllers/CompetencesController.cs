@@ -201,7 +201,7 @@ public async Task<IActionResult> Catalogue(int? collaborateurId)
                 PosteCible = compDef.PosteCible,
                 EstDejaAcquise = estDejaAcquise,
                 NiveauActuel = competenceExistant?.NiveauActuel ?? 0,
-                TypeCompetence = GetCompetenceType(compDef.Categorie)
+                TypeCompetence = CompetenceCatalogService.GetCompetenceType(compDef.Categorie)
             });
         }
 
@@ -249,7 +249,7 @@ public async Task<IActionResult> AjouterCompetencesCatalogue([FromBody] JsonElem
             {
                 // Trouver la catégorie correspondante ou créer "Tech/Fonctionnel" par défaut
                 int? categorieId = null;
-                var categorieNom = GetDefaultCategorie(nom);
+                var categorieNom = CompetenceCatalogService.GetDefaultCategorie(nom);
                 var categorie = await _context.CategoriesCompetences
                     .FirstOrDefaultAsync(cat => cat.Nom == categorieNom);
                 
@@ -276,39 +276,6 @@ public async Task<IActionResult> AjouterCompetencesCatalogue([FromBody] JsonElem
     {
         return StatusCode(500, new { success = false, message = ex.Message });
     }
-}
-
-private string GetCompetenceType(string? categorie)
-{
-    if (string.IsNullOrWhiteSpace(categorie)) return "Technique";
-    
-    var techCategories = new[] { "Tech", "Outils", "Data", "Audit" };
-    var fonctionnelCategories = new[] { "Méthodes", "Management", "Soft skills", "RH" };
-    
-    if (techCategories.Any(t => categorie.Contains(t, StringComparison.OrdinalIgnoreCase)))
-        return "Technique";
-    if (fonctionnelCategories.Any(f => categorie.Contains(f, StringComparison.OrdinalIgnoreCase)))
-        return "Fonctionnel";
-    
-    return "Transverse";
-}
-
-private string GetDefaultCategorie(string competenceNom)
-{
-    var lower = competenceNom.ToLower();
-    if (lower.Contains("azure") || lower.Contains("d365") || lower.Contains("power automate") || 
-        lower.Contains("integration") || lower.Contains("data migration"))
-        return "Tech";
-    if (lower.Contains("audit") || lower.Contains("ifrs") || lower.Contains("financial"))
-        return "Audit";
-    if (lower.Contains("fiscal") || lower.Contains("tax") || lower.Contains("vat") || lower.Contains("transfer pricing"))
-        return "Fiscalité";
-    if (lower.Contains("management") || lower.Contains("stakeholder") || lower.Contains("change"))
-        return "Management";
-    if (lower.Contains("brd") || lower.Contains("requirements") || lower.Contains("business process"))
-        return "Méthodes";
-    
-    return "Métier";
 }
 
 [Authorize(Roles = Roles.ITAdminOrRHOrManager)]
@@ -453,7 +420,7 @@ public async Task<IActionResult> MatriceEquipe(int? collaborateurId)
         evaluation.CommentaireManager = null;
         evaluation.EvaluationManager = null;
 
-        competence.NiveauActuel = Math.Max(1, Math.Min(5, (int)Math.Ceiling(vm.AutoEvaluationCollaborateur / 20.0)));
+        competence.NiveauActuel = CompetenceRules.NiveauFromScore(vm.AutoEvaluationCollaborateur);
         competence.DateEvaluation = DateTime.Now;
 
         await _context.SaveChangesAsync();
@@ -553,7 +520,7 @@ public async Task<IActionResult> MatriceEquipe(int? collaborateurId)
         evaluation.CommentaireManager = vm.CommentaireManager;
         evaluation.DateValidationManager = DateTime.Now;
 
-        competence.NiveauActuel = Math.Max(1, Math.Min(5, (int)Math.Ceiling(vm.EvaluationManager / 20.0)));
+        competence.NiveauActuel = CompetenceRules.NiveauFromScore(vm.EvaluationManager);
         competence.DateEvaluation = DateTime.Now;
 
         await _context.SaveChangesAsync();

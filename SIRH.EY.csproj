@@ -26,4 +26,13 @@
     <PackageReference Include="QuestPDF" Version="2026.2.4" />
   </ItemGroup>
 
+  <!-- SIRH.EY.Tests lives under this project's directory — exclude it from the default
+       SDK-style globs so its generated files (obj/*.g.cs) aren't compiled into this project. -->
+  <ItemGroup>
+    <Compile Remove="SIRH.EY.Tests\**" />
+    <Content Remove="SIRH.EY.Tests\**" />
+    <EmbeddedResource Remove="SIRH.EY.Tests\**" />
+    <None Remove="SIRH.EY.Tests\**" />
+  </ItemGroup>
+
 </Project>

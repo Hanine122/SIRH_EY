@@ -20,6 +20,8 @@ public sealed class PowerAutomateService : IPowerAutomateService
         _logger   = logger;
     }
 
+    
+
     public Task<PowerAutomateResult> NotifyPromotionReadyAsync(
         PromotionReadyNotification notification, CancellationToken ct = default)
         => PostAsync("PromotionReady", _settings.Flows.PromotionReady, notification, ct);
@@ -37,7 +39,14 @@ public sealed class PowerAutomateService : IPowerAutomateService
         => PostAsync("DevelopmentPlanCreated", _settings.Flows.DevelopmentPlanCreated, notification, ct);
 
     // ── Core dispatch ─────────────────────────────────────────────────────────
-
+public Task<PowerAutomateResult> NotifyTalentReviewCompletedAsync(
+    TalentReviewNotification notification,
+    CancellationToken ct = default)
+    => PostAsync(
+        "TalentReviewCompleted",
+        _settings.Flows.TalentReviewCompleted,
+        notification,
+        ct);
     private async Task<PowerAutomateResult> PostAsync<T>(
         string flowName, string? flowUrl, T payload, CancellationToken ct)
     {

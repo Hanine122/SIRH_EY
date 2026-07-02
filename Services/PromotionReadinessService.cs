@@ -66,40 +66,24 @@ public class PromotionReadinessService : IPromotionReadinessService
             .GroupBy(c => c.Nom.Trim(), StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.Max(c => c.NiveauActuel), StringComparer.OrdinalIgnoreCase);
 
-        var gaps = requiredCompetencies
-            .Select(req =>
-            {
-                currentSkills.TryGetValue(req.Name, out var currentLevel);
-                var gap = Math.Max(0, req.RequiredLevel - currentLevel);
-                return new PromotionCompetencyGapViewModel
-                {
-                    Competence = req.Name,
-                    CurrentLevel = currentLevel,
-                    RequiredLevel = req.RequiredLevel,
-                    Gap = gap,
-                    Severity = gap >= 3 ? "High" : gap == 2 ? "Medium" : gap == 1 ? "Low" : "Ready",
-                    PriorityLabel = gap >= 3 ? "Critique" : gap == 2 ? "Prioritaire" : gap == 1 ? "A renforcer" : "Couvert"
-                };
-            })
-            .OrderByDescending(g => g.Gap)
-            .ThenBy(g => g.Competence)
-            .ToList();
+        var gaps = PromotionReadinessEngine.BuildCompetencyGaps(
+            requiredCompetencies.Select(r => (r.Name, r.RequiredLevel)), currentSkills);
 
         var missing = gaps.Where(g => g.Gap > 0).ToList();
         var coveredCount = gaps.Count(g => g.Gap == 0);
         var totalGap = missing.Sum(g => g.Gap);
         var maxGap = Math.Max(1, gaps.Sum(g => g.RequiredLevel));
-        var compatibilityScore = Math.Round(100.0 * coveredCount / Math.Max(1, gaps.Count), 1);
-        var readiness = Math.Round(Math.Max(35, 100.0 - (totalGap * 100.0 / maxGap)), 1);
+        var compatibilityScore = PromotionReadinessEngine.ComputeCompatibilityScore(coveredCount, gaps.Count);
+        var readiness = PromotionReadinessEngine.ComputeReadiness(totalGap, maxGap);
 
         var completedTrainings = (collaborateur.Inscriptions ?? Enumerable.Empty<Inscription>())
             .Count(i => i.Terminee || i.Progression >= 80);
         var leadershipIndicators = ResolveLeadershipIndicators(collaborateur, currentSkills, completedTrainings);
         var transversalSkills = ResolveTransversalSkills(currentSkills.Keys.ToList());
-        var recommendations = BuildFormationRecommendations(missing, formations);
-        var months = EstimateMonths(totalGap, completedTrainings, recommendations.Count);
+        var recommendations = PromotionReadinessEngine.BuildFormationRecommendations(missing, formations);
+        var months = PromotionReadinessEngine.EstimateMonths(totalGap, completedTrainings, recommendations.Count);
 
-        // ── Score multi-critères — formule 40 / 25 / 20 / 15 ────────────────────
+        // ── Score multi-critères — formule 40 / 25 / 20 / 15 (PromotionReadinessEngine) ──
         var gradeRef = await _context.GradeReferentiels
             .AsNoTracking()
             .FirstOrDefaultAsync(g => g.Grade == target.Grade);
@@ -109,39 +93,18 @@ public class PromotionReadinessService : IPromotionReadinessService
         // 40 % — compétences (readiness déjà calculée : couverture pondérée des gaps)
         var scoreComp = readiness;
 
-        // 25 % — performance : TalentEvaluation.PerformanceScore (1-5 → 20-100)
-        //         fallback : NiveauPreparationSuccession (0-100) ou 50 neutre
         var talentEval = await _context.TalentEvaluations
             .AsNoTracking()
             .Where(t => t.CollaborateurId == collaborateur.Id && t.Actif)
             .OrderByDescending(t => t.DateEvaluation)
             .FirstOrDefaultAsync();
 
-        var scorePerformance = talentEval != null
-            ? Math.Min(100.0, talentEval.PerformanceScore * 20.0)
-            : collaborateur.NiveauPreparationSuccession ?? 50;
+        var scorePerformance = PromotionReadinessEngine.ComputeScorePerformance(talentEval, collaborateur.NiveauPreparationSuccession);
+        var scorePotentiel = PromotionReadinessEngine.ComputeScorePotentiel(talentEval, collaborateur.PotentielCarriere);
+        var scoreAnc = PromotionReadinessEngine.ComputeScoreAnciennete(ancienneteAns, gradeRef?.AncienneteMinAns);
 
-        // 20 % — potentiel : TalentEvaluation.PotentielScore > PotentielCarriere string > neutre 40
-        var scorePotentiel = talentEval != null
-            ? Math.Min(100.0, talentEval.PotentielScore * 20.0)
-            : (collaborateur.PotentielCarriere?.Trim().ToLowerInvariant()) switch
-            {
-                "high"   => 100.0,
-                "medium" => 60.0,
-                "low"    => 20.0,
-                _        => 40.0
-            };
-
-        // 15 % — ancienneté relative au seuil du grade cible
-        var scoreAnc = gradeRef is { AncienneteMinAns: > 0 }
-            ? Math.Min(100.0, ancienneteAns * 100.0 / gradeRef.AncienneteMinAns)
-            : Math.Min(100.0, ancienneteAns * 25.0);
-
-        var multiCriteriaScore = Math.Round(
-            0.40 * scoreComp + 0.25 * scorePerformance + 0.20 * scorePotentiel + 0.15 * scoreAnc, 1);
-
-        // PromotionPotential = score directement (plus de coefficients magiques)
-        var promotionPotential = Math.Round(Math.Min(98.0, multiCriteriaScore), 1);
+        var multiCriteriaScore = PromotionReadinessEngine.ComputeMultiCriteriaScore(scoreComp, scorePerformance, scorePotentiel, scoreAnc);
+        var promotionPotential = PromotionReadinessEngine.ComputePromotionPotential(multiCriteriaScore);
 
         return new PromotionReadinessResultViewModel
         {
@@ -308,44 +271,6 @@ public class PromotionReadinessService : IPromotionReadinessService
             matches.AddRange(new[] { "Communication transverse", "Adaptabilite", "Collaboration" });
 
         return matches;
-    }
-
-    private static List<PromotionFormationRecommendationViewModel> BuildFormationRecommendations(List<PromotionCompetencyGapViewModel> gaps, List<Formation> formations)
-    {
-        var recommendations = gaps
-            .Take(5)
-            .Select(gap =>
-            {
-                var formation = formations.FirstOrDefault(f =>
-                    !string.IsNullOrWhiteSpace(f.CompetenceVisee) &&
-                    f.CompetenceVisee.Contains(gap.Competence, StringComparison.OrdinalIgnoreCase))
-                    ?? formations.FirstOrDefault(f => f.Titre.Contains(gap.Competence, StringComparison.OrdinalIgnoreCase));
-
-                return new PromotionFormationRecommendationViewModel
-                {
-                    FormationTitre = formation?.Titre ?? $"Parcours cible - {gap.Competence}",
-                    TargetCompetence = gap.Competence,
-                    ReadinessGain = Math.Min(18, 6 + gap.Gap * 4),
-                    ProgressionImpact = gap.Gap >= 3 ? "Impact critique sur la readiness" : gap.Gap == 2 ? "Impact eleve sur la compatibilite" : "Impact rapide de consolidation",
-                    EstimatedWeeks = Math.Max(2, gap.Gap * 3)
-                };
-            })
-            .ToList();
-
-        if (!recommendations.Any())
-        {
-            recommendations.Add(new PromotionFormationRecommendationViewModel { FormationTitre = "Mentoring manager avance", TargetCompetence = "Leadership", ReadinessGain = 8, ProgressionImpact = "Consolidation avant promotion", EstimatedWeeks = 4 });
-        }
-
-        return recommendations;
-    }
-
-    private static (int Min, int Max) EstimateMonths(int totalGap, int completedTrainings, int recommendationCount)
-    {
-        var baseMonths = Math.Max(2, totalGap * 2 + recommendationCount);
-        var trainingReduction = Math.Min(4, completedTrainings);
-        var min = Math.Max(1, baseMonths - trainingReduction);
-        return (min, min + 2);
     }
 
     private static string BuildExecutiveSummary(Collaborateur collaborateur, PromotionTargetOptionViewModel target, List<PromotionCompetencyGapViewModel> gaps, List<string> transversalSkills, List<string> leadershipIndicators, (int Min, int Max) months)

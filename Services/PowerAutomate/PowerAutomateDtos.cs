@@ -20,6 +20,29 @@ public sealed record PowerAutomateResult(
         => new(false, error, code);
 }
 
+public sealed record TalentReviewNotification(
+    int CollaborateurId,
+    string NomComplet,
+    string? Email,
+    string? ManagerEmail,
+    string Grade,
+    string Poste,
+    string? Departement,
+
+    int Performance,
+    int Potentiel,
+
+    string NineBox,
+
+    bool PromotionReady,
+
+    double Readiness,
+
+    string Recommendation,
+
+    DateTime GeneratedAt
+);
+
 // ─── Promotion Ready ──────────────────────────────────────────────────────────
 
 /// <summary>

@@ -42,6 +42,29 @@ public static class SuccessionEngine
             .ToList();
     }
 
+    // ─── Union des compétences requises (profil du partant ∪ référentiel du poste) ─────
+
+    /// <summary>
+    /// Union des compétences du profil du partant et du référentiel du poste — partagée entre
+    /// CollaborateursController.ExportComparaisonRemplacantsPdf et RhInsightsController.GetMatchingRemplacants
+    /// (duplication byte-identique confirmée avant extraction).
+    /// </summary>
+    public static List<string> BuildCompetencesRequisesUnion(
+        IEnumerable<Competence>? competencesPartant,
+        IEnumerable<string> competencesRequisesParPoste)
+    {
+        var surProfil = (competencesPartant ?? Enumerable.Empty<Competence>())
+            .Where(c => !string.IsNullOrWhiteSpace(c.Nom))
+            .Select(c => c.Nom.Trim())
+            .Distinct(Ci)
+            .ToList();
+
+        return surProfil
+            .Union(competencesRequisesParPoste, Ci)
+            .Distinct(Ci)
+            .ToList();
+    }
+
     // ─── Scoring d'un candidat ────────────────────────────────────────────────
 
     /// <summary>

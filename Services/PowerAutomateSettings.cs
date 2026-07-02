@@ -26,4 +26,6 @@ public sealed class PowerAutomateFlowUrls
 
     /// <summary>HTTP POST trigger URL for the "Development Plan Created" flow.</summary>
     public string? DevelopmentPlanCreated { get; init; }
+
+    public string? TalentReviewCompleted { get; set; }
 }

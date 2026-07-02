@@ -29,6 +29,24 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<OKR> OKRs { get; set; }
     public DbSet<KeyResult> KeyResults { get; set; }
 
+    // ── Talent Governance (cycle, audit, decision rules) ──────────────────────
+    public DbSet<ReviewCycle> ReviewCycles { get; set; }
+    public DbSet<AuditLog> AuditLogs { get; set; }
+    public DbSet<DecisionRule> DecisionRules { get; set; }
+
+    // ── Succession Planning (persistant) ──────────────────────────────────────
+    public DbSet<SuccessionPlan> SuccessionPlans { get; set; }
+    public DbSet<SuccessorRankingSnapshot> SuccessorRankingSnapshots { get; set; }
+
+    // ── Skill Ontology (référentiel compétence enterprise) ────────────────────
+    public DbSet<Skill> Skills { get; set; }
+    public DbSet<SkillCategory> SkillCategories { get; set; }
+    public DbSet<SkillLevel> SkillLevels { get; set; }
+    public DbSet<SkillRelation> SkillRelations { get; set; }
+    public DbSet<SkillAlias> SkillAliases { get; set; }
+    public DbSet<SkillCriticality> SkillCriticalities { get; set; }
+    public DbSet<SkillVersion> SkillVersions { get; set; }
+
     // ── HR Master Data (referential) ──────────────────────────────────────────
     public DbSet<Department> Departments { get; set; }
     public DbSet<SubDepartment> SubDepartments { get; set; }
@@ -210,5 +228,51 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             .Property(c => c.ModeDeploiement)
             .HasConversion<string>()
             .HasMaxLength(20);
+
+        // ── Skill Ontology : SkillCategory self-référence (même pattern que Collaborateur.Manager) ──
+        modelBuilder.Entity<SkillCategory>()
+            .HasOne(sc => sc.ParentCategory)
+            .WithMany(sc => sc.SousCategories)
+            .HasForeignKey(sc => sc.ParentCategoryId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // ── Skill Ontology : SkillRelation a deux FK vers Skill — Restrict sur les deux
+        //    pour éviter l'erreur SQL Server "multiple cascade paths".
+        modelBuilder.Entity<SkillRelation>()
+            .HasOne(sr => sr.SourceSkill)
+            .WithMany(s => s.RelationsSource)
+            .HasForeignKey(sr => sr.SourceSkillId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<SkillRelation>()
+            .HasOne(sr => sr.TargetSkill)
+            .WithMany(s => s.RelationsCible)
+            .HasForeignKey(sr => sr.TargetSkillId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // ── Skill Ontology : suppression d'un Skill entraîne celle de ses attributs (owning) ──
+        modelBuilder.Entity<SkillAlias>()
+            .HasOne(a => a.Skill)
+            .WithMany(s => s.Aliases)
+            .HasForeignKey(a => a.SkillId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<SkillLevel>()
+            .HasOne(l => l.Skill)
+            .WithMany(s => s.Levels)
+            .HasForeignKey(l => l.SkillId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<SkillCriticality>()
+            .HasOne(c => c.Skill)
+            .WithMany(s => s.Criticalities)
+            .HasForeignKey(c => c.SkillId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<SkillVersion>()
+            .HasOne(v => v.Skill)
+            .WithMany(s => s.Versions)
+            .HasForeignKey(v => v.SkillId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

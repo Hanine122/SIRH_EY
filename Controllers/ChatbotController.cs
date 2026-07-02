@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using SIRH.EY.Authorization;
 using SIRH.EY.Data;
 using SIRH.EY.Models;
 using System.Net.Http;
@@ -19,17 +20,20 @@ namespace SIRH.EY.Controllers
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly ApplicationDbContext _context;
         private readonly IPowerAutomateService _powerAutomate;
+        private readonly ITeamAccessService _teamAccess;
         private readonly ILogger<ChatbotController> _logger;
 
         public ChatbotController(
             IHttpClientFactory httpClientFactory,
             ApplicationDbContext context,
             IPowerAutomateService powerAutomate,
+            ITeamAccessService teamAccess,
             ILogger<ChatbotController> logger)
         {
             _httpClientFactory = httpClientFactory;
             _context = context;
             _powerAutomate = powerAutomate;
+            _teamAccess = teamAccess;
             _logger = logger;
         }
 
@@ -951,6 +955,349 @@ var competencesRequises = competencesRequisesRaw
             });
         }
 
+        // ── US-001 — Conversation talent employé (9-box, OKRs, recommandation) ──
+        [AllowAnonymous]
+        [HttpGet("talent-evaluation/{collaborateurId:int}")]
+        public async Task<IActionResult> GetTalentEvaluation(int collaborateurId)
+        {
+            var collaborateur = await _context.Collaborateurs
+                .Include(c => c.Competences)
+                .Include(c => c.Inscriptions)
+                .FirstOrDefaultAsync(c => c.Id == collaborateurId);
+
+            if (collaborateur == null)
+                return NotFound(new { error = "Collaborateur introuvable." });
+
+            // Dernière évaluation manuelle (même source que la matrice 9-box / TalentController)
+            var manualEval = await _context.TalentEvaluations
+                .Where(t => t.CollaborateurId == collaborateurId && t.Actif)
+                .OrderByDescending(t => t.DateEvaluation)
+                .FirstOrDefaultAsync();
+
+            string source;
+            int performanceScore;
+            int potentielScore;
+            NineBoxCategory category;
+            string? managerComments;
+            string? employeeComments;
+            DateTime dateEvaluation;
+
+            if (manualEval != null)
+            {
+                source = "manual";
+                performanceScore = manualEval.PerformanceScore;
+                potentielScore = manualEval.PotentielScore;
+                category = manualEval.Category;
+                // TalentEvaluation ne distingue pas "manager"/"employé" : les deux champs sont
+                // renseignés par l'évaluateur (manager/RH) — Performance = angle manager, Potentiel = angle développement/employé.
+                managerComments = manualEval.CommentairesPerformance;
+                employeeComments = manualEval.CommentairesPotentiel;
+                dateEvaluation = manualEval.DateEvaluation;
+            }
+            else
+            {
+                // Pas d'évaluation manuelle → réutilise le moteur de scoring partagé (TalentController)
+                source = "computed";
+                performanceScore = TalentScoringEngine.CalculatePerformanceScore(collaborateur);
+                potentielScore = TalentScoringEngine.CalculatePotentielScore(collaborateur);
+                category = TalentScoringEngine.Calculate9BoxCategory(performanceScore, potentielScore);
+                managerComments = null;
+                employeeComments = null;
+                dateEvaluation = DateTime.Today;
+            }
+
+            var okrs = await _context.OKRs
+                .Include(o => o.KeyResults)
+                .Where(o => o.CollaborateurId == collaborateurId)
+                .OrderByDescending(o => o.Annee)
+                .ThenByDescending(o => (int)o.Trimestre)
+                .ToListAsync();
+
+            var dernierCycle = okrs.FirstOrDefault();
+            var latestOkrs = dernierCycle == null
+                ? new List<OKR>()
+                : okrs.Where(o => o.Annee == dernierCycle.Annee && o.Trimestre == dernierCycle.Trimestre).ToList();
+
+            var recommendation =
+                $"{category.GetDisplayName()} — performance {performanceScore}/5, potentiel {potentielScore}/5" +
+                (source == "computed" ? " (score calculé automatiquement, aucune évaluation manuelle enregistrée)." : ".");
+
+            return Ok(new
+            {
+                employee = new
+                {
+                    id = collaborateur.Id,
+                    nom = $"{collaborateur.Prenom} {collaborateur.Nom}",
+                    poste = collaborateur.Poste,
+                    grade = collaborateur.Grade,
+                    departement = collaborateur.Departement
+                },
+                evaluation = new
+                {
+                    source,
+                    performanceScore,
+                    potentielScore,
+                    category = category.ToString(),
+                    categoryLabel = category.GetDisplayName(),
+                    managerComments,
+                    employeeComments,
+                    dateEvaluation = dateEvaluation.ToString("yyyy-MM-dd")
+                },
+                latestOkrs = latestOkrs.Select(o => new
+                {
+                    id = o.Id,
+                    objectif = o.Objectif,
+                    annee = o.Annee,
+                    trimestre = o.Trimestre.ToString(),
+                    statut = o.Statut.ToString(),
+                    progressionGlobale = o.ProgressionGlobale,
+                    dateFinCible = o.DateFinCible.ToString("yyyy-MM-dd"),
+                    keyResults = o.KeyResults.Select(k => new
+                    {
+                        description = k.Description,
+                        progression = k.Progression,
+                        statut = k.Statut.ToString()
+                    })
+                }),
+                recommendation
+            });
+        }
+
+        // ── US-002 — Comparaison auto-évaluation (collaborateur) vs évaluation manager, par compétence ──
+        [AllowAnonymous]
+        [HttpGet("self-manager-comparison/{collaborateurId:int}")]
+        public async Task<IActionResult> GetSelfManagerComparison(int collaborateurId)
+        {
+            var collaborateur = await _context.Collaborateurs.FindAsync(collaborateurId);
+            if (collaborateur == null)
+                return NotFound(new { error = "Collaborateur introuvable." });
+
+            // Seules les compétences déjà auto-évaluées ont un EvaluationCompetence à comparer
+            var competences = await _context.Competences
+                .Include(c => c.CategorieCompetence)
+                .Include(c => c.EvaluationCompetence)
+                .Where(c => c.CollaborateurId == collaborateurId && c.EvaluationCompetence != null)
+                .ToListAsync();
+
+            var comparisons = competences
+                .Select(c =>
+                {
+                    var eval = c.EvaluationCompetence!;
+                    int? gap = eval.EvaluationManager.HasValue
+                        ? eval.EvaluationManager.Value - eval.AutoEvaluationCollaborateur
+                        : null;
+
+                    var alignment = gap == null
+                        ? "En attente de validation manager"
+                        : Math.Abs(gap.Value) <= 10 ? "Aligné"
+                        : gap.Value > 0 ? "Manager plus indulgent"
+                        : "Manager plus sévère";
+
+                    return new
+                    {
+                        competenceId = c.Id,
+                        competence = c.Nom,
+                        categorie = c.CategorieCompetence?.Nom,
+                        selfEvaluation = new
+                        {
+                            score = eval.AutoEvaluationCollaborateur,
+                            comment = eval.CommentaireCollaborateur,
+                            date = eval.DateAutoEvaluation?.ToString("yyyy-MM-dd")
+                        },
+                        managerEvaluation = new
+                        {
+                            score = eval.EvaluationManager,
+                            comment = eval.CommentaireManager,
+                            date = eval.DateValidationManager?.ToString("yyyy-MM-dd"),
+                            validated = eval.ValidationManager
+                        },
+                        gap,
+                        alignment
+                    };
+                })
+                .OrderBy(x => x.competence)
+                .ToList();
+
+            var evaluesParManager = comparisons.Where(x => x.gap.HasValue).ToList();
+            var ecartMoyen = evaluesParManager.Any()
+                ? Math.Round(evaluesParManager.Average(x => x.gap!.Value), 1)
+                : (double?)null;
+
+            return Ok(new
+            {
+                employee = new
+                {
+                    id = collaborateur.Id,
+                    nom = $"{collaborateur.Prenom} {collaborateur.Nom}",
+                    poste = collaborateur.Poste,
+                    grade = collaborateur.Grade
+                },
+                totalCompetences = comparisons.Count,
+                competencesValideesParManager = evaluesParManager.Count,
+                ecartMoyen,
+                comparisons
+            });
+        }
+
+        // ── US-003 — Évolution du score talent (dernière évaluation vs précédente) ──
+        [AllowAnonymous]
+        [HttpGet("talent-score-evolution/{collaborateurId:int}")]
+        public async Task<IActionResult> GetTalentScoreEvolution(int collaborateurId)
+        {
+            var collaborateur = await _context.Collaborateurs
+                .Include(c => c.Competences)
+                .Include(c => c.Inscriptions)
+                .FirstOrDefaultAsync(c => c.Id == collaborateurId);
+
+            if (collaborateur == null)
+                return NotFound(new { error = "Collaborateur introuvable." });
+
+            var evals = await _context.TalentEvaluations
+                .Where(t => t.CollaborateurId == collaborateurId && t.Actif)
+                .OrderByDescending(t => t.DateEvaluation)
+                .Take(2)
+                .ToListAsync();
+
+            var currentEval = evals.ElementAtOrDefault(0);
+            var previousEval = evals.ElementAtOrDefault(1);
+
+            string currentSource;
+            int currentPerf, currentPot;
+            NineBoxCategory currentCat;
+            DateTime currentDate;
+
+            if (currentEval != null)
+            {
+                currentSource = "manual";
+                currentPerf = currentEval.PerformanceScore;
+                currentPot = currentEval.PotentielScore;
+                currentCat = currentEval.Category;
+                currentDate = currentEval.DateEvaluation;
+            }
+            else
+            {
+                // Pas d'évaluation manuelle → réutilise le moteur de scoring partagé (US-001)
+                currentSource = "computed";
+                currentPerf = TalentScoringEngine.CalculatePerformanceScore(collaborateur);
+                currentPot = TalentScoringEngine.CalculatePotentielScore(collaborateur);
+                currentCat = TalentScoringEngine.Calculate9BoxCategory(currentPerf, currentPot);
+                currentDate = DateTime.Today;
+            }
+
+            static object BuildSnapshot(string source, int perf, int pot, NineBoxCategory cat, DateTime date) => new
+            {
+                source,
+                performanceScore = perf,
+                potentielScore = pot,
+                category = cat.ToString(),
+                categoryLabel = cat.GetDisplayName(),
+                dateEvaluation = date.ToString("yyyy-MM-dd")
+            };
+
+            var currentSnapshot = BuildSnapshot(currentSource, currentPerf, currentPot, currentCat, currentDate);
+
+            object? previousSnapshot = null;
+            object? delta = null;
+            var changes = new List<string>();
+            string summary;
+
+            if (previousEval != null)
+            {
+                previousSnapshot = BuildSnapshot("manual", previousEval.PerformanceScore, previousEval.PotentielScore, previousEval.Category, previousEval.DateEvaluation);
+
+                var perfDelta = currentPerf - previousEval.PerformanceScore;
+                var potDelta = currentPot - previousEval.PotentielScore;
+                var categoryChanged = currentCat != previousEval.Category;
+
+                delta = new { performance = perfDelta, potentiel = potDelta, categoryChanged };
+
+                if (perfDelta != 0)
+                    changes.Add($"Performance : {previousEval.PerformanceScore}/5 → {currentPerf}/5 ({(perfDelta > 0 ? "+" : "")}{perfDelta})");
+                if (potDelta != 0)
+                    changes.Add($"Potentiel : {previousEval.PotentielScore}/5 → {currentPot}/5 ({(potDelta > 0 ? "+" : "")}{potDelta})");
+                if (categoryChanged)
+                    changes.Add($"Catégorie 9-box : {previousEval.Category.GetDisplayName()} → {currentCat.GetDisplayName()}");
+
+                if (!changes.Any())
+                    changes.Add("Aucun changement détecté depuis la dernière évaluation.");
+
+                var trend = perfDelta > 0 || potDelta > 0 ? "progression"
+                    : perfDelta < 0 || potDelta < 0 ? "régression"
+                    : "stabilité";
+
+                summary = $"{collaborateur.Prenom} {collaborateur.Nom} : {trend} entre le {previousEval.DateEvaluation:dd/MM/yyyy} et le {currentDate:dd/MM/yyyy}. {string.Join(" ", changes)}";
+            }
+            else
+            {
+                changes.Add("Aucune évaluation précédente disponible pour comparaison.");
+                summary = $"{collaborateur.Prenom} {collaborateur.Nom} : {currentCat.GetDisplayName()} (performance {currentPerf}/5, potentiel {currentPot}/5)" +
+                    (currentSource == "computed"
+                        ? " — score calculé automatiquement, aucun historique d'évaluation manuelle."
+                        : " — première évaluation enregistrée, pas d'historique antérieur.");
+            }
+
+            return Ok(new
+            {
+                employee = new
+                {
+                    id = collaborateur.Id,
+                    nom = $"{collaborateur.Prenom} {collaborateur.Nom}",
+                    poste = collaborateur.Poste,
+                    grade = collaborateur.Grade
+                },
+                previousEvaluation = previousSnapshot,
+                currentEvaluation = currentSnapshot,
+                delta,
+                changes,
+                summary
+            });
+        }
+
+        // ── US-004 — Talent reviews en attente de validation manager ─────────────
+        // Source unique : EvaluationCompetence.ValidationManager (seul statut "en attente" du schéma).
+        [AllowAnonymous]
+        [HttpGet("pending-talent-reviews")]
+        public async Task<IActionResult> GetPendingTalentReviews([FromQuery] int? managerId = null)
+        {
+            var collaborateursQuery = _context.Collaborateurs
+                .Include(c => c.Competences!)
+                    .ThenInclude(comp => comp.EvaluationCompetence)
+                .Where(c => c.Actif)
+                .AsQueryable();
+
+            if (managerId.HasValue)
+                collaborateursQuery = collaborateursQuery.Where(c => c.ManagerId == managerId.Value);
+
+            var collaborateurs = await collaborateursQuery.ToListAsync();
+
+            var employeesAwaitingValidation = collaborateurs
+                .Select(c =>
+                {
+                    var evaluated = (c.Competences ?? Enumerable.Empty<Competence>())
+                        .Select(comp => comp.EvaluationCompetence)
+                        .Where(e => e != null && e.DateAutoEvaluation != null)
+                        .Select(e => e!)
+                        .ToList();
+
+                    var pending = evaluated.Where(e => !e.ValidationManager).ToList();
+
+                    return new { Collaborateur = c, Evaluated = evaluated, Pending = pending };
+                })
+                .Where(x => x.Pending.Any())
+                .Select(x => new
+                {
+                    id = x.Collaborateur.Id,
+                    name = $"{x.Collaborateur.Prenom} {x.Collaborateur.Nom}",
+                    status = "En attente de validation manager",
+                    progress = $"{x.Evaluated.Count - x.Pending.Count}/{x.Evaluated.Count}",
+                    lastEvaluationDate = x.Pending.Max(e => e.DateAutoEvaluation!.Value).ToString("yyyy-MM-dd")
+                })
+                .OrderBy(x => x.lastEvaluationDate)
+                .ToList();
+
+            return Ok(new { employeesAwaitingValidation });
+        }
+
         [HttpPost("ask")]
         public async Task<IActionResult> Ask([FromBody] ChatRequest request)
         {
@@ -963,14 +1310,24 @@ var competencesRequises = competencesRequisesRaw
             {
                 var client = _httpClientFactory.CreateClient();
 
+                // US-006 — rôle résolu côté serveur à partir de l'identité authentifiée (jamais
+                // fait confiance à une valeur envoyée par le client). Réutilise ITeamAccessService,
+                // déjà utilisé par TalentController/CompetencesController pour ce même besoin.
+                var role = _teamAccess.IsPrivileged(User) ? "HR"
+                    : User.IsInRole(Roles.Manager) ? "Manager"
+                    : "Employee";
+                var selfCollaborateurId = await _teamAccess.GetCurrentCollaborateurIdAsync(User);
+
                 var payload = JsonSerializer.Serialize(new
                 {
-                    message        = request.Message,
-                    page           = request.Page ?? "general",
-                    contextId      = request.ContextId,
-                    sessionMemory  = request.SessionMemory,
-                    sessionHistory = request.SessionHistory,
-                    context        = request.SessionMemory   // bridge : n8n lit body.context
+                    message             = request.Message,
+                    page                = request.Page ?? "general",
+                    contextId           = request.ContextId,
+                    sessionMemory       = request.SessionMemory,
+                    sessionHistory      = request.SessionHistory,
+                    context             = request.SessionMemory,   // bridge : n8n lit body.context
+                    role,
+                    selfCollaborateurId
                 });
 
                 var response = await client.PostAsync(

@@ -1,311 +1,673 @@
-﻿@model SIRH.EY.Models.Collaborateur
-
+@model SIRH.EY.Models.Collaborateur
 @{
-    ViewData["Title"] = $"{Model.Prenom} {Model.Nom}";
-    var competences = ViewBag.Competences as List<SIRH.EY.Models.Competence> ?? new List<SIRH.EY.Models.Competence>();
+    ViewData["Title"] = $"Intelligence · {Model.Prenom} {Model.Nom}";
+
+    var competences  = ViewBag.Competences  as List<SIRH.EY.Models.Competence>  ?? new List<SIRH.EY.Models.Competence>();
     var inscriptions = ViewBag.Inscriptions as List<SIRH.EY.Models.Inscription> ?? new List<SIRH.EY.Models.Inscription>();
-    var plansDeveloppement = ViewBag.PlanDeveloppement as List<SIRH.EY.Models.PlanDeveloppement> ?? new List<SIRH.EY.Models.PlanDeveloppement>();
-    var manager = ViewBag.Manager as SIRH.EY.Models.Collaborateur;
+    var plansDev     = ViewBag.PlanDeveloppement as List<SIRH.EY.Models.PlanDeveloppement> ?? new List<SIRH.EY.Models.PlanDeveloppement>();
+    var manager      = ViewBag.Manager as SIRH.EY.Models.Collaborateur;
+
+    // ── Derived metrics ──────────────────────────────────────────────────────
     var totalFormations = inscriptions.Count;
-    var totalCertifs = inscriptions.Count(i => i.Terminee);
-    var enCours = inscriptions.Count(i => !i.Terminee);
-    var statutPresence = !Model.Actif ? "INACTIF" : (Model.Id % 7 == 0 ? "CONGÉ" : "ACTIF");
-    var statutPresenceClass = statutPresence == "ACTIF" ? "active" : (statutPresence == "CONGÉ" ? "leave" : "inactive");
-    var initialsProfile = $"{(string.IsNullOrWhiteSpace(Model.Prenom) ? "?" : Model.Prenom[0])}{(string.IsNullOrWhiteSpace(Model.Nom) ? "?" : Model.Nom[0])}".ToUpperInvariant();
-    var avatarDotClass = statutPresence == "CONGÉ" ? "leave" : (statutPresence == "INACTIF" ? "inactive" : "");
+    var totalCertifs    = inscriptions.Count(i => i.Terminee);
+    var enCours         = inscriptions.Count(i => !i.Terminee);
+    var successionPct   = Model.NiveauPreparationSuccession ?? 0;
+    var potentiel       = Model.PotentielCarriere ?? "";
+    var statutPresence  = !Model.Actif ? "INACTIF" : (Model.Id % 7 == 0 ? "CONGÉ" : "ACTIF");
+
+    var compTotal   = competences.Count;
+    var compOk      = competences.Count(c => c.NiveauActuel >= c.NiveauCible);
+    var compCrit    = competences.Count(c => c.NiveauCible - c.NiveauActuel >= 2);
+    var compWarn    = competences.Count(c => c.NiveauCible - c.NiveauActuel == 1);
+    var scoreGlobal = compTotal > 0 ? (int)Math.Round(competences.Average(c => c.NiveauActuel / 5.0 * 100)) : 0;
+
+    // ── Promotion readiness signal ───────────────────────────────────────────
+    var (promoSignal, promoColor) = (potentiel, successionPct) switch {
+        ("Haut potentiel" or "Succession prioritaire", >= 70) => ("PRÊT", "green"),
+        ("Haut potentiel" or "Solide", _)                    => ("EN COURS", "amber"),
+        (_, >= 50)                                            => ("EN COURS", "amber"),
+        _                                                     => ("À PRÉPARER", "red")
+    };
+
+    var successionColor = successionPct >= 70 ? "green" : successionPct >= 40 ? "amber" : "red";
+    var compColor       = compCrit == 0 ? "green" : compCrit <= 1 ? "amber" : "red";
+
+    // ── AI Intelligence Summary (multi-sentence executive analysis) ──────────
+    var strengths = competences.Where(c => c.NiveauActuel >= c.NiveauCible)
+                               .Select(c => c.Nom).Take(2).ToList();
+    var critiques = competences.Where(c => c.NiveauCible - c.NiveauActuel >= 2)
+                               .OrderByDescending(c => c.NiveauCible - c.NiveauActuel)
+                               .Select(c => c.Nom).Take(2).ToList();
+
+    string aiParagraph;
+    if (!Model.Actif) {
+        aiParagraph = $"{Model.Prenom} {Model.Nom} est actuellement inactif(ve). Ce profil est archivé et n'est plus soumis aux cycles de revue RH.";
+    } else {
+        var opening = potentiel switch {
+            "Haut potentiel"         => $"{Model.Prenom} est identifié(e) comme haut potentiel dans le département {Model.Departement ?? "EY"}.",
+            "Succession prioritaire" => $"{Model.Prenom} figure en tête des plans de succession critiques pour le grade {Model.Grade ?? "actuel"}.",
+            "Solide"                 => $"{Model.Prenom} présente un profil solide et stable au sein du département {Model.Departement ?? "EY"}.",
+            "Emergent"               => $"{Model.Prenom} est un profil émergent à surveiller dans les prochains cycles de revue.",
+            _                        => $"{Model.Prenom} {Model.Nom} est {statutPresence.ToLower()} au sein du département {Model.Departement ?? "EY"}."
+        };
+        var succession = $"La préparation succession atteint {successionPct}%.";
+        var compStr = compTotal > 0
+            ? (compCrit > 0
+                ? $" {compCrit} lacune(s) critique(s) identifiée(s)" + (critiques.Any() ? $" — {string.Join(", ", critiques)} — nécessitent une action prioritaire." : ".")
+                : $" Les {compOk}/{compTotal} objectifs de compétences sont atteints ou dépassés.")
+            : " Aucune donnée de compétence disponible.";
+        var formStr = totalCertifs > 0
+            ? $" {totalCertifs} certification(s) validée(s){(enCours > 0 ? $", {enCours} en cours" : "")}."
+            : (totalFormations > 0 ? $" {enCours} formation(s) en cours." : "");
+        var reco = compCrit >= 2
+            ? $" Recommandation : planifier un parcours de développement accéléré avant la prochaine revue de performance."
+            : (promoSignal == "PRÊT" ? $" Recommandation : soumettre au comité de promotion lors du prochain cycle." : "");
+        aiParagraph = opening + " " + succession + compStr + formStr + reco;
+    }
+
+    // ── Career timeline events ───────────────────────────────────────────────
+    var tlEvents = new List<(DateTime Date, string Label, string Sub, string Type)>();
+    tlEvents.Add((Model.DateEmbauche, "Recrutement EY", Model.Grade ?? "", "start"));
+    if (Model.DatePrisePoste.HasValue)
+        tlEvents.Add((Model.DatePrisePoste.Value, "Prise de poste", Model.Poste ?? "", "milestone"));
+    foreach (var c in inscriptions.Where(i => i.Terminee).OrderBy(i => i.DateInscription).Take(4))
+        tlEvents.Add((c.DateInscription, c.Formation?.Titre ?? "Formation", "Certification", "certif"));
+    tlEvents.Add((DateTime.Today, "Aujourd'hui", $"{Model.Anciennete} an(s) EY", "today"));
+    tlEvents = tlEvents.OrderBy(e => e.Date).ToList();
 }
 
-<div class="mb-3 text-uppercase small text-muted fw-semibold">Répertoire &gt; @Model.Prenom @Model.Nom</div>
+@section Styles {
+<style>
+/* ══════════════════════════════════════════════════════════════════════════
+   EY Employee Intelligence Workspace
+   AI-first · executive-grade · zero decoration
+   ══════════════════════════════════════════════════════════════════════════ */
+:root {
+    --w-bg:      #F7F8FA;
+    --w-surface: #FFFFFF;
+    --w-border:  #E4E7EC;
+    --w-border2: #CDD2DA;
+    --w-text:    #0D1117;
+    --w-text2:   #3D4754;
+    --w-muted:   #6B7684;
+    --w-subtle:  #9BA8B5;
+    --w-blue:    #2563EB;
+    --w-navy:    #1E293B;
+    --w-yellow:  #FFE600;
+    --w-green:   #059669;
+    --w-amber:   #D97706;
+    --w-red:     #DC2626;
+    --w-green-s: #ECFDF5;
+    --w-amber-s: #FFFBEB;
+    --w-red-s:   #FEF2F2;
+    --w-blue-s:  #EFF6FF;
+    --w-font:    'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+}
+
+.ew { font-family:var(--w-font);color:var(--w-text);background:var(--w-bg);-webkit-font-smoothing:antialiased;min-height:100vh; }
+.ew *, .ew *::before, .ew *::after { box-sizing:border-box; }
+.ew a { text-decoration:none; }
+
+/* ── IDENTITY STRIP ──────────────────────────────────────────────────── */
+.ew-id {
+    display:flex;align-items:center;gap:16px;
+    padding:14px 0 18px;
+    border-bottom:1px solid var(--w-border);
+    margin-bottom:40px;
+    flex-wrap:wrap;
+}
+.ew-back {
+    font-size:12px;font-weight:600;color:var(--w-muted);letter-spacing:.02em;
+    display:flex;align-items:center;gap:6px;
+    transition:color 120ms;flex-shrink:0;
+}
+.ew-back:hover { color:var(--w-blue); }
+.ew-id-sep { width:1px;height:16px;background:var(--w-border2);flex-shrink:0; }
+.ew-id-name { font-size:14px;font-weight:700;color:var(--w-text);letter-spacing:-.01em; }
+.ew-id-role { font-size:13px;color:var(--w-muted);font-weight:400; }
+.ew-id-pills { display:flex;align-items:center;gap:6px;margin-left:auto; }
+
+.ew-pill {
+    display:inline-flex;align-items:center;padding:3px 9px;
+    border-radius:99px;font-size:10.5px;font-weight:700;letter-spacing:.04em;
+    border:1px solid;
+}
+.ew-pill-active { background:#ECFDF5;color:#059669;border-color:#A7F3D0; }
+.ew-pill-leave  { background:#FFFBEB;color:#D97706;border-color:#FDE68A; }
+.ew-pill-none   { background:#F1F5F9;color:#64748B;border-color:#E2E8F0; }
+.ew-pill-hp     { background:#EFF6FF;color:#2563EB;border-color:#BFDBFE; }
+.ew-pill-succ   { background:#F0FDF4;color:#059669;border-color:#BBF7D0; }
+
+.ew-edit-link {
+    font-size:12px;font-weight:600;color:var(--w-blue);
+    display:flex;align-items:center;gap:4px;flex-shrink:0;
+}
+.ew-edit-link:hover { text-decoration:underline;color:var(--w-blue); }
+
+/* ── AI INTELLIGENCE BLOCK ───────────────────────────────────────────── */
+.ew-ai {
+    background:var(--w-surface);
+    border:1px solid var(--w-border);
+    border-radius:16px;
+    padding:36px 40px;
+    margin-bottom:12px;
+}
+.ew-ai-eyebrow {
+    display:flex;align-items:center;gap:8px;
+    font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--w-blue);margin-bottom:20px;
+}
+.ew-ai-pulse {
+    width:8px;height:8px;border-radius:50%;background:var(--w-blue);
+    flex-shrink:0;animation:wPulse 2.2s ease-in-out infinite;
+}
+@@keyframes wPulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.85)} }
+
+.ew-ai-text {
+    font-size:19px;line-height:1.7;color:var(--w-text);
+    font-weight:400;letter-spacing:-.01em;
+    max-width:760px;margin-bottom:28px;
+}
+.ew-ai-text strong { font-weight:700;color:var(--w-navy); }
+
+.ew-ai-ctas {
+    display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+}
+.ew-cta {
+    display:inline-flex;align-items:center;gap:6px;
+    padding:9px 18px;border-radius:8px;font-size:13px;font-weight:600;
+    border:1px solid var(--w-border2);background:var(--w-bg);color:var(--w-text2);
+    cursor:pointer;transition:all 120ms ease;font-family:var(--w-font);
+    white-space:nowrap;
+}
+.ew-cta:hover { background:var(--w-navy);color:#fff;border-color:var(--w-navy); }
+.ew-cta-primary {
+    background:var(--w-yellow);color:var(--w-navy);border-color:var(--w-yellow);
+}
+.ew-cta-primary:hover { background:#D4C000;border-color:#D4C000;color:var(--w-navy); }
+
+/* ── DECISION STRIP ──────────────────────────────────────────────────── */
+.ew-decisions {
+    display:grid;grid-template-columns:repeat(4,1fr);gap:2px;
+    margin-bottom:40px;
+    border:1px solid var(--w-border);border-radius:14px;overflow:hidden;
+    background:var(--w-border);
+}
+.ew-dc {
+    background:var(--w-surface);padding:22px 24px;
+    display:flex;flex-direction:column;gap:6px;
+    transition:background 130ms;
+}
+.ew-dc:hover { background:#FAFBFD; }
+.ew-dc-label {
+    font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--w-subtle);
+}
+.ew-dc-value {
+    font-size:26px;font-weight:800;letter-spacing:-.04em;line-height:1;
+    color:var(--w-text);
+}
+.ew-dc-signal {
+    display:inline-flex;align-items:center;gap:5px;
+    font-size:11px;font-weight:700;letter-spacing:.04em;
+}
+.ew-sig-green { color:var(--w-green); }
+.ew-sig-amber { color:var(--w-amber); }
+.ew-sig-red   { color:var(--w-red); }
+.ew-sig-blue  { color:var(--w-blue); }
+.ew-dc-signal::before { content:''; display:inline-block; width:6px; height:6px; border-radius:50%; background:currentColor; flex-shrink:0; }
+.ew-dc-meta { font-size:11.5px;color:var(--w-muted);font-weight:400;margin-top:2px; }
+
+/* ── SECTION HEADER ──────────────────────────────────────────────────── */
+.ew-sec-label {
+    font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+    color:var(--w-subtle);margin-bottom:14px;
+}
+
+/* ── INTELLIGENCE PANEL ──────────────────────────────────────────────── */
+.ew-intel {
+    background:var(--w-surface);border:1px solid var(--w-border);border-radius:14px;
+    overflow:hidden;
+}
+.ew-intel-head {
+    padding:18px 22px;border-bottom:1px solid var(--w-border);
+    display:flex;align-items:center;justify-content:space-between;
+}
+.ew-intel-title { font-size:14px;font-weight:700;color:var(--w-text); }
+.ew-intel-meta  { font-size:12px;color:var(--w-muted); }
+
+/* Skill signal rows */
+.ew-skill-row {
+    display:flex;align-items:center;padding:14px 22px;
+    border-bottom:1px solid var(--w-border);gap:14px;
+    transition:background 120ms;
+}
+.ew-skill-row:last-child { border-bottom:none; }
+.ew-skill-row:hover { background:var(--w-bg); }
+.ew-skill-dot { width:8px;height:8px;border-radius:50%;flex-shrink:0; }
+.ew-skill-dot.g { background:var(--w-green); }
+.ew-skill-dot.a { background:var(--w-amber); }
+.ew-skill-dot.r { background:var(--w-red); }
+.ew-skill-name  { font-size:13.5px;font-weight:600;color:var(--w-text);flex:1;min-width:0; }
+.ew-skill-levels { font-size:12px;color:var(--w-muted);flex-shrink:0;font-variant-numeric:tabular-nums; }
+.ew-skill-badge {
+    font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;
+    letter-spacing:.03em;flex-shrink:0;
+}
+.ew-badge-ok   { background:var(--w-green-s);color:var(--w-green); }
+.ew-badge-warn { background:var(--w-amber-s);color:var(--w-amber); }
+.ew-badge-crit { background:var(--w-red-s);  color:var(--w-red); }
+
+/* Formation rows */
+.ew-form-row {
+    display:flex;align-items:center;padding:13px 22px;
+    border-bottom:1px solid var(--w-border);gap:14px;
+    transition:background 120ms;
+}
+.ew-form-row:last-child { border-bottom:none; }
+.ew-form-row:hover { background:var(--w-bg); }
+.ew-form-name  { font-size:13px;font-weight:600;color:var(--w-text);flex:1;min-width:0; }
+.ew-form-pct   { font-size:12px;font-weight:700;color:var(--w-text);flex-shrink:0;font-variant-numeric:tabular-nums; }
+.ew-form-bar   { width:64px;height:3px;background:var(--w-border);border-radius:2px;overflow:hidden;flex-shrink:0; }
+.ew-form-fill  { height:100%;border-radius:2px;background:var(--w-blue); }
+.ew-form-fill.done { background:var(--w-green); }
+
+/* ── ACTIONS PANEL ───────────────────────────────────────────────────── */
+.ew-actions {
+    background:var(--w-surface);border:1px solid var(--w-border);border-radius:14px;
+    overflow:hidden;height:100%;
+}
+.ew-actions-head { padding:18px 22px;border-bottom:1px solid var(--w-border); }
+.ew-actions-title { font-size:14px;font-weight:700;color:var(--w-text); }
+
+.ew-action-item {
+    display:flex;align-items:center;padding:16px 22px;
+    border-bottom:1px solid var(--w-border);gap:14px;
+    cursor:pointer;transition:background 120ms;
+    font-family:var(--w-font);border:none;background:transparent;width:100%;text-align:left;
+    text-decoration:none;
+}
+.ew-action-item:last-child { border-bottom:none; }
+.ew-action-item:hover { background:var(--w-bg); }
+.ew-action-item.primary { background:var(--w-yellow); }
+.ew-action-item.primary:hover { background:#D4C000; }
+
+.ew-action-icon {
+    width:34px;height:34px;border-radius:8px;
+    border:1px solid var(--w-border);background:var(--w-bg);
+    display:flex;align-items:center;justify-content:center;
+    font-size:14px;color:var(--w-muted);flex-shrink:0;
+    transition:all 120ms;
+}
+.ew-action-item:hover .ew-action-icon { background:var(--w-navy);color:#fff;border-color:var(--w-navy); }
+.ew-action-item.primary .ew-action-icon { background:rgba(0,0,0,.08);border-color:rgba(0,0,0,.08);color:var(--w-navy); }
+
+.ew-action-label { font-size:13.5px;font-weight:700;color:var(--w-text);flex:1;line-height:1.3; }
+.ew-action-sub   { font-size:11.5px;color:var(--w-muted);margin-top:2px;font-weight:400; }
+.ew-action-item.primary .ew-action-label,
+.ew-action-item.primary .ew-action-sub { color:var(--w-navy); }
+
+.ew-action-arrow { font-size:14px;color:var(--w-subtle);flex-shrink:0;transition:transform 120ms; }
+.ew-action-item:hover .ew-action-arrow { transform:translateX(3px);color:var(--w-text2); }
+
+/* ── CAREER TIMELINE ─────────────────────────────────────────────────── */
+.ew-timeline-wrap {
+    background:var(--w-surface);border:1px solid var(--w-border);border-radius:14px;
+    padding:26px 32px;margin-top:12px;
+}
+.ew-timeline-track {
+    position:relative;display:flex;align-items:flex-start;
+    padding-top:14px;overflow-x:auto;scrollbar-width:none;
+}
+.ew-timeline-track::-webkit-scrollbar { display:none; }
+.ew-timeline-track::before {
+    content:'';position:absolute;top:19px;left:0;right:0;height:1px;
+    background:var(--w-border2);z-index:0;
+}
+.ew-tl-event {
+    display:flex;flex-direction:column;align-items:center;
+    position:relative;z-index:1;flex:1;min-width:100px;padding:0 8px;
+}
+.ew-tl-dot {
+    width:10px;height:10px;border-radius:50%;background:var(--w-border2);
+    border:2px solid var(--w-surface);box-shadow:0 0 0 1px var(--w-border2);
+    margin-bottom:10px;flex-shrink:0;
+}
+.ew-tl-dot.start  { background:var(--w-navy);box-shadow:0 0 0 1px var(--w-navy); }
+.ew-tl-dot.certif { background:var(--w-green);box-shadow:0 0 0 1px var(--w-green); }
+.ew-tl-dot.today  { background:var(--w-blue);box-shadow:0 0 0 3px var(--w-blue-s),0 0 0 1px var(--w-blue); }
+.ew-tl-date  { font-size:10px;font-weight:600;color:var(--w-subtle);letter-spacing:.04em;margin-bottom:3px; }
+.ew-tl-label { font-size:12px;font-weight:700;color:var(--w-text);text-align:center;line-height:1.3; }
+.ew-tl-sub   { font-size:10.5px;color:var(--w-muted);text-align:center;margin-top:2px;line-height:1.3; }
+
+/* ── MANAGER MICRO CARD ──────────────────────────────────────────────── */
+.ew-mgr-chip {
+    display:inline-flex;align-items:center;gap:10px;
+    padding:10px 14px;background:var(--w-bg);border:1px solid var(--w-border);
+    border-radius:10px;
+}
+.ew-mgr-av {
+    width:32px;height:32px;border-radius:50%;background:var(--w-navy);
+    color:#fff;font-size:11px;font-weight:700;
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.ew-mgr-name { font-size:12.5px;font-weight:700;color:var(--w-text); }
+.ew-mgr-role { font-size:11px;color:var(--w-muted); }
+
+/* ── EMPTY STATES ────────────────────────────────────────────────────── */
+.ew-empty { padding:28px 22px;text-align:center;color:var(--w-muted);font-size:13px; }
+
+/* ── ALERTS ──────────────────────────────────────────────────────────── */
+.ew-alert { display:flex;align-items:flex-start;gap:10px;padding:12px 16px;border-radius:10px;margin-bottom:14px;font-size:13px; }
+.ew-alert-ok  { background:#ECFDF5;color:#059669;border:1px solid #A7F3D0; }
+.ew-alert-err { background:#FEF2F2;color:#DC2626;border:1px solid #FECACA; }
+
+/* ── RESPONSIVE ──────────────────────────────────────────────────────── */
+@@media (max-width:991px) {
+    .ew-decisions { grid-template-columns:repeat(2,1fr); }
+    .ew-ai { padding:24px 22px; }
+    .ew-ai-text { font-size:16px; }
+}
+@@media (max-width:575px) {
+    .ew-decisions { grid-template-columns:1fr 1fr; }
+}
+@@media (prefers-reduced-motion:reduce) {
+    *,*::before,*::after { animation-duration:.01ms!important;transition-duration:.01ms!important; }
+}
+</style>
+}
+
+<div class="ew">
 
 @if (TempData["Success"] != null)
 {
-    <div class="alert alert-success"><i class="fas fa-check-circle me-1"></i> @TempData["Success"]</div>
+    <div class="ew-alert ew-alert-ok"><i class="fas fa-check-circle"></i> @TempData["Success"]</div>
 }
 @if (TempData["Error"] != null)
 {
-    <div class="alert alert-danger"><i class="fas fa-exclamation-triangle me-1"></i> @TempData["Error"]</div>
+    <div class="ew-alert ew-alert-err"><i class="fas fa-exclamation-triangle"></i> @TempData["Error"]</div>
 }
 
-<div class="row g-3 align-items-start">
-    <div class="col-lg-4">
-        <div class="profile-side mb-3">
-            <div class="profile-side-header"></div>
-            <div class="p-3">
-                <div class="profile-avatar">
-                    <span class="profile-initials">@initialsProfile</span>
-                    <span class="profile-status-dot @avatarDotClass"></span>
-                </div>
-                <div class="text-center mt-2">
-                    <h1 class="ey-serif-title mb-1">@Model.Prenom @Model.Nom</h1>
-                    <div class="text-muted fs-6">@Model.Poste</div>
-                    <div class="d-flex justify-content-center gap-2 mt-2">
-                        <span class="ey-pill @statutPresenceClass">@statutPresence</span>
-                        <span class="ey-pill">TEMPS PLEIN</span>
-                    </div>
-                </div>
-                <hr />
-                <div class="small fs-6">
-                    <div class="mb-2"><i class="far fa-envelope me-2 text-muted"></i>@Model.Email</div>
-                    <div class="mb-2"><i class="fas fa-map-marker-alt me-2 text-muted"></i>@(Model.Departement ?? "Non défini")</div>
-                    <div class="mb-2"><i class="fas fa-briefcase me-2 text-muted"></i>@(Model.Poste ?? "Non défini")</div>
-                    <div class="mb-2"><i class="fas fa-sitemap me-2 text-muted"></i>Grade : @(Model.Grade ?? "Non défini")</div>
-                    <div class="mb-2"><i class="fas fa-id-badge me-2 text-muted"></i>Matricule : @(Model.Matricule ?? "Non defini")</div>
-                    <div class="mb-2"><i class="fas fa-building me-2 text-muted"></i>BU : @(Model.BusinessUnit ?? "Non definie")</div>
-                    <div class="mb-2"><i class="fas fa-file-contract me-2 text-muted"></i>Contrat : @(Model.TypeContrat ?? "Non defini")</div>
-                </div>
-                <a asp-action="Edit" asp-route-id="@Model.Id" class="ey-btn-yellow text-decoration-none d-block text-center mt-3"><i class="fas fa-pen me-1"></i> MODIFIER LE PROFIL</a>
-            </div>
-        </div>
+<!-- ══ IDENTITY STRIP ═════════════════════════════════════════════════════ -->
+<div class="ew-id">
+    <a asp-controller="Collaborateurs" asp-action="Index" class="ew-back">
+        <i class="fas fa-arrow-left" style="font-size:10px"></i> Répertoire
+    </a>
+    <div class="ew-id-sep"></div>
+    <div>
+        <span class="ew-id-name">@Model.Prenom @Model.Nom</span>
+        @if (!string.IsNullOrEmpty(Model.Poste) || !string.IsNullOrEmpty(Model.Grade))
+        {
+            <span class="ew-id-role" style="margin-left:8px">·&nbsp;@Model.Poste@(!string.IsNullOrEmpty(Model.Grade) ? $" · {Model.Grade}" : "")</span>
+        }
+    </div>
+    <div class="ew-id-pills">
+        @{
+            var statusCls = statutPresence switch { "ACTIF" => "active", "CONGÉ" => "leave", _ => "none" };
+        }
+        <span class="ew-pill ew-pill-@statusCls">@statutPresence</span>
+        @if (!string.IsNullOrEmpty(potentiel))
+        {
+            var talentPillCls = potentiel.Contains("Haut") || potentiel.Contains("Succession") ? "ew-pill-succ" : "ew-pill-hp";
+            <span class="ew-pill @talentPillCls">@potentiel.ToUpper()</span>
+        }
+    </div>
+    <a asp-action="Edit" asp-route-id="@Model.Id" class="ew-edit-link" style="margin-left:8px">
+        Modifier <i class="fas fa-arrow-right" style="font-size:10px"></i>
+    </a>
+</div>
 
-        <div class="ey-card p-3">
-            <div class="ey-page-kicker mb-2">Reporting line</div>
-            @if (manager != null)
+<!-- ══ AI INTELLIGENCE BLOCK ══════════════════════════════════════════════ -->
+<div class="ew-ai" style="margin-bottom:12px">
+    <div class="ew-ai-eyebrow">
+        <div class="ew-ai-pulse"></div>
+        Intelligence EY HR Copilot · Analyse en temps réel
+    </div>
+    <div class="ew-ai-text">
+        @{
+            var parts = aiParagraph.Split(new[]{". "}, StringSplitOptions.RemoveEmptyEntries);
+        }
+        @if (parts.Length > 0)
+        {
+            <strong>@parts[0].</strong>
+            @if (parts.Length > 1)
             {
-                <div class="d-flex align-items-center gap-2">
-                    <i class="fas fa-user-circle fs-2 text-secondary"></i>
-                    <div>
-                        <div class="fw-semibold">@manager.Prenom @manager.Nom</div>
-                        <div class="text-muted">@(manager.Poste ?? "Manager")</div>
-                    </div>
+                @Html.Raw(" " + string.Join(". ", parts.Skip(1).Select(p => p.TrimEnd('.'))) + ".")
+            }
+        }
+    </div>
+
+    <div class="ew-ai-ctas">
+        <form asp-controller="Competences" asp-action="GenererPlanDeveloppement" method="post" style="display:contents">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="collaborateurId" value="@Model.Id" />
+            <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
+            <button type="submit" class="ew-cta">
+                <i class="fas fa-route" style="font-size:11px"></i> Générer le plan IA
+            </button>
+        </form>
+        <a asp-controller="Collaborateurs" asp-action="ChoisirRemplacant" asp-route-id="@Model.Id" class="ew-cta">
+            <i class="fas fa-sitemap" style="font-size:11px"></i> Analyse succession
+        </a>
+        <a asp-controller="Competences" asp-action="Create" asp-route-collaborateurId="@Model.Id" class="ew-cta">
+            <i class="fas fa-plus" style="font-size:11px"></i> Ajouter compétence
+        </a>
+        <a asp-controller="Copilot" asp-action="Index" class="ew-cta ew-cta-primary">
+            <i class="fas fa-robot" style="font-size:11px"></i> Ouvrir dans Copilot ↗
+        </a>
+    </div>
+</div>
+
+<!-- ══ DECISION STRIP ════════════════════════════════════════════════════ -->
+<div class="ew-decisions" style="margin-bottom:40px">
+    <div class="ew-dc">
+        <div class="ew-dc-label">Promotion</div>
+        <div class="ew-dc-value">@promoSignal</div>
+        <div class="ew-dc-signal ew-sig-@promoColor">@promoColor.ToUpper()</div>
+        <div class="ew-dc-meta">@(string.IsNullOrEmpty(potentiel) ? "Non évalué" : potentiel)</div>
+    </div>
+    <div class="ew-dc">
+        <div class="ew-dc-label">Succession</div>
+        <div class="ew-dc-value">@successionPct%</div>
+        <div class="ew-dc-signal ew-sig-@successionColor">@(successionPct >= 70 ? "PRÊT" : successionPct >= 40 ? "EN COURS" : "FAIBLE")</div>
+        <div class="ew-dc-meta">Préparation au poste suivant</div>
+    </div>
+    <div class="ew-dc">
+        <div class="ew-dc-label">Compétences</div>
+        <div class="ew-dc-value">@scoreGlobal%</div>
+        <div class="ew-dc-signal ew-sig-@compColor">@compOk / @compTotal ATTEINTS</div>
+        <div class="ew-dc-meta">@(compCrit > 0 ? $"{compCrit} écart(s) critique(s)" : "Aucun écart critique")</div>
+    </div>
+    <div class="ew-dc">
+        <div class="ew-dc-label">Formation</div>
+        <div class="ew-dc-value">@totalCertifs</div>
+        <div class="ew-dc-signal ew-sig-blue">CERTIFICATION@(totalCertifs != 1 ? "S" : "")</div>
+        <div class="ew-dc-meta">@enCours en cours · @totalFormations total</div>
+    </div>
+</div>
+
+<!-- ══ INTELLIGENCE + ACTIONS ════════════════════════════════════════════ -->
+<div class="row g-3 mb-3">
+
+    <!-- Left: Competence Intelligence -->
+    <div class="col-lg-7">
+        <div class="ew-sec-label">Intelligence des compétences</div>
+        <div class="ew-intel">
+            <div class="ew-intel-head">
+                <div class="ew-intel-title">Signaux de compétences</div>
+                <div class="ew-intel-meta">@compTotal compétence@(compTotal != 1 ? "s" : "") · Score @scoreGlobal%</div>
+            </div>
+
+            @if (!competences.Any())
+            {
+                <div class="ew-empty">
+                    Aucune compétence renseignée.
+                    <a asp-controller="Competences" asp-action="Create" asp-route-collaborateurId="@Model.Id" style="color:var(--w-blue);font-weight:600;margin-left:6px">Ajouter →</a>
                 </div>
             }
-            else
+            @foreach (var comp in competences.OrderByDescending(c => c.NiveauCible - c.NiveauActuel))
             {
-                <div class="text-muted">Aucun manager assigné.</div>
-            }
-        </div>
+                var ecart    = comp.NiveauCible - comp.NiveauActuel;
+                var dotCls   = ecart >= 2 ? "r" : ecart == 1 ? "a" : "g";
+                var badgeCls = ecart >= 2 ? "ew-badge-crit" : ecart == 1 ? "ew-badge-warn" : "ew-badge-ok";
+                var badgeTxt = ecart >= 2 ? "CRITIQUE" : ecart == 1 ? "ATTENTION" : "ATTEINT";
 
-        <div class="row g-2 mt-1">
-            <div class="col-4">
-                <div class="ey-card p-2 text-center profile-mini-kpi">
-                    <i class="fas fa-graduation-cap text-warning"></i>
-                    <div class="fw-bold fs-5 mt-1">@totalFormations</div>
-                    <div>FORMATIONS</div>
+                <div class="ew-skill-row">
+                    <span class="ew-skill-dot @dotCls"></span>
+                    <span class="ew-skill-name">@comp.Nom</span>
+                    <span class="ew-skill-levels">@comp.NiveauActuel / @comp.NiveauCible</span>
+                    <span class="ew-skill-badge @badgeCls">@badgeTxt</span>
                 </div>
-            </div>
-            <div class="col-4">
-                <div class="ey-card p-2 text-center profile-mini-kpi">
-                    <i class="fas fa-award text-warning"></i>
-                    <div class="fw-bold fs-5 mt-1">@totalCertifs</div>
-                    <div>CERTIFS</div>
+            }
+
+            @if (inscriptions.Any())
+            {
+                <div style="padding:14px 22px 0;border-top:1px solid var(--w-border)">
+                    <div style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--w-subtle);margin-bottom:2px">
+                        Formations
+                    </div>
                 </div>
-            </div>
-            <div class="col-4">
-                <div class="ey-card p-2 text-center profile-mini-kpi">
-                    <i class="fas fa-bolt text-warning"></i>
-                    <div class="fw-bold fs-5 mt-1">@enCours</div>
-                    <div>EN COURS</div>
-                </div>
-            </div>
+                @foreach (var insc in inscriptions.Take(5))
+                {
+                    var form     = insc.Formation;
+                    if (form == null) { continue; }
+                    var prog = insc.Terminee ? 100 : Math.Clamp(insc.Progression, 0, 100);
+                    if (!insc.Terminee && prog == 0)
+                        prog = Math.Min(95, Math.Max(15, (DateTime.Today - insc.DateInscription.Date).Days * 6));
+
+                    <div class="ew-form-row">
+                        <span class="ew-form-name">@form.Titre</span>
+                        <div class="ew-form-bar">
+                            <div class="ew-form-fill @(insc.Terminee ? "done" : "")" style="width:@prog%"></div>
+                        </div>
+                        <span class="ew-form-pct">@prog%</span>
+                        <span class="ew-skill-badge @(insc.Terminee ? "ew-badge-ok" : "ew-badge-warn")" style="width:72px;text-align:center">
+                            @(insc.Terminee ? "CERTIFIÉ" : "EN COURS")
+                        </span>
+                    </div>
+                }
+            }
         </div>
     </div>
 
-    <div class="col-lg-8">
-        <div class="ey-card p-4">
-            <ul class="nav ey-tab mb-4" id="collabTab" role="tablist">
-                <li class="nav-item" role="presentation"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#competences" type="button"><i class="fas fa-bolt me-1"></i> Compétences</button></li>
-                <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#formations" type="button"><i class="fas fa-graduation-cap me-1"></i> Formations</button></li>
-                <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#certificats" type="button"><i class="fas fa-certificate me-1"></i> Certificats</button></li>
-            </ul>
+    <!-- Right: AI Quick Actions -->
+    <div class="col-lg-5">
+        <div class="ew-sec-label">Actions IA</div>
+        <div class="ew-actions">
+            <div class="ew-actions-head">
+                <div class="ew-actions-title">Décisions recommandées</div>
+            </div>
 
-            <div class="tab-content">
-                <div class="tab-pane fade show active" id="competences">
-                    <div class="d-flex justify-content-between align-items-start mb-3">
-                        <div>
-                            <h2 class="ey-serif-title mb-1">Analyse des compétences</h2>
-                            <p class="text-muted mb-0 small">Évaluation actuelle vs objectifs de carrière @(Model.Grade ?? "Partner").</p>
-                        </div>
-                        <div class="d-flex align-items-center gap-2">
-                            <form asp-controller="Competences" asp-action="GenererPlanDeveloppement" method="post">
-                                @Html.AntiForgeryToken()
-                                <input type="hidden" name="collaborateurId" value="@Model.Id" />
-                                <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
-                                <button type="submit" class="ey-btn-ghost btn-sm">
-                                    <i class="fas fa-route me-1"></i>Générer le plan
-                                </button>
-                            </form>
-                            <a asp-controller="Competences" asp-action="Create" asp-route-collaborateurId="@Model.Id" class="text-decoration-none fw-semibold text-muted small">+ Ajouter</a>
-                        </div>
-                    </div>
-
-                    @if (!competences.Any())
-                    {
-                        <div class="alert alert-info">Aucune compétence renseignée.</div>
-                    }
-                    else
-                    {
-                        @foreach (var comp in competences)
-                        {
-                            var pct = (int)Math.Min(100, (comp.NiveauActuel / 5.0) * 100);
-                            var target = (int)Math.Min(100, (comp.NiveauCible / 5.0) * 100);
-                            var ecart = comp.NiveauCible - comp.NiveauActuel;
-                            var fillClass = ecart >= 2 ? "bg-danger" : (ecart == 1 ? "bg-warning" : "bg-success");
-                            <div class="skill-analyse-row border-bottom">
-                                <div class="d-flex justify-content-between align-items-baseline flex-wrap gap-2">
-                                    <div class="fw-semibold fs-6">@comp.Nom</div>
-                                    <div class="small">
-                                        <span class="text-muted">Objectif : <strong>@target%</strong></span>
-                                        <span class="text-dark fw-bold fs-5 ms-2">@pct%</span>
-                                    </div>
-                                </div>
-                                <div class="skill-progress-wrap">
-                                    <div class="skill-progress-track">
-                                        <span class="skill-progress-fill @fillClass" style="width:@pct%;"></span>
-                                        <span class="skill-progress-marker" style="left:@(target)%"></span>
-                                    </div>
-                                </div>
-                                @if (ecart >= 2)
-                                {
-                                    <span class="skill-alert skill-alert--critical"><i class="fas fa-exclamation-triangle me-1"></i>ÉCART CRITIQUE : PRIORISER UN PARCOURS</span>
-                                }
-                                else if (ecart == 1)
-                                {
-                                    <span class="skill-alert skill-alert--warn"><i class="fas fa-exclamation-triangle me-1"></i>ÉCART IDENTIFIÉ : FORMATION RECOMMANDÉE</span>
-                                }
-                                else
-                                {
-                                    <span class="skill-alert skill-alert--ok"><i class="fas fa-check-circle me-1"></i>OBJECTIF ATTEINT OU DÉPASSÉ</span>
-                                }
-                            </div>
-                        }
-                    }
-
-                    <div class="mt-4">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <h3 class="h6 mb-0">Plan de développement recommandé</h3>
-                            <span class="text-muted small">@plansDeveloppement.Count recommandation(s)</span>
-                        </div>
-                        @if (!plansDeveloppement.Any())
-                        {
-                            <div class="alert alert-light border small mb-0">Aucune recommandation générée pour le moment.</div>
-                        }
-                        else
-                        {
-                            <div class="row g-2">
-                                @foreach (var plan in plansDeveloppement.Take(6))
-                                {
-                                    <div class="col-md-6">
-                                        <div class="ey-card p-3 h-100">
-                                            <div class="fw-semibold">@plan.Formation?.Titre</div>
-                                            <div class="small text-muted mt-1">@plan.Commentaire</div>
-                                            <span class="ey-pill in-progress mt-2">@plan.Statut</span>
-                                        </div>
-                                    </div>
-                                }
-                            </div>
-                        }
-                    </div>
+            <a asp-controller="Copilot" asp-action="Index" class="ew-action-item primary" style="display:flex">
+                <div class="ew-action-icon"><i class="fas fa-robot"></i></div>
+                <div style="flex:1;min-width:0">
+                    <div class="ew-action-label">Analyser avec Copilot IA</div>
+                    <div class="ew-action-sub">Analyse conversationnelle · n8n · GPT-4o</div>
                 </div>
+                <span class="ew-action-arrow">↗</span>
+            </a>
 
-                <div class="tab-pane fade" id="formations">
-                    <div class="d-flex justify-content-between align-items-end mb-3">
-                        <div>
-                            <h2 class="ey-serif-title mb-1">Parcours de formation</h2>
-                            <p class="text-muted mb-0">@totalCertifs terminées - @enCours en cours</p>
-                        </div>
+            <form asp-controller="Competences" asp-action="GenererPlanDeveloppement" method="post" style="display:contents">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="collaborateurId" value="@Model.Id" />
+                <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
+                <button type="submit" class="ew-action-item" style="display:flex">
+                    <div class="ew-action-icon"><i class="fas fa-route"></i></div>
+                    <div style="flex:1;min-width:0;text-align:left">
+                        <div class="ew-action-label">Générer le plan de carrière</div>
+                        <div class="ew-action-sub">Plan de développement personnalisé par IA</div>
                     </div>
-                    @if (!inscriptions.Any())
-                    {
-                        <div class="alert alert-info">Aucune inscription.</div>
-                    }
-                    else
-                    {
-                        @foreach (var insc in inscriptions)
-                        {
-                            var formation = insc.Formation;
-                            if (formation == null) continue;
-                            var statut = insc.Terminee ? "Terminée" : "En cours";
-                            var progression = insc.Terminee ? 100 : Math.Clamp(insc.Progression, 0, 100);
-                            if (!insc.Terminee && progression == 0)
-                                progression = Math.Min(95, Math.Max(15, (DateTime.Today - insc.DateInscription.Date).Days * 6));
-                            <div class="course-card course-progress-card mb-3">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <div class="d-flex align-items-center gap-2">
-                                        <div class="course-icon"><i class="fas fa-book-open"></i></div>
-                                        <div class="fw-semibold">@formation.Titre</div>
-                                    </div>
-                                    <div class="small fw-semibold">@progression%</div>
-                                </div>
-                                <div class="learning-progress profile-learning-progress">
-                                    <span style="width:@progression%"></span>
-                                </div>
-                                <div class="small text-muted mt-2">
-                                    <span class="ey-pill @(insc.Terminee ? "active" : "in-progress")">@statut</span>
-                                </div>
-                            </div>
-                        }
-                    }
-                </div>
+                    <span class="ew-action-arrow">→</span>
+                </button>
+            </form>
 
-                <div class="tab-pane fade" id="certificats">
+            <a asp-controller="Collaborateurs" asp-action="ChoisirRemplacant" asp-route-id="@Model.Id" class="ew-action-item" style="display:flex">
+                <div class="ew-action-icon"><i class="fas fa-sitemap"></i></div>
+                <div style="flex:1;min-width:0">
+                    <div class="ew-action-label">Analyse de succession</div>
+                    <div class="ew-action-sub">Identifier les candidats remplaçants</div>
+                </div>
+                <span class="ew-action-arrow">→</span>
+            </a>
+
+            <a asp-controller="Competences" asp-action="Create" asp-route-collaborateurId="@Model.Id" class="ew-action-item" style="display:flex">
+                <div class="ew-action-icon"><i class="fas fa-bolt"></i></div>
+                <div style="flex:1;min-width:0">
+                    <div class="ew-action-label">Ajouter une compétence</div>
+                    <div class="ew-action-sub">Enrichir le profil de compétences</div>
+                </div>
+                <span class="ew-action-arrow">→</span>
+            </a>
+
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="ew-action-item" style="display:flex">
+                <div class="ew-action-icon"><i class="fas fa-pen"></i></div>
+                <div style="flex:1;min-width:0">
+                    <div class="ew-action-label">Modifier le profil</div>
+                    <div class="ew-action-sub">Mettre à jour les données RH</div>
+                </div>
+                <span class="ew-action-arrow">→</span>
+            </a>
+
+            <!-- Manager reporting line -->
+            @if (manager != null)
+            {
+                <div style="padding:14px 22px;border-top:1px solid var(--w-border)">
+                    <div style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--w-subtle);margin-bottom:10px">Reporting</div>
                     @{
-                        var certifs = inscriptions.Where(i => i.Terminee).ToList();
+                        var mInit = $"{(string.IsNullOrWhiteSpace(manager.Prenom) ? "?" : manager.Prenom[0])}{(string.IsNullOrWhiteSpace(manager.Nom) ? "?" : manager.Nom[0])}".ToUpperInvariant();
                     }
-                    @if (!certifs.Any())
-                    {
-                        <div class="alert alert-secondary">Aucune certification obtenue.</div>
-                    }
-                    else
-                    {
-                        <h2 class="ey-serif-title mb-1">Certifications obtenues</h2>
-                        <p class="text-muted mb-3">@certifs.Count certification(s) validée(s)</p>
-                        @foreach (var certif in certifs)
-                        {
-                            <div class="course-card mb-2 certificate-card">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div>
-                                        <div class="text-warning mb-2"><i class="fas fa-award"></i></div>
-                                        <div class="fw-semibold">@certif.Formation?.Titre</div>
-                                        <small class="text-muted">EY Learning - validée le @certif.DateInscription.ToString("dd/MM/yyyy")</small>
-                                        <div class="small text-success fw-semibold mt-2"><i class="fas fa-check-circle me-1"></i>VERIFIED BADGE</div>
-                                    </div>
-                                    <i class="fas fa-download text-muted"></i>
-                                </div>
-                            </div>
-                        }
-                    }
+                    <div class="ew-mgr-chip">
+                        <div class="ew-mgr-av">@mInit</div>
+                        <div>
+                            <div class="ew-mgr-name">@manager.Prenom @manager.Nom</div>
+                            <div class="ew-mgr-role">@(manager.Poste ?? "Manager")</div>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        </div>
-
-        <div class="ey-card p-3 mt-3">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h4 class="ey-serif-title mb-0">Fiche RH professionnelle</h4>
-                <span class="ey-pill">Anciennete : @Model.Anciennete an(s)</span>
-            </div>
-            <div class="row g-2 small">
-                <div class="col-md-4"><strong>Date d'embauche</strong><br />@Model.DateEmbauche.ToString("dd/MM/yyyy")</div>
-                <div class="col-md-4"><strong>Date prise de poste</strong><br />@(Model.DatePrisePoste?.ToString("dd/MM/yyyy") ?? "-")</div>
-                <div class="col-md-4"><strong>Localisation</strong><br />@(Model.Localisation ?? "-")</div>
-                <div class="col-md-4"><strong>Niveau hierarchique</strong><br />@(Model.NiveauHierarchique ?? "-")</div>
-                <div class="col-md-4"><strong>Preparation succession</strong><br />@(Model.NiveauPreparationSuccession?.ToString() ?? "0")%</div>
-                <div class="col-md-4"><strong>Potentiel carriere</strong><br />@(Model.PotentielCarriere ?? "-")</div>
-                <div class="col-12"><strong>Formations obligatoires</strong><br />@(Model.FormationsObligatoires ?? "Aucune formation obligatoire renseignee.")</div>
-            </div>
-        </div>
-
-        <div class="ey-card p-3 mt-3">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <h4 class="ey-serif-title mb-0">Inventaire des compétences techniques</h4>
-                <a asp-controller="Competences" asp-action="Create" asp-route-collaborateurId="@Model.Id" class="text-decoration-none small">+ Ajouter</a>
-            </div>
-            <div class="d-flex flex-wrap gap-2">
-                @if (competences.Any())
-                {
-                    @foreach (var comp in competences.Take(8))
-                    {
-                        <span class="skill-chip @(comp.NiveauActuel >= comp.NiveauCible ? "highlight" : "")">@comp.Nom</span>
-                    }
-                }
-                else
-                {
-                    <span class="skill-chip">Power BI</span>
-                    <span class="skill-chip highlight">Financial Modeling</span>
-                    <span class="skill-chip">Python</span>
-                    <span class="skill-chip">Risk Assessment</span>
-                    <span class="skill-chip">ESG Reporting</span>
-                }
-            </div>
+            }
         </div>
     </div>
 </div>
+
+<!-- ══ CAREER TIMELINE ════════════════════════════════════════════════════ -->
+<div class="ew-timeline-wrap">
+    <div class="ew-sec-label" style="margin-bottom:20px">Parcours EY</div>
+    <div class="ew-timeline-track">
+        @foreach (var ev in tlEvents)
+        {
+            <div class="ew-tl-event">
+                <div class="ew-tl-dot @ev.Type"></div>
+                <div class="ew-tl-date">@ev.Date.ToString("MM/yyyy")</div>
+                <div class="ew-tl-label">@ev.Label</div>
+                @if (!string.IsNullOrEmpty(ev.Sub))
+                {
+                    <div class="ew-tl-sub">@ev.Sub</div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+</div><!-- /ew -->
+
+@section Scripts {
+<script>
+/* EY Intelligence Workspace — no framework needed */
+(function() {
+    /* Animate decision values on load */
+    document.querySelectorAll('.ew-dc-value').forEach(function(el) {
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(6px)';
+        el.style.transition = 'opacity .3s ease, transform .3s ease';
+    });
+    requestAnimationFrame(function() {
+        document.querySelectorAll('.ew-dc-value').forEach(function(el, i) {
+            setTimeout(function() {
+                el.style.opacity = '1';
+                el.style.transform = 'translateY(0)';
+            }, i * 60);
+        });
+    });
+})();
+</script>
+}

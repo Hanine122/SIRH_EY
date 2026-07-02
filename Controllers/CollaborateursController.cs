@@ -557,13 +557,7 @@ public async Task<IActionResult> AskIA([FromBody] RecommendationRequest request)
 
 
 
-        var competencesManquantes = competencesPartant
-
-            .Where(cp => !competencesRemplacant.Any(cr => cr.Nom == cp.Nom && cr.NiveauActuel >= cp.NiveauCible))
-
-            .Select(cp => cp.Nom)
-
-            .ToList();
+        var competencesManquantes = RemplacantMatchingEngine.BuildCompetencesManquantesSimple(competencesPartant, competencesRemplacant);
 
 
 
@@ -802,20 +796,6 @@ public async Task<IActionResult> AskIA([FromBody] RecommendationRequest request)
 
         var comparer = StringComparer.OrdinalIgnoreCase;
 
-
-
-        var surProfil = partant.Competences?
-
-            .Where(c => !string.IsNullOrWhiteSpace(c.Nom))
-
-            .Select(c => c.Nom.Trim())
-
-            .Distinct(comparer)
-
-            .ToList() ?? new List<string>();
-
-
-
         var surPoste = await _context.CompetencesRequisesParPoste
 
             .AsNoTracking()
@@ -828,15 +808,7 @@ public async Task<IActionResult> AskIA([FromBody] RecommendationRequest request)
 
             .ToListAsync();
 
-
-
-        var competencesRequises = surProfil
-
-            .Union(surPoste, comparer)
-
-            .Distinct(comparer)
-
-            .ToList();
+        var competencesRequises = SuccessionEngine.BuildCompetencesRequisesUnion(partant.Competences, surPoste);
 
 
 
@@ -868,59 +840,13 @@ public async Task<IActionResult> AskIA([FromBody] RecommendationRequest request)
 
 
 
-        int CompatPour(Collaborateur c)
-
-        {
-
-            if (competencesRequises.Count == 0) return 0;
-
-            var noms = c.Competences?
-
-                .Where(x => !string.IsNullOrWhiteSpace(x.Nom))
-
-                .Select(x => x.Nom.Trim())
-
-                .Distinct(comparer)
-
-                .ToList() ?? new List<string>();
-
-            var manq = competencesRequises.Count(r => !noms.Any(a => comparer.Equals(a, r)));
-
-            var poss = Math.Max(0, competencesRequises.Count - manq);
-
-            return (int)Math.Round(100.0 * poss / competencesRequises.Count);
-
-        }
-
-
-
-        List<string> Manquantes(Collaborateur c)
-
-        {
-
-            var noms = c.Competences?
-
-                .Where(x => !string.IsNullOrWhiteSpace(x.Nom))
-
-                .Select(x => x.Nom.Trim())
-
-                .Distinct(comparer)
-
-                .ToList() ?? new List<string>();
-
-            return competencesRequises.Where(r => !noms.Any(a => comparer.Equals(a, r))).ToList();
-
-        }
-
-
-
         var candidats = new List<ComparaisonPdfCandidat>();
 
         foreach (var c in candidatsOrdonnes)
 
         {
 
-            var manq = Manquantes(c);
+            var manq = RemplacantMatchingEngine.CompetencesManquantesPourCandidat(competencesRequises, c.Competences);
 
             var titresFormations = new List<string>();
 
@@ -952,7 +878,7 @@ public async Task<IActionResult> AskIA([FromBody] RecommendationRequest request)
 
                 c.Departement ?? "-",
 
-                CompatPour(c),
+                RemplacantMatchingEngine.CompatibilitePourcent(competencesRequises, c.Competences),
 
                 manq.Count,
 
@@ -974,7 +900,7 @@ public async Task<IActionResult> AskIA([FromBody] RecommendationRequest request)
 
             {
 
-                var manq = Manquantes(c);
+                var manq = RemplacantMatchingEngine.CompetencesManquantesPourCandidat(competencesRequises, c.Competences);
 
                 return !manq.Any(m => comparer.Equals(m, comp));
 
@@ -1052,7 +978,7 @@ public async Task<IActionResult> AskIA([FromBody] RecommendationRequest request)
 
 
 
-        var manquantes = competencesRequises.Except(competencesCandidat).ToList();
+        var manquantes = RemplacantMatchingEngine.CompetencesManquantesParNoms(competencesRequises, competencesCandidat);
 
 
 

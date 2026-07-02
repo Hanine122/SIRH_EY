@@ -61,11 +61,11 @@ public class WorkforceImpactService : IWorkforceImpactService
             .Where(c => c.Actif && c.Id != target.Id)
             .ToListAsync();
 
-        var targetSkills = GetSkillNames(target);
+        var targetSkills = WorkforceImpactEngine.GetSkillNames(target);
         if (!targetSkills.Any())
             targetSkills = BuildFallbackSkills(target);
 
-        var successors = BuildSuccessors(target, targetSkills, allActive);
+        var successors = WorkforceImpactEngine.BuildSuccessors(target, targetSkills, allActive);
         var immediate = successors.Where(s => s.ReadinessScore >= 75).Take(3).ToList();
         var partial = successors.Where(s => s.ReadinessScore >= 45 && s.ReadinessScore < 75).Take(3).ToList();
         var highPotential = successors
@@ -77,14 +77,14 @@ public class WorkforceImpactService : IWorkforceImpactService
 
         var sameDepartment = allActive.Where(c => string.Equals(c.Departement, target.Departement, StringComparison.OrdinalIgnoreCase)).ToList();
         var impactedTeamCount = (target.Equipe?.Count ?? 0) + sameDepartment.Count(c => c.ManagerId == target.Id);
-        var skillExposure = ComputeSkillExposure(targetSkills, allActive);
-        var departmentExposure = BuildDepartmentExposure(target, allActive, targetSkills);
+        var skillExposure = WorkforceImpactEngine.ComputeSkillExposure(targetSkills, allActive);
+        var departmentExposure = WorkforceImpactEngine.BuildDepartmentExposure(target, allActive, targetSkills);
         var bestReadiness = successors.FirstOrDefault()?.ReadinessScore ?? 0;
-        var continuityRisk = Clamp(35 + targetSkills.Count * 4 + impactedTeamCount * 5 - bestReadiness * 0.45);
-        var operationalImpact = Clamp(30 + impactedTeamCount * 8 + skillExposure * 0.3);
-        var fragility = Clamp(25 + departmentExposure.FirstOrDefault()?.ExposureScore ?? 45);
-        var strategicDependency = Clamp((continuityRisk * 0.38) + (operationalImpact * 0.32) + (skillExposure * 0.3));
-        var riskLevel = strategicDependency >= 75 ? "Critical" : strategicDependency >= 55 ? "Elevated" : "Controlled";
+        var continuityRisk = WorkforceImpactEngine.ComputeContinuityRisk(targetSkills.Count, impactedTeamCount, bestReadiness);
+        var operationalImpact = WorkforceImpactEngine.ComputeOperationalImpact(impactedTeamCount, skillExposure);
+        var fragility = WorkforceImpactEngine.ComputeDepartmentFragility(departmentExposure.FirstOrDefault()?.ExposureScore);
+        var strategicDependency = WorkforceImpactEngine.ComputeStrategicDependency(continuityRisk, operationalImpact, skillExposure);
+        var riskLevel = DecisionEngine.ClassifyRiskLevel(strategicDependency);
 
         return new WorkforceImpactResultViewModel
         {
@@ -107,70 +107,9 @@ public class WorkforceImpactService : IWorkforceImpactService
         };
     }
 
-    private static List<WorkforceSuccessorViewModel> BuildSuccessors(Collaborateur target, List<string> targetSkills, List<Collaborateur> candidates)
-    {
-        var comparer = StringComparer.OrdinalIgnoreCase;
-
-        return candidates
-            .Select(candidate =>
-            {
-                var skills = GetSkillNames(candidate);
-                var shared = targetSkills.Count(skill => skills.Any(s => comparer.Equals(s, skill)));
-                var skillScore = targetSkills.Any() ? 100.0 * shared / targetSkills.Count : 0;
-                var levelScore = GetAverageLevel(candidate) * 14;
-                var transversalBonus = string.Equals(candidate.Departement, target.Departement, StringComparison.OrdinalIgnoreCase) ? 7 : 12;
-                var seniorityBonus = IsSeniorProfile(candidate.Grade) ? 8 : 0;
-                var trainingBonus = (candidate.Inscriptions ?? Enumerable.Empty<Inscription>()).Count(i => i.Terminee || i.Progression >= 80) * 2;
-                var readiness = Clamp(skillScore * 0.62 + levelScore * 0.18 + transversalBonus + seniorityBonus + trainingBonus);
-
-                return new WorkforceSuccessorViewModel
-                {
-                    CollaborateurId = candidate.Id,
-                    NomComplet = $"{candidate.Prenom} {candidate.Nom}".Trim(),
-                    Poste = candidate.Poste ?? "N/A",
-                    Departement = candidate.Departement ?? "N/A",
-                    ReadinessScore = Math.Round(readiness, 1),
-                    SharedCompetencies = shared,
-                    SuccessorType = readiness >= 75 ? "Immediate successor" : readiness >= 45 ? "Partial successor" : "High potential"
-                };
-            })
-            .OrderByDescending(s => s.ReadinessScore)
-            .ThenByDescending(s => s.SharedCompetencies)
-            .Take(12)
-            .ToList();
-    }
-
-    private static List<WorkforceDepartmentExposureViewModel> BuildDepartmentExposure(Collaborateur target, List<Collaborateur> allActive, List<string> targetSkills)
-    {
-        var departments = allActive
-            .GroupBy(c => string.IsNullOrWhiteSpace(c.Departement) ? "Non defini" : c.Departement!)
-            .Select(group =>
-            {
-                var impacted = group.Count(c => c.ManagerId == target.Id || SharesAnySkill(c, targetSkills));
-                var exposure = Clamp(20 + impacted * 9 + (group.Key.Equals(target.Departement, StringComparison.OrdinalIgnoreCase) ? 18 : 0));
-                return new WorkforceDepartmentExposureViewModel
-                {
-                    Department = group.Key,
-                    ImpactedCollaborators = impacted,
-                    ExposureScore = Math.Round(exposure, 1),
-                    Signal = exposure >= 70 ? "Forte dependance" : exposure >= 45 ? "Fragilite a surveiller" : "Exposition controlee"
-                };
-            })
-            .OrderByDescending(d => d.ExposureScore)
-            .Take(4)
-            .ToList();
-
-        if (!departments.Any())
-        {
-            departments.Add(new WorkforceDepartmentExposureViewModel { Department = target.Departement ?? "RH", ImpactedCollaborators = 1, ExposureScore = 58, Signal = "Dependance a qualifier" });
-        }
-
-        return departments;
-    }
-
     private static List<WorkforceActionRecommendationViewModel> BuildRecommendations(string riskLevel, bool hasImmediateSuccessor, List<string> targetSkills)
     {
-        var priority = riskLevel == "Critical" ? "High" : riskLevel == "Elevated" ? "Medium" : "Low";
+        var priority = DecisionEngine.ClassifyActionPriority(riskLevel);
         var keySkill = targetSkills.FirstOrDefault() ?? "competence critique";
         var actions = new List<WorkforceActionRecommendationViewModel>
         {
@@ -191,54 +130,12 @@ public class WorkforceImpactService : IWorkforceImpactService
         return $"{target.Departement ?? "Le departement"} verrait son risque de dependance augmenter a {dependency:0}% si {name} quittait son role. {readinessText}. Exposition critique detectee sur {skill}; recommander passation, mobilite interne et formation ciblee.";
     }
 
-    private static List<string> GetSkillNames(Collaborateur collaborateur)
-    {
-        return (collaborateur.Competences ?? Enumerable.Empty<Competence>())
-            .Where(c => !string.IsNullOrWhiteSpace(c.Nom))
-            .OrderByDescending(c => c.NiveauActuel)
-            .Select(c => c.Nom.Trim())
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
-    }
-
-    private static bool SharesAnySkill(Collaborateur collaborateur, List<string> targetSkills)
-    {
-        var skills = GetSkillNames(collaborateur);
-        return targetSkills.Any(skill => skills.Contains(skill, StringComparer.OrdinalIgnoreCase));
-    }
-
     private static List<string> BuildFallbackSkills(Collaborateur target)
     {
         var skills = new List<string> { "Communication", "Gestion de projet", "Expertise metier" };
         if ((target.Grade ?? "").Contains("Manager", StringComparison.OrdinalIgnoreCase) || (target.Poste ?? "").Contains("Manager", StringComparison.OrdinalIgnoreCase))
             skills.AddRange(new[] { "Leadership", "Stakeholder management" });
         return skills.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-    }
-
-    private static double ComputeSkillExposure(List<string> targetSkills, List<Collaborateur> allActive)
-    {
-        if (!targetSkills.Any())
-            return 55;
-
-        var rareSkills = targetSkills.Count(skill => allActive.Count(c => GetSkillNames(c).Contains(skill, StringComparer.OrdinalIgnoreCase)) <= 1);
-        return Clamp(35 + rareSkills * 18 + targetSkills.Count * 3);
-    }
-
-    private static double GetAverageLevel(Collaborateur collaborateur)
-    {
-        var skills = collaborateur.Competences ?? Enumerable.Empty<Competence>();
-        return skills.Any() ? skills.Average(c => c.NiveauActuel) : 1.5;
-    }
-
-    private static bool IsSeniorProfile(string? grade)
-    {
-        return !string.IsNullOrWhiteSpace(grade)
-            && (grade.Contains("Senior", StringComparison.OrdinalIgnoreCase) || grade.Contains("Manager", StringComparison.OrdinalIgnoreCase));
-    }
-
-    private static double Clamp(double value)
-    {
-        return Math.Max(0, Math.Min(100, value));
     }
 
     private static WorkforceImpactResultViewModel BuildFallbackResult()

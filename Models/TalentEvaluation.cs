@@ -22,17 +22,36 @@ public class TalentEvaluation
     
     // Catégorie 9-box calculée
     public NineBoxCategory Category { get; set; } = NineBoxCategory.SolidProfessional;
-    
+
     // Détails
     public string? CommentairesPerformance { get; set; }
     public string? CommentairesPotentiel { get; set; }
-    
+
     // Évaluateur
     public string? EvaluateurId { get; set; }
     public ApplicationUser? Evaluateur { get; set; }
-    
+
     public DateTime DateEvaluation { get; set; } = DateTime.Now;
     public bool Actif { get; set; } = true;
+
+    // ── Workflow de gouvernance (cycle, statut, approbation) ──
+    public int? ReviewCycleId { get; set; }
+    public ReviewCycle? ReviewCycle { get; set; }
+
+    public EvaluationStatus Statut { get; set; } = EvaluationStatus.Draft;
+
+    public string? ApprouveParId { get; set; }
+    public ApplicationUser? ApprouvePar { get; set; }
+    public DateTime? DateApprobation { get; set; }
+}
+
+public enum EvaluationStatus
+{
+    Draft = 0,
+    Submitted = 1,
+    Calibrated = 2,
+    Approved = 3,
+    Locked = 4
 }
 
 public enum NineBoxCategory
