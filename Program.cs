@@ -75,6 +75,8 @@ builder.Services.AddMemoryCache();
 builder.Services.AddScoped<IParametreService, ParametreService>();
 builder.Services.AddScoped<IReferentielRhService, ReferentielRhService>();
 builder.Services.AddScoped<IPlanDeveloppementService, PlanDeveloppementService>();
+builder.Services.AddScoped<ICompetenceLifecycleService, CompetenceLifecycleService>();
+builder.Services.AddScoped<IManagerActionCenterService, ManagerActionCenterService>();
 builder.Services.AddScoped<IPromotionReadinessService, PromotionReadinessService>();
 builder.Services.AddScoped<IWorkforceImpactService, WorkforceImpactService>();
 builder.Services.AddScoped<IUserContextService, UserContextService>();
@@ -293,6 +295,9 @@ using (var scope = app.Services.CreateScope())
 
     // 17. Postes référentiel completion — 7 postes manquants (Manager, Senior Consultant…)
     await MissingReferentielSeeder.SeedAsync(context);
+
+    // 18. Priorité des compétences requises — backfill depuis NiveauRequis existant
+    await CompetencePrioriteSeeder.SeedAsync(context);
 
 }
 

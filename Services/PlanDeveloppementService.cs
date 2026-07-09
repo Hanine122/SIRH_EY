@@ -52,6 +52,27 @@ public class PlanDeveloppementService : IPlanDeveloppementService
         return new PlanDeveloppementResult(nouveauxPlans.Count, $"{nouveauxPlans.Count} recommandation(s) ajoutee(s) au plan de developpement.");
     }
 
+    public async Task FermerPlansSiObjectifAtteintAsync(Competence competence)
+    {
+        if (competence.NiveauActuel < competence.NiveauCible) return;
+
+        var plansOuverts = await _context.PlansDeveloppement
+            .Include(p => p.Formation)
+            .Where(p => p.CollaborateurId == competence.CollaborateurId && p.Statut != "Validé")
+            .ToListAsync();
+
+        var nom = competence.Nom.Trim();
+        foreach (var plan in plansOuverts)
+        {
+            var competenceVisee = plan.Formation?.CompetenceVisee;
+            if (!string.IsNullOrWhiteSpace(competenceVisee) &&
+                competenceVisee.Trim().Equals(nom, StringComparison.OrdinalIgnoreCase))
+            {
+                plan.Statut = "Validé";
+            }
+        }
+    }
+
     private static Formation? TrouverFormationPourCompetence(
         IEnumerable<Formation> formations,
         IReadOnlyCollection<int> plansExistants,

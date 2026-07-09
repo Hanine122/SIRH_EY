@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SIRH.EY.Data;
 
@@ -11,9 +12,11 @@ using SIRH.EY.Data;
 namespace SIRH.EY.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260709134048_AddCompetencePriorite")]
+    partial class AddCompetencePriorite
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -814,44 +817,6 @@ namespace SIRH.EY.Migrations
                     b.HasIndex("CompetenceId");
 
                     b.ToTable("EvaluationsHistoriques");
-                });
-
-            modelBuilder.Entity("SIRH.EY.Models.EvaluationPostFormation", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Commentaire")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<DateTime>("DateEvaluation")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("InscriptionId")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("NoteContenu")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("NoteFormateur")
-                        .HasColumnType("int");
-
-                    b.Property<int>("NoteGlobale")
-                        .HasColumnType("int");
-
-                    b.Property<bool>("Recommande")
-                        .HasColumnType("bit");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("InscriptionId")
-                        .IsUnique();
-
-                    b.ToTable("EvaluationsPostFormation");
                 });
 
             modelBuilder.Entity("SIRH.EY.Models.Formation", b =>
@@ -2118,17 +2083,6 @@ namespace SIRH.EY.Migrations
                     b.Navigation("Competence");
                 });
 
-            modelBuilder.Entity("SIRH.EY.Models.EvaluationPostFormation", b =>
-                {
-                    b.HasOne("SIRH.EY.Models.Inscription", "Inscription")
-                        .WithOne("EvaluationPostFormation")
-                        .HasForeignKey("SIRH.EY.Models.EvaluationPostFormation", "InscriptionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Inscription");
-                });
-
             modelBuilder.Entity("SIRH.EY.Models.FormationCompetence", b =>
                 {
                     b.HasOne("SIRH.EY.Models.Competence", "Competence")
@@ -2504,8 +2458,6 @@ namespace SIRH.EY.Migrations
 
             modelBuilder.Entity("SIRH.EY.Models.Inscription", b =>
                 {
-                    b.Navigation("EvaluationPostFormation");
-
                     b.Navigation("EvaluationsFormation");
                 });
 

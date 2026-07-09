@@ -19,10 +19,12 @@ namespace SIRH.EY.Controllers
     public class InscriptionsController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly ICompetenceLifecycleService _competenceLifecycle;
 
-        public InscriptionsController(ApplicationDbContext context)
+        public InscriptionsController(ApplicationDbContext context, ICompetenceLifecycleService competenceLifecycle)
         {
             _context = context;
+            _competenceLifecycle = competenceLifecycle;
         }
         public DateTime? DateExamen { get; set; }
 
@@ -172,7 +174,9 @@ namespace SIRH.EY.Controllers
                     TempData["Success"] = $"Formation terminée ! La compétence '{competence.Nom}' a été créée (niveau 1/{competence.NiveauCible}).";
                     break;
                 case CompetenceCompletionOutcome.Incremented:
-                    competence!.NiveauActuel = decision.NouveauNiveau!.Value;
+                    var ancienNiveauInscription = competence!.NiveauActuel;
+                    competence.NiveauActuel = decision.NouveauNiveau!.Value;
+                    await _competenceLifecycle.RecordLevelChangeAsync(competence, ancienNiveauInscription, competence.NiveauActuel, CompetenceChangeReason.Formation);
                     await _context.SaveChangesAsync();
                     TempData["Success"] = $"Félicitations ! Niveau {competence.Nom} augmenté à {competence.NiveauActuel}/5.";
                     break;
@@ -183,7 +187,8 @@ namespace SIRH.EY.Controllers
                     TempData["Success"] = "Formation terminée (aucune compétence associée).";
                     break;
             }
-            return RedirectToAction("Index", "Collaborateurs");
+            return RedirectToAction("EvaluerFormation", "Formations", new { inscriptionId = inscription.Id,
+                returnUrl = Url.Action("Index", "Collaborateurs") });
         }
 [HttpPost]
 public async Task<IActionResult> PlanifierExamen(int inscriptionId, DateTime dateExamen)

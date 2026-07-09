@@ -1,0 +1,111 @@
+@model SIRH.EY.Models.EvaluationPostFormation
+
+@{
+    ViewData["Title"] = "Évaluation à chaud";
+    var inscription = ViewBag.Inscription as SIRH.EY.Models.Inscription;
+    var returnUrl = ViewBag.ReturnUrl as string;
+    var skipUrl = !string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl)
+        ? returnUrl
+        : Url.Action("Index", "Formations", new { collaborateurId = inscription?.CollaborateurId });
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/ey-forms-premium.css" asp-append-version="true" />
+}
+
+<div class="ey-premium-card">
+    <div class="ey-card-header-premium">
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <div class="ey-header-icon">
+                    <i class="fas fa-star"></i>
+                </div>
+                <h1 class="ey-header-title">Évaluation à chaud</h1>
+                <p class="ey-header-subtitle">@(inscription?.Formation?.Titre ?? "Formation") — votre avis compte, juste après la formation</p>
+            </div>
+            <a href="@skipUrl" class="ey-back-link">
+                Passer <i class="fas fa-arrow-right"></i>
+            </a>
+        </div>
+    </div>
+
+    <div class="ey-form-body">
+        <form asp-action="EvaluerFormation" asp-controller="Formations" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="InscriptionId" />
+            <input type="hidden" name="returnUrl" value="@returnUrl" />
+
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+            <div class="ey-form-section">
+                <div class="ey-section-title">Votre satisfaction</div>
+
+                <div class="mb-3">
+                    <label asp-for="NoteGlobale" class="ey-label">Note globale (1 à 5) *</label>
+                    <select asp-for="NoteGlobale" class="ey-input">
+                        <option value="">Sélectionnez une note</option>
+                        <option value="5">5 - Excellent</option>
+                        <option value="4">4 - Très bien</option>
+                        <option value="3">3 - Correct</option>
+                        <option value="2">2 - Insuffisant</option>
+                        <option value="1">1 - Très insuffisant</option>
+                    </select>
+                    <span asp-validation-for="NoteGlobale" class="text-danger"></span>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label asp-for="NoteContenu" class="ey-label">Qualité du contenu</label>
+                        <select asp-for="NoteContenu" class="ey-input">
+                            <option value="">Non évalué</option>
+                            <option value="5">5</option>
+                            <option value="4">4</option>
+                            <option value="3">3</option>
+                            <option value="2">2</option>
+                            <option value="1">1</option>
+                        </select>
+                        <span asp-validation-for="NoteContenu" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="NoteFormateur" class="ey-label">Qualité du formateur</label>
+                        <select asp-for="NoteFormateur" class="ey-input">
+                            <option value="">Non évalué</option>
+                            <option value="5">5</option>
+                            <option value="4">4</option>
+                            <option value="3">3</option>
+                            <option value="2">2</option>
+                            <option value="1">1</option>
+                        </select>
+                        <span asp-validation-for="NoteFormateur" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="form-check mt-3">
+                    <input asp-for="Recommande" class="form-check-input" type="checkbox" />
+                    <label asp-for="Recommande" class="form-check-label">Je recommande cette formation</label>
+                </div>
+
+                <div class="mt-3">
+                    <label asp-for="Commentaire" class="ey-label">Commentaire (facultatif)</label>
+                    <textarea asp-for="Commentaire" class="ey-input" rows="3" maxlength="1000"></textarea>
+                    <span asp-validation-for="Commentaire" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="ey-actions-bar">
+                <a href="@skipUrl" class="ey-btn-premium ey-btn-ghost">
+                    <i class="fas fa-times"></i> Passer
+                </a>
+                <div class="ey-actions-right">
+                    <button type="submit" class="ey-btn-premium ey-btn-primary">
+                        <i class="fas fa-check"></i> Envoyer mon évaluation
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

@@ -11,5 +11,7 @@ namespace SIRH.EY.Models
         public string Competence { get; set; } = string.Empty;
         [Range(1,5)]
         public int NiveauRequis { get; set; } = 3;
+
+        public string Priorite { get; set; } = "Prioritaire";
     }
 }

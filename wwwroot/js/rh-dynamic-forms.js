@@ -54,7 +54,7 @@
                 <input class="btn-check competence-choice" type="checkbox" name="selectedCompetences" value="${escapeHtml(item.nom)}" id="${id}" autocomplete="off" />
                 <label class="btn competence-check-card w-100 text-start" for="${id}">
                     <span class="fw-semibold d-block">${escapeHtml(item.nom)}</span>
-                    <span class="small text-muted">${escapeHtml(item.poste || "Referentiel")} - niveau requis ${item.niveauRequis || 0}/5</span>
+                    <span class="small text-muted">${escapeHtml(item.poste || "Referentiel")} - niveau requis ${item.niveauRequis || 0}/5 - ${escapeHtml(item.priorite || "")}</span>
                 </label>`;
             container.appendChild(col);
         });

@@ -1,8 +1,10 @@
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
 @using SIRH.EY.Data
+@using SIRH.EY.Services
 @inject UserManager<ApplicationUser> UserManager
 @inject ApplicationDbContext LayoutDbContext
+@inject IManagerActionCenterService ActionCenter
 
 @{
     var user = await UserManager.GetUserAsync(User);
@@ -23,6 +25,12 @@
 
     bool isPrivileged  = roles.Contains("ITAdmin") || roles.Contains("RH");
     bool isManagerPlus = isPrivileged || roles.Contains("Manager");
+    bool isManagerOnly = !isPrivileged && roles.Contains("Manager");
+
+    // "Mon équipe" pending-actions badge — Manager only, same source (GetInboxAsync) as the HR Inbox modal.
+    var pendingCount = isManagerOnly
+        ? (await ActionCenter.GetInboxAsync(User)).TotalCount
+        : 0;
 }
 
 <!DOCTYPE html>
@@ -40,6 +48,7 @@
     <link rel="stylesheet" href="~/css/ey-sidebar.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/chatbot.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/ey-portal.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/ey-directory-card.css" asp-append-version="true" />
     @await RenderSectionAsync("Styles", required: false)
 </head>
 <body>
@@ -106,6 +115,10 @@
                                 <a class="nav-link @((currentController == "Collaborateurs" && currentAction == "Index") ? "active" : "")" asp-controller="Collaborateurs" asp-action="Index">
                                     <i class="fas fa-users"></i>
                                     <span class="nav-link-label">@(isPrivileged ? "Collaborateurs" : "Mon équipe")</span>
+                                    @if (pendingCount > 0)
+                                    {
+                                        <span class="ey-badge ey-badge-warning">@pendingCount</span>
+                                    }
                                 </a>
                             </li>
                             @if (ownCollabId.HasValue)

@@ -8,6 +8,7 @@ public class Inscription
     public DateTime DateInscription { get; set; } = DateTime.Now;
     public bool Terminee { get; set; } = false;
     public virtual ICollection<EvaluationCompetence> EvaluationsFormation { get; set; }
+    public virtual EvaluationPostFormation? EvaluationPostFormation { get; set; }
 
     [Display(Name = "Date d'examen")]
     public DateTime? DateExamen { get; set; }

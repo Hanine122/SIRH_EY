@@ -89,10 +89,12 @@
                 <div class="ey-competence-grid" id="competenceCheckboxList">
                     @foreach (var item in competencesDisponibles)
                     {
+                        var badgeCls = item.Priorite == "Obligatoire" ? "ds-badge-red" : item.Priorite == "Prioritaire" ? "ds-badge-amber" : "";
                         <div class="ey-competence-card" onclick="toggleCompetence(this)">
                             <input class="competence-choice d-none" type="checkbox" name="selectedCompetences" value="@item.Competence" id="comp_@Math.Abs(item.Competence.GetHashCode())" autocomplete="off" />
                             <div class="ey-competence-title">@item.Competence</div>
                             <div class="ey-competence-meta">@item.Poste - Niveau requis @item.NiveauRequis/5</div>
+                            <span class="ey-competence-badge @badgeCls">@item.Priorite</span>
                         </div>
                     }
                 </div>

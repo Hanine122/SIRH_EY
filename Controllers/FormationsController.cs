@@ -19,17 +19,20 @@ namespace SIRH.EY.Controllers
         private readonly IParametreService _parametreService;
         private readonly ITeamAccessService _teamAccess;
         private readonly IOwnershipService _ownership;
+        private readonly ICompetenceLifecycleService _competenceLifecycle;
 
         public FormationsController(
             ApplicationDbContext context,
             IParametreService parametreService,
             ITeamAccessService teamAccess,
-            IOwnershipService ownership)
+            IOwnershipService ownership,
+            ICompetenceLifecycleService competenceLifecycle)
         {
             _context = context;
             _parametreService = parametreService;
             _teamAccess = teamAccess;
             _ownership = ownership;
+            _competenceLifecycle = competenceLifecycle;
         }
 
         // GET: Formations (version simplifiée : catalogue complet)
@@ -375,7 +378,9 @@ namespace SIRH.EY.Controllers
             TempData["Success"] = $"Formation terminée ! La compétence '{competence.Nom}' a été créée avec un niveau 1/{competence.NiveauCible}.";
             break;
         case CompetenceCompletionOutcome.Incremented:
-            competence!.NiveauActuel = decision.NouveauNiveau!.Value;
+            var ancienNiveauFormation = competence!.NiveauActuel;
+            competence.NiveauActuel = decision.NouveauNiveau!.Value;
+            await _competenceLifecycle.RecordLevelChangeAsync(competence, ancienNiveauFormation, competence.NiveauActuel, CompetenceChangeReason.Formation);
             await _context.SaveChangesAsync();
             TempData["Success"] = $"Formation terminée ! Niveau de compétence '{competence.Nom}' augmenté à {competence.NiveauActuel}/{competence.NiveauCible}.";
             break;
@@ -387,8 +392,69 @@ namespace SIRH.EY.Controllers
             break;
     }
 
-    return RedirectToAction(nameof(Index), new { collaborateurId = inscription.CollaborateurId });
+    return RedirectToAction(nameof(EvaluerFormation), new { inscriptionId = inscription.Id,
+        returnUrl = Url.Action(nameof(Index), new { collaborateurId = inscription.CollaborateurId }) });
 }
+
+        // GET: Formations/EvaluerFormation/5 — évaluation à chaud, déclenchée après complétion
+        public async Task<IActionResult> EvaluerFormation(int inscriptionId, string? returnUrl = null)
+        {
+            var inscription = await _context.Inscriptions
+                .Include(i => i.Formation)
+                .Include(i => i.EvaluationPostFormation)
+                .FirstOrDefaultAsync(i => i.Id == inscriptionId);
+            if (inscription == null) return NotFound();
+
+            if (!await _ownership.OwnsInscriptionAsync(User, inscriptionId))
+                return Forbid();
+
+            ViewBag.Inscription = inscription;
+            ViewBag.ReturnUrl = returnUrl;
+            return View(inscription.EvaluationPostFormation ?? new EvaluationPostFormation { InscriptionId = inscriptionId });
+        }
+
+        // POST: Formations/EvaluerFormation
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EvaluerFormation(EvaluationPostFormation vm, string? returnUrl = null)
+        {
+            if (!await _ownership.OwnsInscriptionAsync(User, vm.InscriptionId))
+                return Forbid();
+
+            var inscription = await _context.Inscriptions.FindAsync(vm.InscriptionId);
+            if (inscription == null) return NotFound();
+
+            if (!ModelState.IsValid)
+            {
+                ViewBag.Inscription = inscription;
+                ViewBag.ReturnUrl = returnUrl;
+                return View(vm);
+            }
+
+            var existing = await _context.EvaluationsPostFormation.FirstOrDefaultAsync(e => e.InscriptionId == vm.InscriptionId);
+            if (existing == null)
+            {
+                vm.DateEvaluation = DateTime.Now;
+                _context.EvaluationsPostFormation.Add(vm);
+            }
+            else
+            {
+                existing.NoteGlobale = vm.NoteGlobale;
+                existing.NoteContenu = vm.NoteContenu;
+                existing.NoteFormateur = vm.NoteFormateur;
+                existing.Recommande = vm.Recommande;
+                existing.Commentaire = vm.Commentaire;
+                existing.DateEvaluation = DateTime.Now;
+            }
+
+            await _context.SaveChangesAsync();
+            TempData["Success"] = "Merci pour votre évaluation à chaud !";
+
+            return (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+                ? LocalRedirect(returnUrl)
+                : RedirectToAction(nameof(Index), new { collaborateurId = inscription.CollaborateurId });
+        }
+
         // GET: Formations/Details/5
         public async Task<IActionResult> Details(int id, int? collaborateurId)
         {

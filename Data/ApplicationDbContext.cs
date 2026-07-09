@@ -21,6 +21,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<CompetenceRequiseParPoste> CompetencesRequisesParPoste { get; set; }
     public DbSet<EvaluationCompetence> EvaluationsCompetences { get; set; }
     public DbSet<EvaluationHistorique> EvaluationsHistoriques { get; set; }
+    public DbSet<EvaluationPostFormation> EvaluationsPostFormation { get; set; }
     public DbSet<PlanDeveloppement> PlansDeveloppement { get; set; }
     public DbSet<Parametre> Parametres { get; set; }
 
@@ -204,6 +205,17 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             .WithMany(i => i.EvaluationsFormation)
             .HasForeignKey(e => e.InscriptionId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        // ── EvaluationPostFormation → Inscription (hot evaluation, 1-to-0..1) ─
+        modelBuilder.Entity<EvaluationPostFormation>()
+            .HasOne(e => e.Inscription)
+            .WithOne(i => i.EvaluationPostFormation)
+            .HasForeignKey<EvaluationPostFormation>(e => e.InscriptionId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<EvaluationPostFormation>()
+            .HasIndex(e => e.InscriptionId)
+            .IsUnique();
 
         // ── SystemParameter unique key ────────────────────────────────────────
         modelBuilder.Entity<SystemParameter>()

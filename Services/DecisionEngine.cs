@@ -43,4 +43,14 @@ public static class DecisionEngine
     /// <summary>Priorité d'action RH dérivée du niveau de risque.</summary>
     public static string ClassifyActionPriority(string riskLevel) =>
         riskLevel == "Critical" ? "High" : riskLevel == "Elevated" ? "Medium" : "Low";
+
+    // ── Smart HR Inbox (ManagerActionCenterService) ────────────────────────────
+
+    /// <summary>Urgence d'une action en attente selon son ancienneté en jours.</summary>
+    public static string ClassifyPendingUrgency(int joursEnAttente) =>
+        joursEnAttente > 7 ? "Overdue" : joursEnAttente >= 3 ? "DueSoon" : "Recent";
+
+    /// <summary>Urgence d'expiration d'une certification. Source : ChatbotController.GetCertificationsExpirantes.</summary>
+    public static string ClassifyCertificationUrgency(int joursRestants) =>
+        joursRestants <= 30 ? "Critique" : joursRestants <= 60 ? "Urgent" : "À planifier";
 }

@@ -1419,9 +1419,7 @@ var competencesRequises = competencesRequisesRaw
                     domaine          = cc.Certification?.Domaine,
                     dateExpiration   = cc.DateExpiration!.Value.ToString("yyyy-MM-dd"),
                     joursRestants    = (int)(cc.DateExpiration!.Value - DateTime.Today).TotalDays,
-                    urgence          = (cc.DateExpiration.Value - DateTime.Today).TotalDays <= 30 ? "Critique"
-                                     : (cc.DateExpiration.Value - DateTime.Today).TotalDays <= 60 ? "Urgent"
-                                     : "À planifier",
+                    urgence          = DecisionEngine.ClassifyCertificationUrgency((int)(cc.DateExpiration.Value - DateTime.Today).TotalDays),
                 })
             });
         }

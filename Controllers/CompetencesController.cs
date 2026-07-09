@@ -79,19 +79,22 @@ public class CompetencesController : Controller
 
     private readonly ITeamAccessService _teamAccess;
     private readonly IOwnershipService _ownership;
+    private readonly ICompetenceLifecycleService _competenceLifecycle;
 
     public CompetencesController(
         ApplicationDbContext context,
         IReferentielRhService referentielRhService,
         IPlanDeveloppementService planDeveloppementService,
         ITeamAccessService teamAccess,
-        IOwnershipService ownership)
+        IOwnershipService ownership,
+        ICompetenceLifecycleService competenceLifecycle)
     {
         _context = context;
         _referentielRhService = referentielRhService;
         _planDeveloppementService = planDeveloppementService;
         _teamAccess = teamAccess;
         _ownership = ownership;
+        _competenceLifecycle = competenceLifecycle;
     }
 
     // GET: Competences?collaborateurId=xx
@@ -331,13 +334,8 @@ public async Task<IActionResult> MatriceEquipe(int? collaborateurId)
         competence.DateEvaluation = dateEvaluation;
         _context.Update(competence);
 
-         _context.EvaluationsHistoriques.Add(new EvaluationHistorique {
-        CompetenceId = competence.Id,
-        NiveauAncien = ancienNiveau,
-        NiveauNouveau = nouveauNiveau,
-        DateChangement = dateEvaluation,
-        Raison = "Manuel"
-    });
+        await _competenceLifecycle.RecordLevelChangeAsync(competence, ancienNiveau, nouveauNiveau, CompetenceChangeReason.Manuel);
+
         await _context.SaveChangesAsync();
         return Ok(new { success = true });
     }
@@ -420,7 +418,9 @@ public async Task<IActionResult> MatriceEquipe(int? collaborateurId)
         evaluation.CommentaireManager = null;
         evaluation.EvaluationManager = null;
 
-        competence.NiveauActuel = CompetenceRules.NiveauFromScore(vm.AutoEvaluationCollaborateur);
+        // Le score auto-declare reste provisoire tant que le manager n'a pas valide (4-yeux) :
+        // Competence.NiveauActuel (le niveau "officiel") n'est mis a jour qu'a la validation
+        // manager (cf. ValidationManager) ou par override RH direct (cf. Evaluate).
         competence.DateEvaluation = DateTime.Now;
 
         await _context.SaveChangesAsync();
@@ -520,8 +520,12 @@ public async Task<IActionResult> MatriceEquipe(int? collaborateurId)
         evaluation.CommentaireManager = vm.CommentaireManager;
         evaluation.DateValidationManager = DateTime.Now;
 
+        var ancienNiveau = competence.NiveauActuel;
         competence.NiveauActuel = CompetenceRules.NiveauFromScore(vm.EvaluationManager);
         competence.DateEvaluation = DateTime.Now;
+
+        await _competenceLifecycle.RecordLevelChangeAsync(competence, ancienNiveau, competence.NiveauActuel,
+            vm.ValidationManager ? CompetenceChangeReason.ValidationManager : CompetenceChangeReason.CorrectionManager);
 
         await _context.SaveChangesAsync();
         TempData["Success"] = vm.ValidationManager
@@ -606,7 +610,8 @@ public async Task<IActionResult> PlanifierExamen(int inscriptionId, DateTime dat
         {
             nom = c.Competence,
             poste = c.Poste,
-            niveauRequis = c.NiveauRequis
+            niveauRequis = c.NiveauRequis,
+            priorite = c.Priorite
         }));
     }
 

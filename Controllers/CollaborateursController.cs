@@ -30,6 +30,7 @@ public class CollaborateursController : Controller
     private readonly FlowiseService _flowiseService;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ITeamAccessService _teamAccess;
+    private readonly IManagerActionCenterService _managerActionCenter;
 
     private readonly Microsoft.AspNetCore.Identity.UI.Services.IEmailSender _emailSender;
 
@@ -38,12 +39,14 @@ public class CollaborateursController : Controller
         FlowiseService flowiseService,
         UserManager<ApplicationUser> userManager,
         ITeamAccessService teamAccess,
+        IManagerActionCenterService managerActionCenter,
         Microsoft.AspNetCore.Identity.UI.Services.IEmailSender emailSender)
     {
         _context = context;
         _flowiseService = flowiseService;
         _userManager = userManager;
         _teamAccess = teamAccess;
+        _managerActionCenter = managerActionCenter;
         _emailSender = emailSender;
     }
 
@@ -128,6 +131,8 @@ public async Task<IActionResult> AskIA([FromBody] RecommendationRequest request)
     if (user == null)
         return RedirectToAction("Login", "Account");
 
+    ViewBag.CurrentUserPrenom = user.Prenom;
+
     // Service applies role-aware data scope (ITAdmin/RH=all, Manager=team, Collaborateur=self)
     IQueryable<Collaborateur> collaborateurs =
         await _teamAccess.ApplyAccessFilterAsync(User, _context.Collaborateurs);
@@ -172,6 +177,11 @@ public async Task<IActionResult> AskIA([FromBody] RecommendationRequest request)
             (c.Poste ?? "").Contains("Manager")))
         .OrderBy(c => c.Nom)
         .ToListAsync();
+
+    // Smart HR Inbox — pending validations, development plans and expiring certifications for this manager's team.
+    ViewBag.HrInbox = (!_teamAccess.IsPrivileged(User) && User.IsInRole(Roles.Manager))
+        ? await _managerActionCenter.GetInboxAsync(User)
+        : new HrInboxSummary(Array.Empty<PendingValidationItem>(), Array.Empty<PendingDevelopmentPlanItem>(), Array.Empty<ExpiringCertificationItem>());
 
     return View(await collaborateurs.ToListAsync());
 }
