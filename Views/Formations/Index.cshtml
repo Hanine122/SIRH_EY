@@ -902,6 +902,22 @@
                                        class="ey-btn-premium-ghost px-3 text-decoration-none" title="Détails">
                                         <i class="fas fa-eye"></i>
                                     </a>
+                                    @if (certif.EvaluationPostFormation != null)
+                                    {
+                                        if (certif.EvaluationSuiviFormation == null)
+                                        {
+                                            <a asp-action="EvaluationSuivi" asp-route-inscriptionId="@certif.Id"
+                                               class="ey-btn-premium-ghost px-3 text-decoration-none" title="Évaluation de suivi">
+                                                <i class="fas fa-chart-line"></i>
+                                            </a>
+                                        }
+                                        else
+                                        {
+                                            <span class="ey-btn-premium-ghost px-3 text-success" title="Évaluation de suivi complétée">
+                                                <i class="fas fa-check-circle"></i>
+                                            </span>
+                                        }
+                                    }
                                 </div>
                             </div>
                         </div>

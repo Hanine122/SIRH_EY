@@ -9,6 +9,7 @@ public class Inscription
     public bool Terminee { get; set; } = false;
     public virtual ICollection<EvaluationCompetence> EvaluationsFormation { get; set; }
     public virtual EvaluationPostFormation? EvaluationPostFormation { get; set; }
+    public virtual EvaluationSuiviFormation? EvaluationSuiviFormation { get; set; }
 
     [Display(Name = "Date d'examen")]
     public DateTime? DateExamen { get; set; }

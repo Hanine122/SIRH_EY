@@ -64,6 +64,10 @@ public class Formation
     [Display(Name = "Forte demande")]
     public bool EstForteDemande { get; set; } = false;
 
+    // ── Skill bridge (real relationship, replaces text-matching on CompetenceVisee) ──
+    public int? SkillId { get; set; }
+    public Skill? Skill { get; set; }
+
     // ── Navigations ──────────────────────────────────────────────────────────
     public ICollection<Inscription>? Inscriptions { get; set; }
 }

@@ -31,7 +31,7 @@ public class PlanDeveloppementService : IPlanDeveloppementService
         var nouveauxPlans = new List<PlanDeveloppement>();
         foreach (var competence in competencesEnEcart)
         {
-            var formation = TrouverFormationPourCompetence(formations, plansExistants, nouveauxPlans, competence.Nom);
+            var formation = TrouverFormationPourCompetence(formations, plansExistants, nouveauxPlans, competence.SkillId, competence.Nom);
             if (formation == null) continue;
 
             nouveauxPlans.Add(new PlanDeveloppement
@@ -64,9 +64,15 @@ public class PlanDeveloppementService : IPlanDeveloppementService
         var nom = competence.Nom.Trim();
         foreach (var plan in plansOuverts)
         {
+            var parSkill = competence.SkillId.HasValue &&
+                           plan.Formation?.SkillId.HasValue == true &&
+                           plan.Formation.SkillId == competence.SkillId;
+
             var competenceVisee = plan.Formation?.CompetenceVisee;
-            if (!string.IsNullOrWhiteSpace(competenceVisee) &&
-                competenceVisee.Trim().Equals(nom, StringComparison.OrdinalIgnoreCase))
+            var parNom = !string.IsNullOrWhiteSpace(competenceVisee) &&
+                         competenceVisee.Trim().Equals(nom, StringComparison.OrdinalIgnoreCase);
+
+            if (parSkill || parNom)
             {
                 plan.Statut = "Validé";
             }
@@ -77,12 +83,21 @@ public class PlanDeveloppementService : IPlanDeveloppementService
         IEnumerable<Formation> formations,
         IReadOnlyCollection<int> plansExistants,
         IReadOnlyCollection<PlanDeveloppement> nouveauxPlans,
+        int? competenceSkillId,
         string competenceNom)
     {
         var formationsDisponibles = formations
             .Where(f => !plansExistants.Contains(f.Id) && !nouveauxPlans.Any(p => p.FormationId == f.Id))
             .ToList();
 
+        // Chemin prioritaire : vraie relation FK (Skill), construite par SkillBridgeSeeder.
+        if (competenceSkillId.HasValue)
+        {
+            var parSkill = formationsDisponibles.FirstOrDefault(f => f.SkillId.HasValue && f.SkillId == competenceSkillId);
+            if (parSkill != null) return parSkill;
+        }
+
+        // Filet de sécurité inchangé : texte-matching existant, pour les lignes non backfillées.
         return formationsDisponibles.FirstOrDefault(f =>
                    !string.IsNullOrWhiteSpace(f.CompetenceVisee) &&
                    f.CompetenceVisee.Trim().Equals(competenceNom.Trim(), StringComparison.OrdinalIgnoreCase))

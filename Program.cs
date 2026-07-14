@@ -299,6 +299,9 @@ using (var scope = app.Services.CreateScope())
     // 18. Priorité des compétences requises — backfill depuis NiveauRequis existant
     await CompetencePrioriteSeeder.SeedAsync(context);
 
+    // 19. Pont Skill — peuple le référentiel canonique et relie Competence/Formation
+    await SkillBridgeSeeder.SeedAsync(context);
+
 }
 
 // ── MIDDLEWARE ────────────────────────────────────────────────────────────────

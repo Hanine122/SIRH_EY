@@ -146,7 +146,13 @@ namespace SIRH.EY.Controllers
             var formation = inscription.Formation;
             var competenceVisee = formation?.CompetenceVisee;
 
-            Competence? competence = !string.IsNullOrEmpty(competenceVisee)
+            // Chemin prioritaire : vraie relation FK (Skill). Filet de sécurité inchangé :
+            // recherche par nom existante, pour les lignes non backfillées.
+            Competence? competence = formation?.SkillId != null
+                ? await _context.Competences
+                    .FirstOrDefaultAsync(c => c.CollaborateurId == inscription.CollaborateurId && c.SkillId == formation.SkillId)
+                : null;
+            competence ??= !string.IsNullOrEmpty(competenceVisee)
                 ? await _context.Competences
                     .FirstOrDefaultAsync(c => c.CollaborateurId == inscription.CollaborateurId && c.Nom == competenceVisee)
                 : null;
@@ -167,7 +173,8 @@ namespace SIRH.EY.Controllers
                         NiveauActuel = 1,
                         NiveauCible = decision.NiveauCible!.Value,
                         DateEvaluation = DateTime.Now,
-                        CollaborateurId = inscription.CollaborateurId
+                        CollaborateurId = inscription.CollaborateurId,
+                        SkillId = formation?.SkillId
                     };
                     _context.Competences.Add(competence);
                     await _context.SaveChangesAsync();

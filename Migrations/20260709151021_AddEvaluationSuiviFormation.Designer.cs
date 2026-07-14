@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SIRH.EY.Data;
 
@@ -11,9 +12,11 @@ using SIRH.EY.Data;
 namespace SIRH.EY.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260709151021_AddEvaluationSuiviFormation")]
+    partial class AddEvaluationSuiviFormation
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -571,16 +574,11 @@ namespace SIRH.EY.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int?>("SkillId")
-                        .HasColumnType("int");
-
                     b.HasKey("Id");
 
                     b.HasIndex("CategorieCompetenceId");
 
                     b.HasIndex("CollaborateurId");
-
-                    b.HasIndex("SkillId");
 
                     b.ToTable("Competences");
                 });
@@ -974,9 +972,6 @@ namespace SIRH.EY.Migrations
                     b.Property<string>("PosteCible")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int?>("SkillId")
-                        .HasColumnType("int");
-
                     b.Property<string>("SupportPdfUrl")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
@@ -986,8 +981,6 @@ namespace SIRH.EY.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("SkillId");
 
                     b.ToTable("Formations");
                 });
@@ -2121,16 +2114,9 @@ namespace SIRH.EY.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("SIRH.EY.Models.Skill", "Skill")
-                        .WithMany()
-                        .HasForeignKey("SkillId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
                     b.Navigation("CategorieCompetence");
 
                     b.Navigation("Collaborateur");
-
-                    b.Navigation("Skill");
                 });
 
             modelBuilder.Entity("SIRH.EY.Models.DecisionRule", b =>
@@ -2191,16 +2177,6 @@ namespace SIRH.EY.Migrations
                         .IsRequired();
 
                     b.Navigation("Inscription");
-                });
-
-            modelBuilder.Entity("SIRH.EY.Models.Formation", b =>
-                {
-                    b.HasOne("SIRH.EY.Models.Skill", "Skill")
-                        .WithMany()
-                        .HasForeignKey("SkillId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("Skill");
                 });
 
             modelBuilder.Entity("SIRH.EY.Models.FormationCompetence", b =>

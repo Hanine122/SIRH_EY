@@ -22,6 +22,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<EvaluationCompetence> EvaluationsCompetences { get; set; }
     public DbSet<EvaluationHistorique> EvaluationsHistoriques { get; set; }
     public DbSet<EvaluationPostFormation> EvaluationsPostFormation { get; set; }
+    public DbSet<EvaluationSuiviFormation> EvaluationsSuiviFormation { get; set; }
     public DbSet<PlanDeveloppement> PlansDeveloppement { get; set; }
     public DbSet<Parametre> Parametres { get; set; }
 
@@ -199,6 +200,19 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         modelBuilder.Entity<FormationCompetence>()
             .HasKey(fc => new { fc.FormationId, fc.CompetenceId });
 
+        // ── Skill bridge — real Formation/Competence↔Skill relationship ────────
+        modelBuilder.Entity<Formation>()
+            .HasOne(f => f.Skill)
+            .WithMany()
+            .HasForeignKey(f => f.SkillId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<Competence>()
+            .HasOne(c => c.Skill)
+            .WithMany()
+            .HasForeignKey(c => c.SkillId)
+            .OnDelete(DeleteBehavior.SetNull);
+
         // ── EvaluationCompetence → Inscription ────────────────────────────────
         modelBuilder.Entity<EvaluationCompetence>()
             .HasOne(e => e.Inscription)
@@ -214,6 +228,17 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<EvaluationPostFormation>()
+            .HasIndex(e => e.InscriptionId)
+            .IsUnique();
+
+        // ── EvaluationSuiviFormation → Inscription (cold evaluation, 1-to-0..1) ─
+        modelBuilder.Entity<EvaluationSuiviFormation>()
+            .HasOne(e => e.Inscription)
+            .WithOne(i => i.EvaluationSuiviFormation)
+            .HasForeignKey<EvaluationSuiviFormation>(e => e.InscriptionId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<EvaluationSuiviFormation>()
             .HasIndex(e => e.InscriptionId)
             .IsUnique();
 

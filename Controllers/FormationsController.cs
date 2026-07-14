@@ -66,6 +66,8 @@ namespace SIRH.EY.Controllers
 
             var inscriptions = await _context.Inscriptions
                 .Include(i => i.Formation)
+                .Include(i => i.EvaluationPostFormation)
+                .Include(i => i.EvaluationSuiviFormation)
                 .Where(i => i.CollaborateurId == collaborateurId)
                 .ToListAsync();
             ViewBag.Inscriptions = inscriptions;
@@ -350,7 +352,13 @@ namespace SIRH.EY.Controllers
     var formation = inscription.Formation;
     var competenceVisee = formation?.CompetenceVisee;
 
-    Competence? competence = !string.IsNullOrEmpty(competenceVisee)
+    // Chemin prioritaire : vraie relation FK (Skill). Filet de sécurité inchangé : recherche
+    // par nom existante, pour les lignes non backfillées par SkillBridgeSeeder.
+    Competence? competence = formation?.SkillId != null
+        ? await _context.Competences
+            .FirstOrDefaultAsync(c => c.CollaborateurId == inscription.CollaborateurId && c.SkillId == formation.SkillId)
+        : null;
+    competence ??= !string.IsNullOrEmpty(competenceVisee)
         ? await _context.Competences
             .FirstOrDefaultAsync(c => c.CollaborateurId == inscription.CollaborateurId && c.Nom == competenceVisee)
         : null;
@@ -371,7 +379,8 @@ namespace SIRH.EY.Controllers
                 NiveauActuel = 1,
                 NiveauCible = decision.NiveauCible!.Value,
                 DateEvaluation = DateTime.Now,
-                CollaborateurId = inscription.CollaborateurId
+                CollaborateurId = inscription.CollaborateurId,
+                SkillId = formation?.SkillId
             };
             _context.Competences.Add(competence);
             await _context.SaveChangesAsync();
@@ -449,6 +458,76 @@ namespace SIRH.EY.Controllers
 
             await _context.SaveChangesAsync();
             TempData["Success"] = "Merci pour votre évaluation à chaud !";
+
+            return (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+                ? LocalRedirect(returnUrl)
+                : RedirectToAction(nameof(Index), new { collaborateurId = inscription.CollaborateurId });
+        }
+
+        // GET: Formations/EvaluationSuivi/5 — évaluation de suivi (à froid), disponible une fois
+        // l'évaluation à chaud complétée. Pas de déclenchement automatique : accessible via un lien
+        // optionnel depuis l'onglet Certifications de Formations/Index.
+        public async Task<IActionResult> EvaluationSuivi(int inscriptionId, string? returnUrl = null)
+        {
+            var inscription = await _context.Inscriptions
+                .Include(i => i.Formation)
+                .Include(i => i.EvaluationPostFormation)
+                .Include(i => i.EvaluationSuiviFormation)
+                .FirstOrDefaultAsync(i => i.Id == inscriptionId);
+            if (inscription == null) return NotFound();
+
+            if (!await _ownership.OwnsInscriptionAsync(User, inscriptionId))
+                return Forbid();
+
+            if (inscription.EvaluationPostFormation == null)
+            {
+                TempData["Error"] = "L'évaluation à chaud doit être complétée avant l'évaluation de suivi.";
+                return RedirectToAction(nameof(Index), new { collaborateurId = inscription.CollaborateurId });
+            }
+
+            ViewBag.Inscription = inscription;
+            ViewBag.ReturnUrl = returnUrl;
+            return View(inscription.EvaluationSuiviFormation ?? new EvaluationSuiviFormation { InscriptionId = inscriptionId });
+        }
+
+        // POST: Formations/EvaluationSuivi
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EvaluationSuivi(EvaluationSuiviFormation vm, string? returnUrl = null)
+        {
+            if (!await _ownership.OwnsInscriptionAsync(User, vm.InscriptionId))
+                return Forbid();
+
+            var inscription = await _context.Inscriptions
+                .Include(i => i.EvaluationPostFormation)
+                .FirstOrDefaultAsync(i => i.Id == vm.InscriptionId);
+            if (inscription == null) return NotFound();
+            if (inscription.EvaluationPostFormation == null) return Forbid();
+
+            if (!ModelState.IsValid)
+            {
+                ViewBag.Inscription = inscription;
+                ViewBag.ReturnUrl = returnUrl;
+                return View(vm);
+            }
+
+            var existing = await _context.EvaluationsSuiviFormation.FirstOrDefaultAsync(e => e.InscriptionId == vm.InscriptionId);
+            if (existing == null)
+            {
+                vm.DateEvaluation = DateTime.Now;
+                _context.EvaluationsSuiviFormation.Add(vm);
+            }
+            else
+            {
+                existing.NoteApplicationCompetences = vm.NoteApplicationCompetences;
+                existing.NoteImpactBusiness = vm.NoteImpactBusiness;
+                existing.ExemplesConcrets = vm.ExemplesConcrets;
+                existing.Commentaire = vm.Commentaire;
+                existing.DateEvaluation = DateTime.Now;
+            }
+
+            await _context.SaveChangesAsync();
+            TempData["Success"] = "Merci pour votre évaluation de suivi !";
 
             return (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
                 ? LocalRedirect(returnUrl)

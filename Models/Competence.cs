@@ -26,4 +26,8 @@ public class Competence
     public Collaborateur? Collaborateur { get; set; }
 
     public EvaluationCompetence? EvaluationCompetence { get; set; }
+
+    // ── Skill bridge (real relationship, replaces text-matching on Nom) ──────
+    public int? SkillId { get; set; }
+    public Skill? Skill { get; set; }
 }

@@ -1,0 +1,99 @@
+@model SIRH.EY.Models.EvaluationSuiviFormation
+
+@{
+    ViewData["Title"] = "Évaluation de suivi";
+    var inscription = ViewBag.Inscription as SIRH.EY.Models.Inscription;
+    var returnUrl = ViewBag.ReturnUrl as string;
+    var backUrl = !string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl)
+        ? returnUrl
+        : Url.Action("Index", "Formations", new { collaborateurId = inscription?.CollaborateurId });
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/ey-forms-premium.css" asp-append-version="true" />
+}
+
+<div class="ey-premium-card">
+    <div class="ey-card-header-premium">
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <div class="ey-header-icon">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <h1 class="ey-header-title">Évaluation de suivi</h1>
+                <p class="ey-header-subtitle">@(inscription?.Formation?.Titre ?? "Formation") — application des compétences et impact sur votre activité</p>
+            </div>
+            <a href="@backUrl" class="ey-back-link">
+                <i class="fas fa-arrow-left"></i> Retour
+            </a>
+        </div>
+    </div>
+
+    <div class="ey-form-body">
+        <form asp-action="EvaluationSuivi" asp-controller="Formations" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="InscriptionId" />
+            <input type="hidden" name="returnUrl" value="@returnUrl" />
+
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+            <div class="ey-form-section">
+                <div class="ey-section-title">Application sur le poste</div>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label asp-for="NoteApplicationCompetences" class="ey-label">Application des compétences acquises (1 à 5) *</label>
+                        <select asp-for="NoteApplicationCompetences" class="ey-input">
+                            <option value="">Sélectionnez une note</option>
+                            <option value="5">5 - Appliquées systématiquement</option>
+                            <option value="4">4 - Souvent appliquées</option>
+                            <option value="3">3 - Parfois appliquées</option>
+                            <option value="2">2 - Rarement appliquées</option>
+                            <option value="1">1 - Pas appliquées</option>
+                        </select>
+                        <span asp-validation-for="NoteApplicationCompetences" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="NoteImpactBusiness" class="ey-label">Impact sur votre activité (1 à 5) *</label>
+                        <select asp-for="NoteImpactBusiness" class="ey-input">
+                            <option value="">Sélectionnez une note</option>
+                            <option value="5">5 - Impact majeur</option>
+                            <option value="4">4 - Impact significatif</option>
+                            <option value="3">3 - Impact modéré</option>
+                            <option value="2">2 - Impact faible</option>
+                            <option value="1">1 - Aucun impact</option>
+                        </select>
+                        <span asp-validation-for="NoteImpactBusiness" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="mt-3">
+                    <label asp-for="ExemplesConcrets" class="ey-label">Exemples concrets d'application (facultatif)</label>
+                    <textarea asp-for="ExemplesConcrets" class="ey-input" rows="3" maxlength="1000"></textarea>
+                    <span asp-validation-for="ExemplesConcrets" class="text-danger"></span>
+                </div>
+
+                <div class="mt-3">
+                    <label asp-for="Commentaire" class="ey-label">Commentaire (facultatif)</label>
+                    <textarea asp-for="Commentaire" class="ey-input" rows="3" maxlength="1000"></textarea>
+                    <span asp-validation-for="Commentaire" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="ey-actions-bar">
+                <a href="@backUrl" class="ey-btn-premium ey-btn-ghost">
+                    <i class="fas fa-times"></i> Annuler
+                </a>
+                <div class="ey-actions-right">
+                    <button type="submit" class="ey-btn-premium ey-btn-primary">
+                        <i class="fas fa-check"></i> Envoyer mon évaluation
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}
