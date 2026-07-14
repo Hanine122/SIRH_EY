@@ -372,6 +372,24 @@ public async Task<IActionResult> MatriceEquipe(int? collaborateurId)
             CommentaireManager = evaluation?.CommentaireManager
         };
 
+        // Training feedback history — same completed×hot-eval / pending-cold-eval
+        // gating already used in FormationsController.Index's certifications tab,
+        // reused here rather than re-derived. Cold eval availability is
+        // existence-only (hot eval done → cold eval open), not time-delayed.
+        var inscriptionsAvecFeedback = await _context.Inscriptions
+            .Include(i => i.Formation)
+            .Include(i => i.EvaluationPostFormation)
+            .Include(i => i.EvaluationSuiviFormation)
+            .Where(i => i.CollaborateurId == competence.CollaborateurId && i.Terminee && i.EvaluationPostFormation != null)
+            .OrderByDescending(i => i.EvaluationPostFormation!.DateEvaluation)
+            .ToListAsync();
+
+        ViewBag.EvaluationsAChaud = inscriptionsAvecFeedback.Take(5).ToList();
+        ViewBag.EvaluationsAFroidEnAttente = inscriptionsAvecFeedback
+            .Where(i => i.EvaluationSuiviFormation == null)
+            .Take(5)
+            .ToList();
+
         return View(vm);
     }
 

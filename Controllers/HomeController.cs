@@ -55,6 +55,7 @@ public async Task<IActionResult> Index()
         : await _context.Collaborateurs
             .AsNoTracking()
             .FirstOrDefaultAsync(c => c.UserId == user.Id || c.Email == user.Email);
+    ViewBag.OwnCollaborateurId = collaborateurConnecte?.Id;
 
     // Collaborateurs actifs récents (les 4 derniers)
     var collaborateurs = await _context.Collaborateurs

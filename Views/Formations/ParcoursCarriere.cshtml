@@ -3,10 +3,105 @@
 @{
     ViewData["Title"] = "Parcours de carrière";
     var collab = Model.Collaborateur;
+
+    // Slugs used to wire the roadmap click-filter to the two panels that
+    // have real per-grade data on this page. Only the collaborator's
+    // current grade (mastered competencies) and next grade (gap list,
+    // already computed against that grade's target level) have concrete
+    // competency data here — grades further out are backed by the real
+    // GradeReferentiel thresholds instead (fetched live), not by a
+    // fabricated competency list this page has no data for.
+    Func<string?, string> Slug = g => (g ?? "").Trim().ToLowerInvariant().Replace(" ", "-");
+    var currentGradeSlug = Slug(Model.GradeActuel);
+    var nextGradeSlug    = Model.ProchainGrade != null ? Slug(Model.ProchainGrade) : null;
 }
 
 @section Styles {
     <link rel="stylesheet" href="~/css/ey-formations-catalogue.css" asp-append-version="true" />
+    <style>
+        /* Grade progress bar — thinner, with an animated fill (scaleX so it
+           works regardless of the inline width%) and a soft glow at the
+           leading edge. Width itself is always @Model.ProgressionGrade —
+           the real value, never fabricated. */
+        @@keyframes pc-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+        .pc-progress {
+            position: relative; height: 6px; border-radius: 999px;
+            background: rgba(255,255,255,.12); overflow: hidden;
+        }
+        .pc-progress-fill {
+            position: relative; height: 100%; border-radius: 999px;
+            background: linear-gradient(90deg,#d4c000,#ffe600);
+            transform-origin: left;
+            animation: pc-grow .8s cubic-bezier(.16,1,.3,1) backwards;
+            animation-delay: .1s;
+        }
+        .pc-progress-fill::after {
+            content:''; position:absolute; top:50%; right:0; transform:translate(50%,-50%);
+            width:10px; height:10px; border-radius:50%; background:#ffe600;
+            box-shadow: 0 0 8px 2px rgba(255,230,0,.65);
+        }
+        @@media (prefers-reduced-motion: reduce) { .pc-progress-fill { animation: none; } }
+
+        /* Roadmap rows — real hover affordance */
+        .pc-road-row {
+            cursor: pointer; transition: background .15s ease, border-color .15s ease, transform .15s ease;
+        }
+        .pc-road-row:hover { transform: translateX(2px); }
+        .pc-road-row.pc-road-next {
+            background: rgba(255,230,0,.08) !important;
+            border: 1px dashed rgba(255,230,0,.45) !important;
+            box-shadow: 0 0 0 1px rgba(255,230,0,.12) inset;
+        }
+        .pc-road-row.pc-road-next:hover {
+            background: rgba(255,230,0,.14) !important;
+            border-color: rgba(255,230,0,.7) !important;
+        }
+
+        /* Competence rows — clean surface, percentage-colored gauge */
+        .pc-comp-row { background:#fff; border:1px solid #e5e7eb; transition: box-shadow .15s ease, border-color .15s ease; }
+        .pc-comp-row:hover { border-color:#d1d5db; box-shadow:0 2px 8px rgba(15,23,42,.06); }
+        .pc-comp-bar { height:5px; border-radius:999px; background:#eef0f4; overflow:hidden; }
+        .pc-comp-bar-fill { height:100%; border-radius:999px; transform-origin:left; animation: pc-grow .7s cubic-bezier(.16,1,.3,1) backwards; }
+
+        /* Priority badges on competence rows */
+        .pc-badge-priorite {
+            display:inline-flex; align-items:center; gap:4px; font-size:10px; font-weight:700;
+            letter-spacing:.04em; text-transform:uppercase; padding:3px 9px; border-radius:99px;
+            flex-shrink:0; white-space:nowrap;
+        }
+        .pc-badge-haute    { background:#FEF2F2; color:var(--red-600);   border:1px solid #FECACA; }
+        .pc-badge-moyenne  { background:#FFFBEB; color:var(--amber-600); border:1px solid #FDE68A; }
+        .pc-badge-basse    { background:#F0FDF4; color:var(--green-600); border:1px solid #BBF7D0; }
+        .pc-badge-maitrise { background:#EFF6FF; color:var(--blue-600);  border:1px solid #BFDBFE; }
+
+        /* Grade filter panels — fade transition on switch, driven by JS */
+        .pc-panel { transition: opacity .22s ease; opacity: 1; }
+
+        /* Roadmap steps — active (clicked) state */
+        .grade-step.pc-road-active {
+            background: rgba(255,230,0,.24) !important;
+            border: 1px solid rgba(255,230,0,.75) !important;
+            box-shadow: 0 0 0 1px rgba(255,230,0,.18) inset;
+        }
+        .grade-step:focus-visible { outline: 2px solid #ffe600; outline-offset: 2px; }
+
+        /* Filter status bar above the center column */
+        .pc-filter-bar {
+            display:flex; align-items:center; justify-content:space-between; gap:12px;
+            background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:10px 16px; margin-bottom:16px;
+        }
+        .pc-filter-reset {
+            font-size:12.5px; font-weight:600; color:#6b7280; cursor:pointer; text-decoration:underline;
+            background:none; border:none; padding:0;
+        }
+        .pc-filter-reset:hover { color:#111319; }
+
+        /* "Other grade" criteria panel */
+        .pc-criteria-item { display:flex; justify-content:space-between; padding:9px 0; border-bottom:1px solid #eef0f4; font-size:13.5px; }
+        .pc-criteria-item:last-child { border-bottom:none; }
+        .pc-criteria-label { color:#6b7280; }
+        .pc-criteria-value { font-weight:700; color:#111319; }
+    </style>
 }
 
 <!-- Header -->
@@ -73,10 +168,9 @@
                 <span>Compétences maîtrisées</span>
                 <span class="fw-bold">@Model.ProgressionGrade%</span>
             </div>
-            <div class="progress rounded-pill mb-2" style="height:10px;background:rgba(255,255,255,.1);">
-                <div class="progress-bar rounded-pill"
-                     style="width:@Model.ProgressionGrade%;background:linear-gradient(90deg,#d4c000,#ffe600);"
-                     role="progressbar"></div>
+            <div class="pc-progress mb-2">
+                <div class="pc-progress-fill" style="width:@Model.ProgressionGrade%"
+                     role="progressbar" aria-valuenow="@Model.ProgressionGrade" aria-valuemin="0" aria-valuemax="100"></div>
             </div>
             <div class="text-white-50 small">
                 @Model.CompetencesAcquises.Count acquises ·
@@ -86,24 +180,43 @@
     </div>
 </div>
 
+<!-- Filter status bar — reflects the roadmap selection -->
+<div class="pc-filter-bar" id="pc-filter-bar" style="display:none;">
+    <div class="small">
+        Compétences pour : <strong id="pc-filter-label" class="text-dark">—</strong>
+    </div>
+    <button type="button" class="pc-filter-reset" id="pc-filter-reset">
+        <i class="fas fa-times me-1"></i>Réinitialiser
+    </button>
+</div>
+
 <div class="row g-4">
 
     <!-- ── LEFT: Competences status ──────────────────────────────────────────── -->
     <div class="col-lg-8">
 
-        <!-- Compétences manquantes -->
+        <!-- Compétences manquantes — tagged with the NEXT grade, since these
+             gap items are exactly what the page already frames as "steps
+             toward the next grade". -->
         @if (Model.CompetencesManquantes.Any())
         {
-            <div class="card border-0 shadow-sm mb-4 p-4" style="border-radius:16px;">
+            <div class="card border-0 shadow-sm mb-4 p-4 pc-panel" id="pc-panel-acquerir"
+                 data-panel-grade="@nextGradeSlug" style="border-radius:16px;">
                 <h5 class="fw-bold text-dark mb-3">
                     <i class="fas fa-exclamation-triangle text-warning me-2"></i>
                     Compétences à acquérir
                     <span class="badge bg-warning text-dark ms-2">@Model.CompetencesManquantes.Count</span>
                 </h5>
 
+                <div id="pc-acquerir-list">
                 @foreach (var item in Model.CompetencesManquantes)
                 {
-                    <div class="p-3 mb-3 rounded-3" style="background:#fffbeb;border:1px solid #fde68a;">
+                    var pct        = item.PourcentageAtteint;
+                    var gaugeCl    = pct < 50 ? "var(--red-600)" : pct < 75 ? "var(--amber-600)" : "var(--green-600)";
+                    var priorite   = pct < 50 ? "Haute" : pct < 75 ? "Moyenne" : "Basse";
+                    var badgeCl    = pct < 50 ? "pc-badge-haute" : pct < 75 ? "pc-badge-moyenne" : "pc-badge-basse";
+
+                    <div class="pc-comp-row p-3 mb-3 rounded-3" data-grade="@nextGradeSlug" data-priorite="@priorite">
                         <div class="d-flex align-items-start justify-content-between gap-3 mb-2">
                             <div>
                                 <span class="fw-bold text-dark">@item.Nom</span>
@@ -111,7 +224,15 @@
                                     Niveau @item.NiveauActuel / @item.NiveauCible
                                 </span>
                             </div>
-                            <span class="fw-bold text-warning small flex-shrink-0">@item.PourcentageAtteint%</span>
+                            <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                                <span class="pc-badge-priorite @badgeCl">Priorité : @priorite</span>
+                                <span class="fw-bold small" style="color:@gaugeCl">@pct%</span>
+                            </div>
+                        </div>
+
+                        <!-- Percentage gauge -->
+                        <div class="pc-comp-bar mb-2">
+                            <div class="pc-comp-bar-fill" style="width:@pct%;background:@gaugeCl"></div>
                         </div>
 
                         <!-- Level dots -->
@@ -162,13 +283,15 @@
                         }
                     </div>
                 }
+                </div>
             </div>
         }
 
-        <!-- Compétences acquises -->
+        <!-- Compétences acquises — tagged with the CURRENT grade. -->
         @if (Model.CompetencesAcquises.Any())
         {
-            <div class="card border-0 shadow-sm mb-4 p-4" style="border-radius:16px;">
+            <div class="card border-0 shadow-sm mb-4 p-4 pc-panel" id="pc-panel-maitrise"
+                 data-panel-grade="@currentGradeSlug" style="border-radius:16px;">
                 <h5 class="fw-bold text-dark mb-3">
                     <i class="fas fa-check-circle text-success me-2"></i>
                     Compétences maîtrisées
@@ -179,10 +302,12 @@
                     {
                         <div class="col-sm-6">
                             <div class="d-flex align-items-center justify-content-between p-2 rounded-3"
+                                 data-grade="@currentGradeSlug" data-priorite="Maîtrise"
                                  style="background:#e6f9f0;border:1px solid #a8dfc5;">
                                 <div>
                                     <div class="fw-semibold text-dark small">@item.Nom</div>
                                     <div class="text-muted" style="font-size:.7rem;">Niveau @item.NiveauActuel/@item.NiveauCible</div>
+                                    <span class="pc-badge-priorite pc-badge-maitrise mt-1">Priorité : Actuelle / Maîtrise</span>
                                 </div>
                                 <!-- Level dots -->
                                 <div class="d-flex gap-1">
@@ -198,6 +323,23 @@
                 </div>
             </div>
         }
+
+        <!-- Grades beyond current/next — no personal competency data exists
+             for these on this page; show the real GradeReferentiel criteria
+             instead of fabricating a competency list. Populated by JS. -->
+        <div class="card border-0 shadow-sm mb-4 p-4 pc-panel" id="pc-panel-criteres" style="border-radius:16px; display:none;">
+            <h5 class="fw-bold text-dark mb-3">
+                <i class="fas fa-clipboard-list text-primary me-2"></i>
+                Critères pour devenir <span id="pc-criteres-grade">—</span>
+            </h5>
+            <div id="pc-criteres-body">
+                <div class="text-muted small"><i class="fas fa-spinner fa-spin me-1"></i>Chargement…</div>
+            </div>
+            <div class="small text-muted mt-3 pt-3" style="border-top:1px solid #eef0f4;">
+                Le détail des compétences requises pour ce grade n'est pas encore projeté sur votre parcours —
+                seuls votre grade actuel et le grade suivant affichent une liste de compétences personnalisée.
+            </div>
+        </div>
 
         @if (!Model.CompetencesAcquises.Any() && !Model.CompetencesManquantes.Any())
         {
@@ -260,7 +402,9 @@
                 <i class="fas fa-route text-warning me-2"></i>Votre feuille de route
             </h6>
             @{
-                var grades = new[] { "Junior", "Senior", "Manager", "Director", "Partner" };
+                // Matches GradeReferentiel exactly (6 rungs, not the 5 this
+                // list previously had — "Senior Manager" was missing).
+                var grades = new[] { "Junior", "Senior", "Manager", "Senior Manager", "Director", "Partner" };
                 var gradeActuelNorm = (Model.GradeActuel ?? "Junior").Trim();
                 int idxActuel = Array.FindIndex(grades, g => g.Equals(gradeActuelNorm, StringComparison.OrdinalIgnoreCase));
                 if (idxActuel < 0) idxActuel = 0;
@@ -271,14 +415,17 @@
                     var g = grades[gi];
                     bool estActuel  = gi == idxActuel;
                     bool estPasse   = gi < idxActuel;
-                    bool estFutur   = gi > idxActuel;
                     bool estProchain = gi == idxActuel + 1;
+                    var rowCls = "grade-step pc-road-row d-flex align-items-center gap-2 px-2 py-2 rounded-2" + (estProchain ? " pc-road-next" : "");
+                    var gSlug  = Slug(g);
 
-                    <div class="d-flex align-items-center gap-2 px-2 py-2 rounded-2"
-                         style="background:@(estActuel ? "rgba(255,230,0,.2)" : estPasse ? "rgba(16,185,129,.12)" : "rgba(255,255,255,.05)");
-                                border:1px solid @(estActuel ? "rgba(255,230,0,.5)" : estPasse ? "rgba(16,185,129,.3)" : "rgba(255,255,255,.08)");">
+                    <div class="@rowCls"
+                         data-grade="@gSlug" data-grade-label="@g"
+                         role="button" tabindex="0" aria-pressed="false"
+                         title="@(estProchain ? "Prochaine étape de votre progression" : "Voir les compétences pour ce grade")"
+                         style="@(estProchain ? "" : "background:" + (estActuel ? "rgba(255,230,0,.2)" : estPasse ? "rgba(16,185,129,.12)" : "rgba(255,255,255,.05)") + ";border:1px solid " + (estActuel ? "rgba(255,230,0,.5)" : estPasse ? "rgba(16,185,129,.3)" : "rgba(255,255,255,.08)") + ";")">
                         <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
-                             style="width:26px;height:26px;background:@(estPasse ? "#10b981" : estActuel ? "#ffe600" : "rgba(255,255,255,.1)");">
+                             style="width:26px;height:26px;background:@(estPasse ? "#10b981" : estActuel ? "#ffe600" : estProchain ? "rgba(255,230,0,.22)" : "rgba(255,255,255,.1)");">
                             @if (estPasse)
                             {
                                 <i class="fas fa-check text-white" style="font-size:.65rem;"></i>
@@ -287,20 +434,26 @@
                             {
                                 <i class="fas fa-user text-dark" style="font-size:.65rem;"></i>
                             }
+                            else if (estProchain)
+                            {
+                                <i class="fas fa-flag" style="font-size:.6rem;color:#ffe600;"></i>
+                            }
                             else
                             {
                                 <span class="text-white-50" style="font-size:.65rem;">@(gi + 1)</span>
                             }
                         </div>
-                        <span class="fw-semibold @(estActuel ? "text-warning" : estPasse ? "text-success" : "text-white-50")"
-                              style="font-size:.85rem;">@g</span>
+                        <span class="fw-semibold @(estActuel ? "text-warning" : estPasse ? "text-success" : estProchain ? "" : "text-white-50")"
+                              style="font-size:.85rem;@(estProchain ? "color:#ffe600;" : "")">@g</span>
                         @if (estActuel)
                         {
                             <span class="badge ms-auto" style="background:#ffe600;color:#1A1A24;font-size:.6rem;">Actuel</span>
                         }
                         else if (estProchain)
                         {
-                            <span class="badge ms-auto" style="background:rgba(255,255,255,.1);color:rgba(255,255,255,.7);font-size:.6rem;">Prochain</span>
+                            <span class="badge ms-auto" style="background:#ffe600;color:#1A1A24;font-size:.6rem;">
+                                <i class="fas fa-arrow-up" style="font-size:.55rem;"></i> Objectif
+                            </span>
                         }
                     </div>
                 }
@@ -308,3 +461,155 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+<script>
+(function () {
+    'use strict';
+
+    var CURRENT_GRADE = @Html.Raw(Json.Serialize(currentGradeSlug));
+    var NEXT_GRADE     = @Html.Raw(Json.Serialize(nextGradeSlug));
+
+    var steps       = Array.prototype.slice.call(document.querySelectorAll('.grade-step'));
+    var panelNext   = document.getElementById('pc-panel-acquerir');
+    var panelCurrent = document.getElementById('pc-panel-maitrise');
+    var panelOther  = document.getElementById('pc-panel-criteres');
+    var filterBar   = document.getElementById('pc-filter-bar');
+    var filterLabel = document.getElementById('pc-filter-label');
+    var resetBtn    = document.getElementById('pc-filter-reset');
+    var criteresGradeEl = document.getElementById('pc-criteres-grade');
+    var criteresBodyEl  = document.getElementById('pc-criteres-body');
+
+    var PRIORITE_RANK = { 'Haute': 0, 'Moyenne': 1, 'Basse': 2, 'Maîtrise': 0 };
+    var criteresCache = {};
+    var activeStep = null;
+
+    function fadeSwap(showEl, hideEls) {
+        hideEls.forEach(function (el) {
+            if (!el || el.style.display === 'none') return;
+            el.style.opacity = '0';
+        });
+        window.setTimeout(function () {
+            hideEls.forEach(function (el) { if (el) el.style.display = 'none'; });
+            if (showEl) {
+                showEl.style.display = '';
+                showEl.style.opacity = '0';
+                // Force reflow so the transition actually runs.
+                void showEl.offsetWidth;
+                showEl.style.opacity = '1';
+            }
+        }, 180);
+    }
+
+    function sortByPriorite(listEl) {
+        if (!listEl) return;
+        var rows = Array.prototype.slice.call(listEl.querySelectorAll('[data-priorite]'));
+        rows.sort(function (a, b) {
+            var ra = PRIORITE_RANK[a.getAttribute('data-priorite')];
+            var rb = PRIORITE_RANK[b.getAttribute('data-priorite')];
+            ra = (ra === undefined) ? 9 : ra;
+            rb = (rb === undefined) ? 9 : rb;
+            return ra - rb;
+        });
+        rows.forEach(function (r) { listEl.appendChild(r); });
+    }
+
+    function loadCriteresPourGrade(gradeLabel) {
+        criteresGradeEl.textContent = gradeLabel;
+
+        if (criteresCache[gradeLabel]) {
+            renderCriteres(criteresCache[gradeLabel]);
+            return;
+        }
+
+        criteresBodyEl.innerHTML = '<div class="text-muted small"><i class="fas fa-spinner fa-spin me-1"></i>Chargement…</div>';
+
+        fetch('/api/chatbot/criteres-promotion?grade=' + encodeURIComponent(gradeLabel))
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (data) {
+                if (!data) {
+                    criteresBodyEl.innerHTML = '<div class="text-muted small">Critères non disponibles pour ce grade.</div>';
+                    return;
+                }
+                criteresCache[gradeLabel] = data;
+                renderCriteres(data);
+            })
+            .catch(function () {
+                criteresBodyEl.innerHTML = '<div class="text-muted small">Impossible de charger les critères pour le moment.</div>';
+            });
+    }
+
+    function renderCriteres(data) {
+        var rows = [
+            ['Niveau de compétences minimum', data.niveauMinCompetences],
+            ['Ancienneté minimum', data.ancienneteMinAns != null ? data.ancienneteMinAns + ' an(s)' : null],
+            ['Implémentations minimum', data.nombreImplementationsMin],
+            ['Expérience domaine minimum', data.experienceDomainMinAns != null ? data.experienceDomainMinAns + ' an(s)' : null]
+        ];
+        var html = rows
+            .filter(function (r) { return r[1] !== null && r[1] !== undefined; })
+            .map(function (r) {
+                return '<div class="pc-criteria-item"><span class="pc-criteria-label">' + r[0] +
+                       '</span><span class="pc-criteria-value">' + r[1] + '</span></div>';
+            })
+            .join('');
+        criteresBodyEl.innerHTML = html || '<div class="text-muted small">Aucun critère chiffré défini pour ce grade.</div>';
+    }
+
+    function selectGrade(step) {
+        var grade = step.getAttribute('data-grade');
+        var label = step.getAttribute('data-grade-label');
+
+        steps.forEach(function (s) {
+            s.classList.remove('pc-road-active');
+            s.setAttribute('aria-pressed', 'false');
+        });
+        step.classList.add('pc-road-active');
+        step.setAttribute('aria-pressed', 'true');
+        activeStep = step;
+
+        filterBar.style.display = 'flex';
+        filterLabel.textContent = label;
+
+        var toHide = [panelNext, panelCurrent, panelOther].filter(function (el) { return el; });
+
+        if (grade === NEXT_GRADE && panelNext) {
+            sortByPriorite(document.getElementById('pc-acquerir-list'));
+            fadeSwap(panelNext, toHide.filter(function (el) { return el !== panelNext; }));
+        } else if (grade === CURRENT_GRADE && panelCurrent) {
+            fadeSwap(panelCurrent, toHide.filter(function (el) { return el !== panelCurrent; }));
+        } else {
+            loadCriteresPourGrade(label);
+            fadeSwap(panelOther, toHide.filter(function (el) { return el !== panelOther; }));
+        }
+    }
+
+    function reset() {
+        steps.forEach(function (s) {
+            s.classList.remove('pc-road-active');
+            s.setAttribute('aria-pressed', 'false');
+        });
+        activeStep = null;
+        filterBar.style.display = 'none';
+        [panelNext, panelCurrent].forEach(function (el) {
+            if (!el) return;
+            el.style.display = '';
+            el.style.opacity = '1';
+        });
+        if (panelOther) panelOther.style.display = 'none';
+    }
+
+    steps.forEach(function (step) {
+        step.addEventListener('click', function () { selectGrade(step); });
+        step.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                selectGrade(step);
+            }
+        });
+    });
+
+    if (resetBtn) resetBtn.addEventListener('click', reset);
+})();
+</script>
+}

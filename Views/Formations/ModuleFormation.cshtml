@@ -3,11 +3,72 @@
     ViewData["Title"] = Model.Formation?.Titre ?? "Formation";
     var collaborateurId = Model.CollaborateurId;
     var prog = Model.Progression;
+    var formation = Model.Formation;
+    var isTerminee = Model.Terminee || prog >= 100;
+    var isPrivileged = User.IsInRole("ITAdmin") || User.IsInRole("RH");
+
+    // Three fixed conceptual modules — the schema has no per-module content
+    // table, so their "complete / current / locked" state is derived
+    // directly from the real, persisted Progression value in even bands
+    // (34/67/100), not from any client-only counter.
+    bool m1Done = prog >= 34, m2Done = prog >= 67, m3Done = prog >= 100;
+    bool m2Locked = prog < 34, m3Locked = prog < 67;
+}
+
+@section Styles {
+<style>
+    @@keyframes mf-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+    .mf-progress { position:relative; height:8px; border-radius:999px; overflow:hidden; }
+    .mf-progress > span {
+        display:block; height:100%; border-radius:999px; transform-origin:left;
+        animation: mf-grow .7s cubic-bezier(.16,1,.3,1) backwards;
+    }
+    @@media (prefers-reduced-motion: reduce) { .mf-progress > span { animation:none; } }
+
+    .mf-module-card {
+        cursor:pointer; transition: box-shadow .18s ease, border-color .18s ease, transform .18s ease;
+    }
+    .mf-module-card:hover { box-shadow:0 8px 20px rgba(15,23,42,.08); transform:translateY(-2px); }
+    .mf-module-card.mf-locked { cursor:not-allowed; opacity:.62; }
+    .mf-module-card.mf-locked:hover { box-shadow:none; transform:none; }
+    .mf-pulse { animation: mf-pulse .5s ease; }
+    @@keyframes mf-pulse { 0%,100% { box-shadow:0 0 0 0 rgba(255,230,0,0); } 40% { box-shadow:0 0 0 6px rgba(255,230,0,.28); } }
+
+    .mf-badge { display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:700; padding:3px 10px; border-radius:99px; }
+    .mf-badge-done   { background:#ECFDF5; color:#0d7a4e; border:1px solid #A7F3D0; }
+    .mf-badge-current{ background:#FFFBEB; color:#B45309; border:1px solid #FDE68A; }
+    .mf-badge-locked { background:#F3F4F6; color:#6B7280; border:1px solid #E5E7EB; }
+
+    .mf-player {
+        aspect-ratio: 16/7; border-radius:14px; position:relative; overflow:hidden;
+        background: linear-gradient(135deg,#12141c 0%,#1e2230 100%);
+        display:flex; align-items:center; justify-content:center; text-decoration:none;
+    }
+    .mf-player-play {
+        width:64px; height:64px; border-radius:50%; background:rgba(255,230,0,.95);
+        display:flex; align-items:center; justify-content:center; color:#1A1A24; font-size:22px;
+        transition: transform .18s ease, background .18s ease;
+    }
+    .mf-player:hover .mf-player-play { transform:scale(1.08); background:#ffe600; }
+    .mf-player-skel {
+        position:absolute; inset:0; opacity:.5;
+        background:
+            repeating-linear-gradient(100deg, rgba(255,255,255,.04) 0 2px, transparent 2px 40px);
+    }
+    .mf-player-tag {
+        position:absolute; top:14px; left:14px; font-size:10.5px; font-weight:700; letter-spacing:.06em;
+        text-transform:uppercase; color:#fff; background:rgba(255,255,255,.12); padding:4px 10px; border-radius:99px;
+    }
+</style>
 }
 
 @if (TempData["Success"] != null)
 {
     <div class="alert alert-success">@TempData["Success"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
 }
 
 <div class="mb-3">
@@ -16,60 +77,207 @@
     </a>
 </div>
 
-<div class="ey-card p-4 mb-3 ey-interactive-card">
+<!-- ── Header / progression ────────────────────────────────────────────────── -->
+<div class="ey-card p-4 mb-3">
     <div class="text-warning fw-semibold small mb-2">MODULE EN LIGNE</div>
-    <h1 class="ey-serif-title mb-2">@Model.Formation?.Titre</h1>
-    <p class="text-muted mb-3">
-        Prototype : enregistrez votre progression par paliers (+20 % par étape). Les données sont enregistrées en base.
-    </p>
-    <div class="learning-progress mb-1"><span style="width:@prog%"></span></div>
-    <div class="d-flex justify-content-between small text-muted">
-        <span>@prog % complété</span>
+    <h1 class="ey-serif-title mb-2">@formation?.Titre</h1>
+    @if (!string.IsNullOrWhiteSpace(formation?.Description))
+    {
+        <p class="text-muted mb-3">@formation.Description</p>
+    }
+
+    <div class="d-flex align-items-center justify-content-between mb-1">
+        <span class="small fw-semibold text-dark">Progression du parcours</span>
+        <span class="fw-bold" style="font-size:1.1rem;color:@(isTerminee ? "#0d7a4e" : "#B45309")">@prog%</span>
+    </div>
+    <div class="mf-progress" style="background:#e8ebf2;">
+        <span style="width:@prog%;background:@(isTerminee ? "linear-gradient(90deg,#0d9f68,#10b981)" : "linear-gradient(90deg,#ffe600,#ffd000)")"></span>
+    </div>
+    <div class="d-flex justify-content-between small text-muted mt-2">
         <span>@(Model.Collaborateur?.Prenom) @(Model.Collaborateur?.Nom)</span>
+        <span>@(isTerminee ? "Parcours complété" : $"{3 - (m1Done ? 1 : 0) - (m2Done ? 1 : 0) - (m3Done ? 1 : 0)} module(s) restant(s)")</span>
     </div>
 </div>
 
-<div class="row g-3">
+<!-- ── Modules ──────────────────────────────────────────────────────────────── -->
+<div class="row g-3" id="mf-modules">
     <div class="col-md-4">
-        <div class="ey-card ey-interactive-card p-3 h-100">
-            <div class="fw-semibold mb-2"><i class="fas fa-play-circle text-warning me-1"></i> Module 1 — Introduction</div>
-            <p class="small text-muted">Objectifs, contexte métier et glossaire.</p>
+        <div class="ey-card mf-module-card p-3 h-100" data-module="1" data-target="mf-content">
+            <div class="d-flex align-items-start justify-content-between mb-2">
+                <div class="fw-semibold"><i class="fas fa-play-circle text-warning me-1"></i> Module 1</div>
+                <span class="mf-badge mf-badge-done"><i class="fas fa-check"></i> Complété</span>
+            </div>
+            <div class="fw-semibold small mb-1">Introduction</div>
+            <p class="small text-muted mb-0">Objectifs, contexte métier et glossaire.</p>
         </div>
     </div>
     <div class="col-md-4">
-        <div class="ey-card ey-interactive-card p-3 h-100">
-            <div class="fw-semibold mb-2"><i class="fas fa-layer-group text-warning me-1"></i> Module 2 — Pratique</div>
-            <p class="small text-muted">Études de cas, quiz et ressources téléchargeables.</p>
+        <div class="ey-card mf-module-card p-3 h-100 @(m2Locked ? "mf-locked" : "")" data-module="2" data-target="mf-content">
+            <div class="d-flex align-items-start justify-content-between mb-2">
+                <div class="fw-semibold"><i class="fas fa-layer-group text-warning me-1"></i> Module 2</div>
+                @if (m2Done)
+                {
+                    <span class="mf-badge mf-badge-done"><i class="fas fa-check"></i> Complété</span>
+                }
+                else if (!m2Locked)
+                {
+                    <span class="mf-badge mf-badge-current"><i class="fas fa-spinner"></i> En cours</span>
+                }
+                else
+                {
+                    <span class="mf-badge mf-badge-locked"><i class="fas fa-lock"></i> Verrouillé</span>
+                }
+            </div>
+            <div class="fw-semibold small mb-1">Pratique</div>
+            <p class="small text-muted mb-0">Études de cas, quiz et ressources téléchargeables.</p>
         </div>
     </div>
     <div class="col-md-4">
-        <div class="ey-card ey-interactive-card p-3 h-100">
-            <div class="fw-semibold mb-2"><i class="fas fa-flag-checkered text-warning me-1"></i> Module 3 — Synthèse</div>
-            <p class="small text-muted">Check-list avant validation manager / RH.</p>
+        <div class="ey-card mf-module-card p-3 h-100 @(m3Locked ? "mf-locked" : "")" data-module="3" data-target="mf-content">
+            <div class="d-flex align-items-start justify-content-between mb-2">
+                <div class="fw-semibold"><i class="fas fa-flag-checkered text-warning me-1"></i> Module 3</div>
+                @if (m3Done)
+                {
+                    <span class="mf-badge mf-badge-done"><i class="fas fa-check"></i> Complété</span>
+                }
+                else if (!m3Locked)
+                {
+                    <span class="mf-badge mf-badge-current"><i class="fas fa-spinner"></i> En cours</span>
+                }
+                else
+                {
+                    <span class="mf-badge mf-badge-locked"><i class="fas fa-lock"></i> Verrouillé</span>
+                }
+            </div>
+            <div class="fw-semibold small mb-1">Synthèse</div>
+            <p class="small text-muted mb-0">Check-list avant validation manager / RH.</p>
         </div>
     </div>
 </div>
 
+<!-- ── Contenu du cours ─────────────────────────────────────────────────────── -->
+<div class="ey-card p-4 mt-3" id="mf-content">
+    <div class="fw-semibold mb-3"><i class="fas fa-book-open text-warning me-2"></i>Contenu du cours</div>
+
+    @if (!string.IsNullOrWhiteSpace(formation?.ExternalUrl))
+    {
+        <a href="@formation.ExternalUrl" target="_blank" rel="noopener" class="mf-player mb-3 d-block">
+            <div class="mf-player-skel"></div>
+            <span class="mf-player-tag">@(formation.Plateforme ?? "Plateforme externe")</span>
+            <div class="mf-player-play"><i class="fas fa-play"></i></div>
+        </a>
+    }
+    else
+    {
+        <div class="mf-player mb-3">
+            <div class="mf-player-skel"></div>
+            <span class="mf-player-tag">@(formation?.Plateforme ?? "EY Learning")</span>
+            <div class="mf-player-play"><i class="fas fa-play"></i></div>
+        </div>
+    }
+
+    <p class="small text-muted">
+        @(string.IsNullOrWhiteSpace(formation?.Description)
+            ? "Support de cours et exercices pratiques associés à ce module."
+            : formation.Description)
+    </p>
+
+    @if (!string.IsNullOrWhiteSpace(formation?.SupportPdfUrl))
+    {
+        <a href="@formation.SupportPdfUrl" target="_blank" rel="noopener" class="ey-btn-ghost d-inline-flex align-items-center gap-2">
+            <i class="fas fa-file-pdf"></i> Télécharger les ressources @(formation.Titre) (PDF)
+        </a>
+    }
+    else
+    {
+        <span class="small text-muted"><i class="fas fa-info-circle me-1"></i>Aucune ressource PDF n'est encore rattachée à cette formation.</span>
+    }
+</div>
+
+<!-- ── Action ───────────────────────────────────────────────────────────────── -->
 <div class="ey-card ey-form-shell p-4 mt-3 d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
-    <div>
-        <div class="fw-semibold">Enregistrer une progression</div>
-        <div class="small text-muted">Chaque clic ajoute 20 % jusqu’à 100 %.</div>
-    </div>
-    <form asp-action="AvancerModule" method="post" class="d-flex flex-wrap gap-2 align-items-center">
-        @Html.AntiForgeryToken()
-        <input type="hidden" name="inscriptionId" value="@Model.Id" />
-        <input type="hidden" name="deltaPourcent" value="20" />
-        @if (prog < 100)
-        {
-            <button type="submit" class="ey-btn-main">Marquer une étape complétée (+20 %)</button>
-        }
-        else
-        {
-            <span class="text-success fw-semibold"><i class="fas fa-check-circle me-1"></i>Parcours module à 100 %</span>
-        }
-    </form>
+    @if (!isTerminee)
+    {
+        <div>
+            <div class="fw-semibold">Poursuivre le parcours</div>
+            <div class="small text-muted">Valide le module en cours et fait progresser la jauge ci-dessus.</div>
+        </div>
+        <form asp-action="AvancerModule" method="post" id="mf-advance-form" class="d-flex flex-wrap gap-2 align-items-center">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="inscriptionId" value="@Model.Id" />
+            <input type="hidden" name="deltaPourcent" value="34" />
+            <button type="submit" class="ey-btn-main" id="mf-advance-btn">
+                <i class="fas fa-check me-1"></i> Marquer ce module comme terminé
+            </button>
+        </form>
+    }
+    else if (isPrivileged)
+    {
+        <div>
+            <div class="fw-semibold text-success"><i class="fas fa-check-circle me-1"></i>Parcours complété à 100 %</div>
+            <div class="small text-muted">Clôturez la formation pour générer le certificat et mettre à jour les compétences.</div>
+        </div>
+        <form asp-action="TerminerFormation" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="inscriptionId" value="@Model.Id" />
+            <button type="submit" class="ey-btn-main">
+                <i class="fas fa-award me-1"></i> Obtenir mon certificat
+            </button>
+        </form>
+    }
+    else
+    {
+        <div>
+            <div class="fw-semibold text-success"><i class="fas fa-check-circle me-1"></i>Parcours complété à 100 %</div>
+            <div class="small text-muted">
+                En attente de clôture par votre manager ou RH pour la mise à jour de vos compétences et l'obtention du certificat.
+            </div>
+        </div>
+        <span class="ey-btn-ghost" style="opacity:.6;cursor:not-allowed;" title="Clôture réservée à votre manager / RH">
+            <i class="fas fa-lock me-1"></i> Certificat en attente
+        </span>
+    }
 </div>
 
 <div class="alert alert-secondary mt-4 small mb-0">
-    Retour au <a asp-action="Index" asp-route-collaborateurId="@collaborateurId">centre de formation</a>, puis <strong>Marquer terminée</strong> pour le certificat et la mise à jour des compétences.
+    Retour au <a asp-action="Index" asp-route-collaborateurId="@collaborateurId">centre de formation</a> à tout moment — votre progression est enregistrée automatiquement.
 </div>
+
+@section Scripts {
+<script>
+(function () {
+    'use strict';
+
+    // Optimistic fill: nudges the bar visually the instant the real form is
+    // submitted, ahead of the full-page reload that returns the persisted
+    // (authoritative) value from the server. Purely cosmetic — the actual
+    // number always comes from Progression in the database, never from this.
+    var form = document.getElementById('mf-advance-form');
+    var bar  = document.querySelector('.mf-progress > span');
+    if (form && bar) {
+        form.addEventListener('submit', function () {
+            var current = parseFloat(bar.style.width) || 0;
+            var next = Math.min(100, current + 34);
+            bar.style.width = next + '%';
+            var btn = document.getElementById('mf-advance-btn');
+            if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Enregistrement…'; }
+        });
+    }
+
+    // Module cards: clicking scrolls to the course-content zone and gives a
+    // brief highlight pulse. Locked modules don't scroll — there is nothing
+    // to reveal yet since progression to that point hasn't been recorded.
+    var cards = document.querySelectorAll('.mf-module-card');
+    cards.forEach(function (card) {
+        card.addEventListener('click', function () {
+            if (card.classList.contains('mf-locked')) return;
+            var target = document.getElementById(card.getAttribute('data-target'));
+            if (!target) return;
+            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            target.classList.add('mf-pulse');
+            window.setTimeout(function () { target.classList.remove('mf-pulse'); }, 600);
+        });
+    });
+})();
+</script>
+}

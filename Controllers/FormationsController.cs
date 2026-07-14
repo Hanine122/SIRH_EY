@@ -782,13 +782,20 @@ namespace SIRH.EY.Controllers
 
         // ── Private helpers ───────────────────────────────────────────────────
 
-        private static string? GetProchainGrade(string? grade) => grade?.ToLowerInvariant() switch
+        // Falls back to "Junior" before matching, mirroring the display-side
+        // fallback (GradeActuel = collab.Grade ?? "Junior") — otherwise a
+        // collaborator with no Grade set shows "Junior" in the UI while this
+        // method silently returns null ("grade maximum atteint"), the two
+        // falling out of sync. Ladder matches GradeReferentiel exactly
+        // (Junior→Senior→Manager→Senior Manager→Director→Partner).
+        private static string? GetProchainGrade(string? grade) => (grade ?? "Junior").Trim().ToLowerInvariant() switch
         {
-            "junior"        => "Senior",
-            "senior"        => "Manager",
-            "manager"       => "Director",
-            "director"      => "Partner",
-            _               => null
+            "junior"         => "Senior",
+            "senior"         => "Manager",
+            "manager"        => "Senior Manager",
+            "senior manager" => "Director",
+            "director"       => "Partner",
+            _                => null
         };
 
         private static bool IsFormationObligatoire(Formation f, Collaborateur? c)

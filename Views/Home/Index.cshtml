@@ -24,13 +24,15 @@
 .ds-kpi.ds-card-accent-amber  { border-top: 3px solid var(--amber-600); }
 .ds-kpi.ds-card-accent-red    { border-top: 3px solid var(--red-600);   }
 
-/* Quick action cells */
+/* Quick action cells — solid surface + visible border so they read as
+   pressable buttons rather than faint placeholders. */
 .db-action {
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: var(--sp-2); padding: var(--sp-5) var(--sp-4);
-    text-decoration: none; text-align: center;
-    background: var(--ds-bg); border: 1px solid var(--ds-border);
+    text-decoration: none; text-align: center; cursor: pointer;
+    background: #ffffff; border: 1px solid var(--ds-border);
     border-radius: var(--radius-lg);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
     transition:
         background   var(--dur-fast) var(--ease-out),
         border-color var(--dur-fast) var(--ease-out),
@@ -42,6 +44,9 @@
     box-shadow: var(--shadow-2);
     text-decoration: none;
 }
+.db-action:focus-visible {
+    outline: 2px solid var(--ey-yellow); outline-offset: 2px;
+}
 .db-action i {
     font-size: 20px; color: var(--ey-navy);
     transition: transform var(--dur-normal) var(--ease-spring);
@@ -49,8 +54,15 @@
 .db-action:hover i { transform: scale(1.12); }
 .db-action-lbl {
     font-size: var(--text-sm); font-weight: var(--fw-semibold);
-    color: var(--ds-text-2); line-height: var(--leading-snug);
+    color: var(--ds-text); line-height: var(--leading-snug);
 }
+.db-action-disabled {
+    cursor: not-allowed; opacity: 0.55;
+}
+.db-action-disabled:hover {
+    background: #ffffff; border-color: var(--ds-border); box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+.db-action-disabled:hover i { transform: none; }
 
 /* Table-like card rows (talent list, deadlines, certifications) */
 .db-row {
@@ -234,13 +246,23 @@
                         </a>
                     </div>
                     <div class="col-4">
-                        <a asp-controller="Progression" asp-action="Index" class="db-action">
-                            <i class="fas fa-tachometer-alt"></i>
-                            <span class="db-action-lbl">Mon évolution</span>
-                        </a>
+                        @if (ViewBag.OwnCollaborateurId != null)
+                        {
+                            <a asp-controller="Formations" asp-action="ParcoursCarriere" asp-route-collaborateurId="@ViewBag.OwnCollaborateurId" class="db-action">
+                                <i class="fas fa-tachometer-alt"></i>
+                                <span class="db-action-lbl">Mon évolution</span>
+                            </a>
+                        }
+                        else
+                        {
+                            <span class="db-action db-action-disabled" title="Profil collaborateur non lié à ce compte">
+                                <i class="fas fa-tachometer-alt"></i>
+                                <span class="db-action-lbl">Mon évolution</span>
+                            </span>
+                        }
                     </div>
                     <div class="col-4">
-                        <a asp-controller="Objectives" asp-action="Index" class="db-action">
+                        <a asp-controller="Talent" asp-action="MyOKRs" class="db-action">
                             <i class="fas fa-bullseye"></i>
                             <span class="db-action-lbl">Mes objectifs RH</span>
                         </a>

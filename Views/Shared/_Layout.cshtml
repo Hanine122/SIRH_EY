@@ -326,9 +326,9 @@
                 </div>
                 <!-- user right -->
                 <div class="d-flex align-items-center gap-3 ey-topbar-actions">
-                    <span class="ey-icon-btn position-relative"><i class="far fa-bell"></i><span class="ey-dot-alert"></span></span>
-                    <span class="ey-icon-btn"><i class="far fa-question-circle"></i></span>
-                    <span class="ey-icon-btn"><i class="fas fa-cog"></i></span>
+                    <button type="button" class="ey-icon-btn position-relative" aria-label="Notifications"><i class="far fa-bell"></i><span class="ey-dot-alert"></span></button>
+                    <button type="button" class="ey-icon-btn" aria-label="Aide"><i class="far fa-question-circle"></i></button>
+                    <a asp-controller="Home" asp-action="Settings" class="ey-icon-btn" aria-label="Paramètres"><i class="fas fa-cog"></i></a>
                     <div style="width:1px;height:24px;background:#E8E8EE;flex-shrink:0;"></div>
                     <div class="text-end lh-sm d-none d-md-block">
                         <div class="fw-semibold small mb-0">@User.Identity?.Name</div>

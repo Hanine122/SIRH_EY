@@ -70,8 +70,23 @@
     tlEvents.Add((Model.DateEmbauche, "Recrutement EY", Model.Grade ?? "", "start"));
     if (Model.DatePrisePoste.HasValue)
         tlEvents.Add((Model.DatePrisePoste.Value, "Prise de poste", Model.Poste ?? "", "milestone"));
-    foreach (var c in inscriptions.Where(i => i.Terminee).OrderBy(i => i.DateInscription).Take(4))
-        tlEvents.Add((c.DateInscription, c.Formation?.Titre ?? "Formation", "Certification", "certif"));
+
+    // Most recent completion always gets its own highlighted node — the
+    // previous ".Take(4)" after an ascending sort could silently drop the
+    // latest formation once a collaborator had more than 4 completions.
+    // DateCompletion (the real completion date) is used where set, falling
+    // back to DateInscription for older rows completed before that column
+    // existed.
+    var completedDesc = inscriptions.Where(i => i.Terminee)
+        .OrderByDescending(i => i.DateCompletion ?? i.DateInscription)
+        .ToList();
+    var latestCompleted = completedDesc.FirstOrDefault();
+    foreach (var c in completedDesc.Skip(latestCompleted != null ? 1 : 0).Take(3))
+        tlEvents.Add(((c.DateCompletion ?? c.DateInscription), c.Formation?.Titre ?? "Formation", "Certification", "certif"));
+    if (latestCompleted != null)
+        tlEvents.Add(((latestCompleted.DateCompletion ?? latestCompleted.DateInscription),
+            latestCompleted.Formation?.Titre ?? "Formation", "Dernière formation complétée", "latest-certif"));
+
     tlEvents.Add((DateTime.Today, "Aujourd'hui", $"{Model.Anciennete} an(s) EY", "today"));
     tlEvents = tlEvents.OrderBy(e => e.Date).ToList();
 }
@@ -383,6 +398,14 @@
 .ep-tl-dot.milestone { border-color:var(--blue-600); color:var(--blue-600); box-shadow:0 0 0 4px var(--blue-50), 0 2px 8px -4px rgba(15,23,42,.18); }
 .ep-tl-dot.certif    { border-color:var(--green-600); color:var(--green-600); box-shadow:0 0 0 4px var(--green-50), 0 2px 8px -4px rgba(15,23,42,.18); }
 .ep-tl-dot.today     { border-color:var(--ey-yellow); background:var(--ey-yellow); color:var(--ey-ink); animation:epGlow 2.6s ease-in-out infinite; }
+.ep-tl-dot.latest-certif {
+    border-color:var(--ey-yellow); background:var(--ey-yellow); color:var(--ey-ink);
+    box-shadow:0 0 0 4px rgba(255,230,0,.22), 0 4px 12px -4px rgba(15,23,42,.28);
+}
+.ep-tl-new-badge {
+    font-size:9px; font-weight:800; letter-spacing:.04em; text-transform:uppercase;
+    background:var(--green-600); color:#fff; padding:2px 7px; border-radius:99px; margin-bottom:4px;
+}
 .ep-tl-date  { font-size:10px; font-weight:600; color:var(--gray-400); letter-spacing:.05em; margin-bottom:3px; }
 .ep-tl-label { font-size:12px; font-weight:700; color:var(--ey-ink); text-align:center; line-height:1.3; transition:color 200ms ease; }
 .ep-tl-event:hover .ep-tl-label { color:var(--ey-navy); }
@@ -704,14 +727,19 @@
         @foreach (var ev in tlEvents)
         {
             var tlIcon = ev.Type switch {
-                "start"     => "fa-briefcase",
-                "milestone" => "fa-flag",
-                "certif"    => "fa-award",
-                "today"     => "fa-circle-dot",
-                _           => "fa-circle"
+                "start"         => "fa-briefcase",
+                "milestone"     => "fa-flag",
+                "certif"        => "fa-award",
+                "latest-certif" => "fa-award",
+                "today"         => "fa-circle-dot",
+                _               => "fa-circle"
             };
             <div class="ep-tl-event">
                 <div class="ep-tl-dot @ev.Type"><i class="fas @tlIcon" style="font-size:11px"></i></div>
+                @if (ev.Type == "latest-certif")
+                {
+                    <span class="ep-tl-new-badge">Récent</span>
+                }
                 <div class="ep-tl-date">@ev.Date.ToString("MM/yyyy")</div>
                 <div class="ep-tl-label">@ev.Label</div>
                 @if (!string.IsNullOrEmpty(ev.Sub))

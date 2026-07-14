@@ -1088,7 +1088,20 @@
     border-radius: 8px                              !important;
     font-size:     15px                             !important;
     cursor:        pointer                          !important;
+    /* Reset: some icon buttons are real <button>/<a> elements now (were
+       inert <span>s), so native chrome and text-decoration must not leak. */
+    background:      transparent                    !important;
+    border:          none                            !important;
+    padding:         0                               !important;
+    text-decoration: none                            !important;
+    align-items:     center                          !important;
+    justify-content: center                          !important;
+    color:           inherit                         !important;
     transition:    background var(--t-fast), color var(--t-fast) !important;
+}
+.ey-icon-btn:hover {
+    background: #F1F3F8 !important;
+    color:      #0d1120 !important;
 }
 
 /* User avatar */

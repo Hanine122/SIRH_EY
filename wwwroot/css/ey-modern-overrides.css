@@ -27,9 +27,11 @@ html {
 }
 
 body {
-    background:
-        radial-gradient(circle at top right, rgba(255, 230, 0, 0.18), transparent 28rem),
-        linear-gradient(180deg, #f7f8fb 0%, #eceff4 100%);
+    /* Flat, neutral ground — was a yellow radial glow over a gradient,
+       which fought the white cards for attention instead of setting them
+       off. Pages with their own scoped background (e.g. the employee
+       profile) already paint over this and are unaffected. */
+    background: #F9FAFB;
     color: var(--ey-text);
     font-size: 14px;
 }
