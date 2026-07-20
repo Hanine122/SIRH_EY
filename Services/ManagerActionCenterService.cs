@@ -60,7 +60,8 @@ public class ManagerActionCenterService : IManagerActionCenterService
                 $"{c.Collaborateur?.Prenom} {c.Collaborateur?.Nom}".Trim(),
                 c.Nom,
                 c.EvaluationCompetence!.DateAutoEvaluation!.Value,
-                Math.Max(0, (int)(now - c.EvaluationCompetence!.DateAutoEvaluation!.Value).TotalDays)))
+                Math.Max(0, (int)(now - c.EvaluationCompetence!.DateAutoEvaluation!.Value).TotalDays),
+                c.NiveauCible))
             .ToList();
     }
 

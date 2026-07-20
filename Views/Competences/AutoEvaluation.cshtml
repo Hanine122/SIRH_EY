@@ -11,37 +11,114 @@
 
 @section Styles {
 <style>
-    .aeh-panel { border-radius:16px; }
+    /* ── Left: feedback history panel ─────────────────────────────────────── */
+    .aeh-panel {
+        border-radius:16px;
+        height: calc(100vh - 12rem);
+        overflow-y: auto;
+        padding-right: 6px;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(17,19,37,.16) transparent;
+    }
+    .aeh-panel::-webkit-scrollbar { width: 5px; }
+    .aeh-panel::-webkit-scrollbar-track { background: transparent; }
+    .aeh-panel::-webkit-scrollbar-thumb { background: rgba(17,19,37,.16); border-radius: 99px; }
+    .aeh-panel::-webkit-scrollbar-thumb:hover { background: rgba(17,19,37,.28); }
+
     .aeh-section-title {
         font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:#6b7280;
-        display:flex; align-items:center; gap:6px; margin:18px 0 10px;
+        display:flex; align-items:center; gap:6px; margin:18px 0 10px; position:sticky; top:0; background:#fff; padding-top:2px;
     }
     .aeh-section-title:first-child { margin-top:0; }
+
+    /* À chaud — pure white surface, shadow-driven definition instead of a border */
     .aeh-item {
-        display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:10px;
-        border:1px solid #e5e7eb; background:#fff; margin-bottom:8px; transition:box-shadow .15s ease, border-color .15s ease;
+        display:flex; align-items:center; gap:10px; padding:11px 12px; border-radius:11px;
+        border:1px solid transparent; background:#fff; margin-bottom:8px;
+        box-shadow:0 1px 2px rgba(15,23,42,.05);
+        transition: box-shadow .18s ease, transform .18s ease;
     }
-    .aeh-item:hover { box-shadow:0 4px 12px rgba(15,23,42,.06); border-color:#d1d5db; }
-    .aeh-item-froid { background:#FFFBEB; border-color:#FDE68A; }
+    .aeh-item:hover { box-shadow:0 8px 20px rgba(15,23,42,.09); transform:translateY(-1px); }
+
+    /* À froid — tinted surface + left accent, urgency without shouting */
+    .aeh-item-froid {
+        background: rgba(245,158,11,.06);
+        border: none; border-left: 4px solid var(--amber-600, #d97706);
+        border-radius: 8px 11px 11px 8px;
+    }
     .aeh-item-icon {
         width:32px; height:32px; border-radius:9px; flex-shrink:0; display:flex; align-items:center; justify-content:center;
         font-size:13px;
     }
     .aeh-item-icon-chaud { background:#EFF6FF; color:var(--blue-600, #2563eb); }
-    .aeh-item-icon-froid { background:#FFFBEB; color:#B45309; }
+    .aeh-item-icon-froid { background:#FDE68A; color:#92400E; }
     .aeh-item-title { font-size:12.5px; font-weight:600; color:#111319; line-height:1.3; }
     .aeh-item-sub { font-size:11px; color:#6b7280; margin-top:1px; }
+
     .aeh-eye-btn {
-        width:28px; height:28px; border-radius:8px; flex-shrink:0; display:flex; align-items:center; justify-content:center;
-        color:#6b7280; background:#f3f4f6; transition:background .15s ease, color .15s ease;
+        width:30px; height:30px; border-radius:99px; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+        color:#2563eb; background:#EFF6FF; transition: background .18s ease, transform .18s ease; text-decoration:none;
     }
-    .aeh-eye-btn:hover { background:#e5e7eb; color:#111319; }
+    .aeh-eye-btn:hover { background:#2563eb; color:#fff; transform:scale(1.08); }
+
     .aeh-froid-btn {
-        font-size:11px; font-weight:700; padding:5px 10px; border-radius:8px; background:#1A1A24; color:#fff;
-        white-space:nowrap; flex-shrink:0; text-decoration:none;
+        font-size:11.5px; font-weight:600; padding:6px 12px; border-radius:8px;
+        background:var(--amber-600, #f59e0b); color:#fff;
+        white-space:nowrap; flex-shrink:0; text-decoration:none; transition: background .18s ease, box-shadow .18s ease;
     }
-    .aeh-froid-btn:hover { background:#000; color:#fff; }
-    .aeh-empty { font-size:12px; color:#9ca3af; padding:10px 2px; }
+    .aeh-froid-btn:hover { background:#B45309; color:#fff; box-shadow:0 6px 14px -4px rgba(180,83,9,.45); }
+    .aeh-empty { font-size:12px; color:#9ca3af; padding:8px 2px 14px; }
+
+    /* Deep-link highlight — flashes the matching item when arriving from
+       the "Parcours EY" timeline on the employee profile page. */
+    @@keyframes aeh-flash {
+        0%   { box-shadow:0 0 0 0 rgba(255,230,0,.9); }
+        50%  { box-shadow:0 0 0 8px rgba(255,230,0,.15); }
+        100% { box-shadow:0 1px 2px rgba(15,23,42,.05); }
+    }
+    .aeh-item-highlight { animation: aeh-flash 1.4s ease 2; }
+
+    /* ── Right: self-evaluation form ──────────────────────────────────────── */
+
+    /* Modern thin sliders — replaces the chunky native browser look. */
+    .aev-range {
+        -webkit-appearance:none; appearance:none; width:100%; height:5px; border-radius:99px;
+        background: linear-gradient(90deg, var(--ey-yellow, #FFE600) var(--fill, 50%), #e8ebf2 var(--fill, 50%));
+        outline:none;
+    }
+    .aev-range.aev-range-blue { background: linear-gradient(90deg, #2563eb var(--fill, 50%), #e8ebf2 var(--fill, 50%)); }
+    .aev-range::-webkit-slider-thumb {
+        -webkit-appearance:none; width:18px; height:18px; border-radius:50%; background:#fff;
+        border:3px solid var(--ey-yellow, #FFE600); box-shadow:0 2px 6px rgba(15,23,42,.25); cursor:pointer;
+        transition: transform .15s ease;
+    }
+    .aev-range-blue::-webkit-slider-thumb { border-color:#2563eb; }
+    .aev-range::-webkit-slider-thumb:hover { transform:scale(1.15); }
+    .aev-range::-moz-range-thumb {
+        width:16px; height:16px; border-radius:50%; background:#fff;
+        border:3px solid var(--ey-yellow, #FFE600); box-shadow:0 2px 6px rgba(15,23,42,.25); cursor:pointer;
+    }
+    .aev-range-blue::-moz-range-thumb { border-color:#2563eb; }
+    .aev-range::-moz-range-track { height:5px; border-radius:99px; background:#e8ebf2; }
+
+    /* KPI trio — harmonized size/type, soft badge for the gap instead of a
+       large, punitive-looking negative number. */
+    .aev-kpi { text-align:center; }
+    .aev-kpi-label { font-size:11px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:#9ca3af; margin-bottom:6px; }
+    .aev-kpi-value { font-size:26px; font-weight:800; color:#111319; line-height:1; }
+    .aev-gap-badge {
+        display:inline-flex; align-items:center; gap:5px; font-size:15px; font-weight:700;
+        padding:5px 14px; border-radius:99px;
+    }
+    .aev-gap-pos { background:#ECFDF5; color:#0d7a4e; }
+    .aev-gap-neg { background:#FEF2F2; color:#B91C1C; }
+    .aev-gap-zero { background:#F3F4F6; color:#6b7280; }
+
+    .aev-actions { display:flex; justify-content:flex-end; gap:10px; }
+    .aev-actions .ey-btn-main,
+    .aev-actions .ey-btn-ghost { transition: transform .18s ease, box-shadow .18s ease; }
+    .aev-actions .ey-btn-main:hover { transform:translateY(-1px); box-shadow:0 10px 22px -10px rgba(255,230,0,.6); }
+    .aev-actions .ey-btn-ghost:hover { transform:translateY(-1px); }
 </style>
 }
 
@@ -52,9 +129,9 @@
 </div>
 
 <div class="row g-3">
-    <!-- ── LEFT: Feedback history panel ────────────────────────────────────── -->
+    <!-- ── LEFT: Feedback history panel — 1/3 ──────────────────────────────── -->
     <div class="col-lg-4 order-2 order-lg-1">
-        <div class="ey-card aeh-panel p-3">
+        <div class="ey-card aeh-panel p-3" id="aeh-panel">
             <div class="fw-bold text-dark mb-1"><i class="fas fa-clock-rotate-left text-warning me-2"></i>Mon Historique de Feedback Formation</div>
             <div class="small text-muted mb-2">Vos retours sur les formations terminées.</div>
 
@@ -65,7 +142,7 @@
             }
             @foreach (var i in evalsChaud)
             {
-                <div class="aeh-item">
+                <div class="aeh-item" data-inscription-id="@i.Id">
                     <div class="aeh-item-icon aeh-item-icon-chaud"><i class="fas fa-graduation-cap"></i></div>
                     <div class="flex-grow-1 min-w-0">
                         <div class="aeh-item-title text-truncate">@(i.Formation?.Titre ?? "Formation")</div>
@@ -85,7 +162,7 @@
             }
             @foreach (var i in evalsFroidEnAttente)
             {
-                <div class="aeh-item aeh-item-froid">
+                <div class="aeh-item aeh-item-froid" data-inscription-id="@i.Id">
                     <div class="aeh-item-icon aeh-item-icon-froid"><i class="fas fa-hourglass-half"></i></div>
                     <div class="flex-grow-1 min-w-0">
                         <div class="aeh-item-title text-truncate">@(i.Formation?.Titre ?? "Formation")</div>
@@ -100,7 +177,7 @@
         </div>
     </div>
 
-    <!-- ── RIGHT: Self-evaluation form ─────────────────────────────────────── -->
+    <!-- ── RIGHT: Self-evaluation form — 2/3 ───────────────────────────────── -->
     <div class="col-lg-8 order-1 order-lg-2">
         <div class="ey-card ey-form-shell p-4 ey-interactive-card">
             <div class="text-uppercase small text-muted fw-semibold mb-2">Auto-évaluation collaborateur</div>
@@ -129,8 +206,9 @@
                 <div class="row g-3">
                     <div class="col-md-6">
                         <label asp-for="SeuilRh" class="form-label fw-semibold"></label>
-                        <input asp-for="SeuilRh" type="range" min="0" max="100" step="5" class="form-range"
-                               oninput="document.getElementById('seuilRhValue').innerText = this.value + '%'; updateGap();" />
+                        <input asp-for="SeuilRh" type="range" min="0" max="100" step="5" class="aev-range"
+                               style="--fill:@(Model.SeuilRh)%"
+                               oninput="this.style.setProperty('--fill', this.value + '%'); document.getElementById('seuilRhValue').innerText = this.value + '%'; updateGap();" />
                         <div class="d-flex justify-content-between small text-muted">
                             <span>0%</span>
                             <span id="seuilRhValue">@Model.SeuilRh%</span>
@@ -141,8 +219,9 @@
 
                     <div class="col-md-6">
                         <label asp-for="AutoEvaluationCollaborateur" class="form-label fw-semibold"></label>
-                        <input asp-for="AutoEvaluationCollaborateur" type="range" min="0" max="100" step="5" class="form-range"
-                               oninput="document.getElementById('autoEvalValue').innerText = this.value + '%'; updateGap();" />
+                        <input asp-for="AutoEvaluationCollaborateur" type="range" min="0" max="100" step="5" class="aev-range aev-range-blue"
+                               style="--fill:@(Model.AutoEvaluationCollaborateur)%"
+                               oninput="this.style.setProperty('--fill', this.value + '%'); document.getElementById('autoEvalValue').innerText = this.value + '%'; updateGap();" />
                         <div class="d-flex justify-content-between small text-muted">
                             <span>0%</span>
                             <span id="autoEvalValue">@Model.AutoEvaluationCollaborateur%</span>
@@ -154,22 +233,24 @@
 
                 <div class="row g-3">
                     <div class="col-md-4">
-                        <div class="ey-card ey-soft-kpi p-3 h-100">
-                            <div class="small text-muted">Objectif RH</div>
-                            <div class="display-6 fw-bold" id="resumeSeuil">@Model.SeuilRh%</div>
+                        <div class="ey-card ey-soft-kpi p-3 h-100 aev-kpi">
+                            <div class="aev-kpi-label">Objectif RH</div>
+                            <div class="aev-kpi-value" id="resumeSeuil">@Model.SeuilRh%</div>
                         </div>
                     </div>
                     <div class="col-md-4">
-                        <div class="ey-card ey-soft-kpi p-3 h-100">
-                            <div class="small text-muted">Votre estimation</div>
-                            <div class="display-6 fw-bold" id="resumeAuto">@Model.AutoEvaluationCollaborateur%</div>
+                        <div class="ey-card ey-soft-kpi p-3 h-100 aev-kpi">
+                            <div class="aev-kpi-label">Votre estimation</div>
+                            <div class="aev-kpi-value" id="resumeAuto">@Model.AutoEvaluationCollaborateur%</div>
                         </div>
                     </div>
                     <div class="col-md-4">
-                        <div class="ey-card ey-soft-kpi p-3 h-100">
-                            <div class="small text-muted">Écart à l'objectif</div>
-                            <div class="display-6 fw-bold @(ecartObjectif >= 0 ? "text-success" : "text-danger")" id="resumeGap">
-                                @(ecartObjectif >= 0 ? "+" : "")@ecartObjectif%
+                        <div class="ey-card ey-soft-kpi p-3 h-100 aev-kpi d-flex flex-column justify-content-center">
+                            <div class="aev-kpi-label">Écart à l'objectif</div>
+                            <div>
+                                <span class="aev-gap-badge @(ecartObjectif > 0 ? "aev-gap-pos" : ecartObjectif < 0 ? "aev-gap-neg" : "aev-gap-zero")" id="resumeGap">
+                                    @(ecartObjectif >= 0 ? "+" : "")@ecartObjectif%
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -194,13 +275,12 @@
                     </div>
                 }
 
-                <div class="d-flex flex-wrap gap-2">
-                    <button type="submit" class="ey-btn-main">Enregistrer mon auto-évaluation</button>
+                <div class="aev-actions">
                     <a asp-action="Index" asp-route-collaborateurId="@Model.CollaborateurId" class="ey-btn-ghost text-decoration-none text-center">Annuler</a>
+                    <button type="submit" class="ey-btn-main">Enregistrer mon auto-évaluation</button>
                 </div>
             </form>
         </div>
-    </div>
     </div>
 </div>
 
@@ -213,8 +293,24 @@
             var gap = autoEval - seuil;
             document.getElementById('resumeSeuil').innerText = seuil + '%';
             document.getElementById('resumeAuto').innerText = autoEval + '%';
-            document.getElementById('resumeGap').innerText = (gap >= 0 ? '+' : '') + gap + '%';
-            document.getElementById('resumeGap').className = 'display-6 fw-bold ' + (gap >= 0 ? 'text-success' : 'text-danger');
+            var gapEl = document.getElementById('resumeGap');
+            gapEl.innerText = (gap >= 0 ? '+' : '') + gap + '%';
+            gapEl.className = 'aev-gap-badge ' + (gap > 0 ? 'aev-gap-pos' : gap < 0 ? 'aev-gap-neg' : 'aev-gap-zero');
         }
+
+        // Deep-link highlight — arriving from a "Parcours EY" timeline dot
+        // (Collaborateurs/Details.cshtml) passes ?highlightInscription=<id>;
+        // scroll to and flash the matching row in this panel.
+        (function () {
+            var params = new URLSearchParams(window.location.search);
+            var id = params.get('highlightInscription');
+            if (!id) return;
+            var target = document.querySelector('.aeh-item[data-inscription-id="' + id + '"]');
+            if (!target) return;
+            var panel = document.getElementById('aeh-panel');
+            if (panel) panel.scrollTop = Math.max(0, target.offsetTop - panel.offsetTop - 40);
+            target.classList.add('aeh-item-highlight');
+            window.setTimeout(function () { target.classList.remove('aeh-item-highlight'); }, 3000);
+        })();
     </script>
 }

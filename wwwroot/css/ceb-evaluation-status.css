@@ -1,0 +1,25 @@
+/* Evaluation status badge/note/validate-button — shared by Competences/Index.cshtml
+   and Collaborateurs/Index.cshtml (both render _EvaluationStatusBadge and/or trigger
+   /Competences/ValiderCompetence via .ceb-validate-btn). Kept as one file so the two
+   pages can never visually drift apart. */
+
+.ceb-badge {
+    display: inline-flex; align-items: center; font-size: 10.5px; font-weight: 700;
+    letter-spacing: .03em; padding: 3px 10px; border-radius: 99px; border: 1px solid;
+}
+.ceb-badge-todo      { background: #F3F4F6; color: #6B7280; border-color: #E5E7EB; }
+.ceb-badge-pending   { background: #FFFBEB; color: var(--amber-600, #B45309); border-color: #FDE68A; }
+.ceb-badge-validated { background: #ECFDF5; color: var(--green-600, #0D7A4E); border-color: #A7F3D0; }
+
+.ceb-note {
+    display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: #6B7280; margin-left: 8px;
+}
+.ceb-note-valid { color: #0D7A4E; font-weight: 600; }
+
+.ceb-validate-btn {
+    display: inline-flex; align-items: center; margin-left: 8px; font-size: 11.5px; font-weight: 700;
+    padding: 4px 12px; border-radius: 8px; background: var(--ey-yellow, #FFE600); color: #1A1A24;
+    border: 1px solid var(--ey-yellow, #FFE600); cursor: pointer; transition: background .15s ease, box-shadow .15s ease;
+}
+.ceb-validate-btn:hover    { background: #E6CE00; box-shadow: 0 4px 12px -4px rgba(255,230,0,.6); }
+.ceb-validate-btn:disabled { opacity: .6; cursor: not-allowed; }

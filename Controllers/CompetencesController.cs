@@ -80,6 +80,7 @@ public class CompetencesController : Controller
     private readonly ITeamAccessService _teamAccess;
     private readonly IOwnershipService _ownership;
     private readonly ICompetenceLifecycleService _competenceLifecycle;
+    private readonly IUserContextService _userContext;
 
     public CompetencesController(
         ApplicationDbContext context,
@@ -87,7 +88,8 @@ public class CompetencesController : Controller
         IPlanDeveloppementService planDeveloppementService,
         ITeamAccessService teamAccess,
         IOwnershipService ownership,
-        ICompetenceLifecycleService competenceLifecycle)
+        ICompetenceLifecycleService competenceLifecycle,
+        IUserContextService userContext)
     {
         _context = context;
         _referentielRhService = referentielRhService;
@@ -95,6 +97,7 @@ public class CompetencesController : Controller
         _teamAccess = teamAccess;
         _ownership = ownership;
         _competenceLifecycle = competenceLifecycle;
+        _userContext = userContext;
     }
 
     // GET: Competences?collaborateurId=xx
@@ -550,6 +553,103 @@ public async Task<IActionResult> MatriceEquipe(int? collaborateurId)
             ? "Évaluation manager validée et enregistrée."
             : "Correction manager enregistrée (validation non finalisée).";
         return RedirectToAction(nameof(Index), new { collaborateurId = competence.CollaborateurId });
+    }
+
+    // POST: Competences/AutoEvaluer — minimal JSON counterpart to the full
+    // AutoEvaluation form above; reuses the same EvaluationCompetence entity
+    // and the same "manager validation resets on re-submission" rule.
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> AutoEvaluer(int compId, int note)
+    {
+        if (note < 0 || note > 100)
+            return BadRequest(new { success = false, message = "La note doit être comprise entre 0 et 100." });
+
+        var competence = await _context.Competences
+            .Include(c => c.EvaluationCompetence)
+            .FirstOrDefaultAsync(c => c.Id == compId);
+        if (competence == null)
+            return NotFound(new { success = false, message = "Compétence introuvable." });
+
+        // Strictement le propriétaire — pas le chemin "peut accéder" plus large
+        // qu'utilise OwnsCompetenceAsync (RH/ITAdmin/manager) : une auto-évaluation
+        // ne se fait qu'en son propre nom.
+        var currentCollaborateur = await _userContext.GetCurrentCollaborateurAsync(User);
+        if (currentCollaborateur == null || currentCollaborateur.Id != competence.CollaborateurId)
+            return Forbid();
+
+        var evaluation = competence.EvaluationCompetence;
+        if (evaluation == null)
+        {
+            evaluation = new EvaluationCompetence { CompetenceId = competence.Id };
+            _context.EvaluationsCompetences.Add(evaluation);
+        }
+
+        evaluation.AutoEvaluationCollaborateur = note;
+        evaluation.DateAutoEvaluation = DateTime.Now;
+
+        // Même règle que le formulaire complet : une nouvelle auto-évaluation
+        // rouvre la validation manager, elle ne doit pas rester accrochée à
+        // l'ancien score.
+        evaluation.ValidationManager = false;
+        evaluation.DateValidationManager = null;
+        evaluation.EvaluationManager = null;
+        evaluation.CommentaireManager = null;
+
+        competence.DateEvaluation = DateTime.Now;
+
+        await _context.SaveChangesAsync();
+        return Ok(new { success = true });
+    }
+
+    // POST: Competences/ValiderCompetence — minimal JSON counterpart to the
+    // full ValidationManager form above; reuses the same 4-eyes check,
+    // CompetenceRules.NiveauFromScore mapping, and ICompetenceLifecycleService
+    // audit trail, so the two entry points never disagree on outcome.
+    [HttpPost]
+    [Authorize(Roles = Roles.ITAdminOrRHOrManager)]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ValiderCompetence(int compId, int note)
+    {
+        if (note < 0 || note > 100)
+            return BadRequest(new { success = false, message = "La note doit être comprise entre 0 et 100." });
+
+        var competence = await _context.Competences
+            .Include(c => c.EvaluationCompetence)
+            .FirstOrDefaultAsync(c => c.Id == compId);
+        if (competence == null)
+            return NotFound(new { success = false, message = "Compétence introuvable." });
+
+        if (!await _teamAccess.CanAccessCollaborateurAsync(User, competence.CollaborateurId))
+            return Forbid();
+
+        // 4 yeux : un manager ne peut pas valider sa propre auto-évaluation
+        // (même garde que ValidationManager ci-dessus — RH/ITAdmin ne sont pas concernés).
+        if (User.IsInRole(Roles.Manager) && !User.IsInRole(Roles.RH) && !User.IsInRole(Roles.ITAdmin))
+        {
+            var ownId = await _teamAccess.GetCurrentCollaborateurIdAsync(User);
+            if (ownId.HasValue && competence.CollaborateurId == ownId.Value)
+                return Forbid();
+        }
+
+        var evaluation = competence.EvaluationCompetence;
+        if (evaluation == null)
+            return BadRequest(new { success = false, message = "Le collaborateur doit d'abord renseigner son auto-évaluation." });
+
+        var ancienNiveau = competence.NiveauActuel;
+
+        evaluation.EvaluationManager = note;
+        evaluation.ValidationManager = true;
+        evaluation.DateValidationManager = DateTime.Now;
+
+        competence.NiveauActuel = CompetenceRules.NiveauFromScore(note);
+        competence.DateEvaluation = DateTime.Now;
+
+        await _competenceLifecycle.RecordLevelChangeAsync(
+            competence, ancienNiveau, competence.NiveauActuel, CompetenceChangeReason.ValidationManager);
+
+        await _context.SaveChangesAsync();
+        return Ok(new { success = true });
     }
 
 public async Task<IActionResult> Explorer(int collaborateurId)

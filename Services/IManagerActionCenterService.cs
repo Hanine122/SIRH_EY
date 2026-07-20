@@ -8,7 +8,8 @@ public record PendingValidationItem(
     string CollaborateurNom,
     string CompetenceNom,
     DateTime DateAutoEvaluation,
-    int JoursEnAttente);
+    int JoursEnAttente,
+    int NiveauCible);
 
 public record PendingDevelopmentPlanItem(
     int PlanId,

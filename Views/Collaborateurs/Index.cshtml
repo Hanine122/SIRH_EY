@@ -1,4 +1,5 @@
 @model IEnumerable<SIRH.EY.Models.Collaborateur>
+@using SIRH.EY.Services
 
 @{
     ViewData["Title"] = "Répertoire";
@@ -11,7 +12,75 @@
     var juniors  = Model.Count(c => c.Grade == "Junior");
     var filtered = !string.IsNullOrEmpty(ViewBag.Search as string)
                    || !string.IsNullOrEmpty(ViewBag.DepartementFilter as string);
+
+    // EY Copilot suggestions — reuses the same "Smart HR Inbox" data already
+    // computed for this page by ManagerActionCenterService (no new query),
+    // gated by the same isManagerView flag the controller uses for the inbox.
+    var isManagerView = ViewBag.IsManagerView as bool? ?? false;
+    var hrInbox        = ViewBag.HrInbox as HrInboxSummary;
+    var pendingValidations = hrInbox?.PendingValidations ?? Array.Empty<PendingValidationItem>();
+    var pendingByCollaborateur = pendingValidations
+        .GroupBy(p => p.CollaborateurId)
+        .ToDictionary(g => g.Key, g => g.ToList());
 }
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/ceb-evaluation-status.css" asp-append-version="true" />
+    <style>
+        .copilot-banner {
+            background: #0B0F1A; border-radius: var(--ey-radius-lg, 16px); padding: 1rem 1.25rem;
+            color: #fff; margin-bottom: 1.5rem; position: relative; overflow: hidden;
+        }
+        .copilot-banner::before {
+            content: ''; position: absolute; inset: 0;
+            background: radial-gradient(600px circle at 0% 0%, rgba(255,230,0,.14), transparent 55%);
+            pointer-events: none;
+        }
+        .copilot-banner-head {
+            display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 700;
+            letter-spacing: .08em; text-transform: uppercase; color: var(--ey-yellow, #FFE600);
+            margin-bottom: 10px; position: relative;
+        }
+        .copilot-item {
+            display: flex; align-items: center; justify-content: space-between; gap: 12px;
+            background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1);
+            border-radius: 10px; padding: 10px 14px; margin-bottom: 8px; position: relative;
+        }
+        .copilot-item:last-child { margin-bottom: 0; }
+        .copilot-item-text { font-size: 13.5px; line-height: 1.4; }
+        .copilot-item-text strong { color: var(--ey-yellow, #FFE600); }
+        .copilot-open-btn {
+            flex-shrink: 0; font-size: 12px; font-weight: 700; padding: 6px 14px; border-radius: 8px;
+            background: var(--ey-yellow, #FFE600); color: #1A1A24; text-decoration: none;
+            transition: background .15s ease, transform .15s ease;
+        }
+        .copilot-open-btn:hover { background: #E6CE00; color: #1A1A24; transform: translateY(-1px); }
+
+        /* Card treatment for a collaborator with a pending validation */
+        @@keyframes ceb-pulse-ring {
+            0%, 100% { box-shadow: 0 0 0 3px rgba(250,204,21,.55); }
+            50%      { box-shadow: 0 0 0 6px rgba(250,204,21,.22); }
+        }
+        .directory-card.ceb-pending-ring {
+            animation: ceb-pulse-ring 2.2s ease-in-out infinite;
+        }
+        @@media (prefers-reduced-motion: reduce) {
+            .directory-card.ceb-pending-ring { animation: none; box-shadow: 0 0 0 3px rgba(250,204,21,.55); }
+        }
+        .ceb-floating-badge {
+            position: absolute; top: -8px; right: 10px; font-size: 10px; font-weight: 700;
+            background: var(--ey-yellow, #FFE600); color: #1A1A24; padding: 3px 9px; border-radius: 99px;
+            box-shadow: 0 2px 6px rgba(0,0,0,.18); display: inline-flex; align-items: center; gap: 4px;
+        }
+        .ceb-quick-validate-btn {
+            background: var(--ey-yellow, #FFE600); border-color: var(--ey-yellow, #FFE600); color: #1A1A24 !important;
+        }
+        .ceb-quick-validate-btn:hover { background: #E6CE00; border-color: #E6CE00; }
+    </style>
+}
+
+@* Jeton anti-CSRF pour les boutons de validation rapide (bandeau Copilot + modal) *@
+@Html.AntiForgeryToken()
 
 @if (TempData["Success"] != null)
 {
@@ -47,6 +116,28 @@
         <i class="fas fa-plus me-1"></i>Ajouter un collaborateur
     </a>
 </div>
+
+@* ── EY Copilot suggestions (Manager only, auto-évaluations en attente) ─────── *@
+@if (isManagerView && pendingValidations.Any())
+{
+    <div class="copilot-banner">
+        <div class="copilot-banner-head"><i class="fas fa-robot"></i> Suggestions EY Copilot</div>
+        @foreach (var item in pendingValidations)
+        {
+            <div class="copilot-item">
+                <div class="copilot-item-text">
+                    <i class="fas fa-wand-magic-sparkles me-1" style="color: var(--ey-yellow, #FFE600);"></i>
+                    Copilot : <strong>@item.CollaborateurNom</strong> a complété son auto-évaluation
+                    (<em>@item.CompetenceNom</em>). Validez ses compétences en 1 clic.
+                </div>
+                <a asp-controller="Competences" asp-action="ValidationManager" asp-route-id="@item.CompetenceId"
+                   class="copilot-open-btn">
+                    Ouvrir l'évaluation
+                </a>
+            </div>
+        }
+    </div>
+}
 
 @* ── Team composition KPIs ──────────────────────────────────────────────────── *@
 <div class="row g-3 mb-4">
@@ -161,8 +252,14 @@
         var initials = $"{(string.IsNullOrWhiteSpace(item.Prenom) ? "?" : item.Prenom[0])}{(string.IsNullOrWhiteSpace(item.Nom) ? "?" : item.Nom[0])}";
         var tone = item.Id % 6;
         var avatarState = statut == "CONGÉ" ? "is-conge" : (statut == "INACTIF" ? "is-inactif" : "");
+        var pendingForItem = pendingByCollaborateur.TryGetValue(item.Id, out var pv) ? pv : null;
+        var hasPending = isManagerView && pendingForItem != null && pendingForItem.Any();
         <div class="col-sm-6 col-lg-4 col-xl-3">
-            <div class="directory-card directory-card-modern">
+            <div class="directory-card directory-card-modern @(hasPending ? "ceb-pending-ring" : "")" style="position:relative;">
+                @if (hasPending)
+                {
+                    <span class="ceb-floating-badge"><i class="fas fa-inbox"></i> Auto-éval reçue</span>
+                }
                 <span class="ey-pill @statutClass directory-status-pill">@statut</span>
                 <div class="d-flex justify-content-center">
                     <div class="directory-avatar directory-avatar--tone-@tone @avatarState">@initials.ToUpperInvariant()</div>
@@ -180,7 +277,15 @@
 
                 <div class="mt-4 d-flex flex-column gap-2">
                     <a asp-action="Details" asp-route-id="@item.Id" class="directory-btn-profile text-decoration-none w-100 text-center">Consulter le profil <i class="fas fa-arrow-right ms-1"></i></a>
-                    @if (item.Actif)
+                    @if (hasPending)
+                    {
+                        <button type="button" class="btn btn-sm w-100 rounded-pill ceb-quick-validate-btn ceb-quick-validate-trigger"
+                                data-bs-toggle="modal" data-bs-target="#ceb-quick-validate-modal"
+                                data-collab-id="@item.Id" data-collab-nom="@($"{item.Prenom} {item.Nom}")">
+                            <i class="fas fa-bolt me-1"></i>Valider ses compétences
+                        </button>
+                    }
+                    else if (item.Actif)
                     {
                         <a asp-action="ChoisirRemplacant" asp-route-id="@item.Id"
                            class="btn btn-sm btn-dark w-100 rounded-pill text-decoration-none text-center text-warning border-warning border-opacity-50">
@@ -205,4 +310,74 @@
 @if (!Model.Any())
 {
     <div class="alert alert-info mt-3">Aucun collaborateur trouvé.</div>
+}
+
+@if (isManagerView)
+{
+    @* ── Modal d'évaluation rapide — mêmes boutons .ceb-validate-btn / même
+       endpoint /Competences/ValiderCompetence que Competences/Index.cshtml,
+       remplis à l'ouverture depuis les données déjà chargées ci-dessous. *@
+    <div class="modal fade" id="ceb-quick-validate-modal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content rounded-4 border-0 shadow-lg">
+                <div class="modal-header border-0 pb-0">
+                    <div>
+                        <div class="ey-page-kicker mb-0">Validation rapide</div>
+                        <h5 class="modal-title fw-bold" id="ceb-quick-validate-title">Compétences</h5>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body pt-2" id="ceb-quick-validate-body">
+                    <div class="text-muted small">Aucune compétence en attente.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var cebPendingByCollaborateur = @Html.Raw(Json.Serialize(pendingByCollaborateur));
+    </script>
+}
+
+@section Scripts {
+    <script src="~/js/ceb-evaluation-status.js" asp-append-version="true"></script>
+    @if (isManagerView)
+    {
+        <script>
+            (function () {
+                'use strict';
+
+                function cebOpenQuickValidate(collaborateurId, nomComplet) {
+                    document.getElementById('ceb-quick-validate-title').textContent = nomComplet;
+                    var body = document.getElementById('ceb-quick-validate-body');
+                    var items = (cebPendingByCollaborateur && cebPendingByCollaborateur[collaborateurId]) || [];
+
+                    if (!items.length) {
+                        body.innerHTML = '<div class="text-muted small">Aucune compétence en attente.</div>';
+                        return;
+                    }
+
+                    body.innerHTML = items.map(function (it) {
+                        var targetScore = it.niveauCible * 20;
+                        return '' +
+                            '<div class="d-flex align-items-center justify-content-between py-2 border-bottom">' +
+                                '<div>' +
+                                    '<div class="fw-semibold small">' + it.competenceNom + '</div>' +
+                                    '<span class="ceb-badge ceb-badge-pending">En attente</span>' +
+                                '</div>' +
+                                '<button type="button" class="ceb-validate-btn" data-comp-id="' + it.competenceId + '" data-target-score="' + targetScore + '">' +
+                                    'Valider à ' + it.niveauCible + '/5' +
+                                '</button>' +
+                            '</div>';
+                    }).join('');
+                }
+
+                document.addEventListener('click', function (e) {
+                    var trigger = e.target.closest('.ceb-quick-validate-trigger');
+                    if (!trigger) return;
+                    cebOpenQuickValidate(trigger.getAttribute('data-collab-id'), trigger.getAttribute('data-collab-nom'));
+                });
+            })();
+        </script>
+    }
 }

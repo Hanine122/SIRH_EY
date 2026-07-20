@@ -1,0 +1,48 @@
+@model SIRH.EY.Models.CompetenceEvaluationStatusViewModel
+@using SIRH.EY.Services
+@{
+    var comp     = Model.Competence;
+    var evalData = comp.EvaluationCompetence;
+
+    // Règle exacte demandée : EvaluationManager a une valeur -> Validé ;
+    // sinon un EvaluationCompetence existe (auto-éval faite) -> En attente ;
+    // sinon -> À évaluer.
+    string badgeClass, badgeLabel;
+    if (evalData != null && evalData.EvaluationManager.HasValue)
+    {
+        badgeClass = "ceb-badge-validated"; badgeLabel = "Validé";
+    }
+    else if (evalData != null)
+    {
+        badgeClass = "ceb-badge-pending"; badgeLabel = "En attente";
+    }
+    else
+    {
+        badgeClass = "ceb-badge-todo"; badgeLabel = "À évaluer";
+    }
+
+    // Auto-éval / Validé stockés en score 0-100 (EvaluationCompetence) — reconverti
+    // en note /5 via CompetenceRules.NiveauFromScore, la même conversion déjà
+    // utilisée par ValidationManager/ValiderCompetence pour fixer Competence.NiveauActuel.
+    int? autoNote  = evalData != null ? CompetenceRules.NiveauFromScore(evalData.AutoEvaluationCollaborateur) : null;
+    int? validNote = evalData?.EvaluationManager.HasValue == true ? CompetenceRules.NiveauFromScore(evalData.EvaluationManager!.Value) : null;
+
+    var showValidateCta = Model.IsManager && badgeClass == "ceb-badge-pending";
+    var targetScore      = comp.NiveauCible * 20; // NiveauCible (1-5) -> score 0-100 attendu par ValiderCompetence
+}
+
+<span class="ceb-badge @badgeClass">@badgeLabel</span>
+@if (autoNote.HasValue)
+{
+    <span class="ceb-note"><i class="fas fa-user-edit"></i> Auto-éval : @autoNote/5</span>
+}
+@if (validNote.HasValue)
+{
+    <span class="ceb-note ceb-note-valid"><i class="fas fa-check-double"></i> Validé : @validNote/5</span>
+}
+@if (showValidateCta)
+{
+    <button type="button" class="ceb-validate-btn" data-comp-id="@comp.Id" data-target-score="@targetScore">
+        Valider à @comp.NiveauCible/5
+    </button>
+}

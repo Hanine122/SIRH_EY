@@ -1,4 +1,6 @@
 @model IEnumerable<SIRH.EY.Models.Competence>
+@using SIRH.EY.Authorization
+@inject SIRH.EY.Services.IUserContextService UserContext
 
 @{
     ViewData["Title"] = "Compétences";
@@ -9,6 +11,7 @@
     var plans             = ViewBag.PlanDeveloppement as List<SIRH.EY.Models.PlanDeveloppement>
                             ?? new List<SIRH.EY.Models.PlanDeveloppement>();
     var seuilRequis       = SIRH.EY.Services.CompetenceRules.GetSeuilRequis(grade ?? "Junior");
+    var isManager         = await UserContext.IsUserInRoleAsync(User, Roles.Manager);
 
     // ── Priority groups ──────────────────────────────────────────────────────
     var all            = Model.ToList();
@@ -29,6 +32,13 @@
             p.Formation?.CompetenceVisee != null &&
             string.Equals(p.Formation.CompetenceVisee, nom, StringComparison.OrdinalIgnoreCase));
 }
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/ceb-evaluation-status.css" asp-append-version="true" />
+}
+
+@* Jeton anti-CSRF partagé par tous les boutons "Valider" rendus par le partial ci-dessous *@
+@Html.AntiForgeryToken()
 
 @* ── Flash messages ────────────────────────────────────────────────────────── *@
 @if (TempData["Success"] != null)
@@ -270,26 +280,11 @@ else
                                     </div>
                                 </div>
 
-                                @* Analytics RH inline *@
-                                @if (evalData != null)
-                                {
-                                    <div class="d-flex gap-3 mt-3 small">
-                                        @if (evalData.DateAutoEvaluation.HasValue)
-                                        {
-                                            <span class="text-muted">
-                                                <i class="fas fa-user-edit text-primary me-1"></i>
-                                                Auto-éval : <strong>@evalData.AutoEvaluationCollaborateur%</strong>
-                                            </span>
-                                        }
-                                        @if (evalData.EvaluationManager.HasValue)
-                                        {
-                                            <span class="text-muted">
-                                                <i class="fas fa-check-double text-success me-1"></i>
-                                                Manager : <strong>@evalData.EvaluationManager.Value%</strong>
-                                            </span>
-                                        }
-                                    </div>
-                                }
+                                @* Statut d'évaluation *@
+                                <div class="mt-3">
+                                    <partial name="_EvaluationStatusBadge"
+                                             model='new SIRH.EY.Models.CompetenceEvaluationStatusViewModel { Competence = comp, IsManager = isManager }' />
+                                </div>
                             </div>
 
                             @* ── Gap metric ─── *@
@@ -370,7 +365,6 @@ else
             <div class="row g-3">
                 @foreach (var comp in progressList)
                 {
-                    var evalData = comp.EvaluationCompetence;
                     var planForComp = PlanFor(comp.Nom);
 
                     <div class="col-md-6 col-xl-4">
@@ -398,8 +392,13 @@ else
                                     <span class="small text-muted ms-1">@comp.NiveauActuel → @comp.NiveauCible</span>
                                 </div>
 
-                                <div class="progress rounded-pill mb-3" style="height:5px;">
+                                <div class="progress rounded-pill mb-2" style="height:5px;">
                                     <div class="progress-bar bg-warning" style="width:@(comp.NiveauActuel / 5.0 * 100)%;"></div>
+                                </div>
+
+                                <div class="mb-2">
+                                    <partial name="_EvaluationStatusBadge"
+                                             model='new SIRH.EY.Models.CompetenceEvaluationStatusViewModel { Competence = comp, IsManager = isManager }' />
                                 </div>
 
                                 @if (planForComp?.Formation != null)
@@ -452,8 +451,6 @@ else
                 <div class="ey-card overflow-hidden">
                     @foreach (var comp in validatedList)
                     {
-                        var evalData = comp.EvaluationCompetence;
-
                         <div class="d-flex align-items-center gap-3 px-4 py-3 border-bottom border-light"
                              style="transition:background .15s ease;">
                             <i class="fas fa-check-circle text-success flex-shrink-0"></i>
@@ -471,14 +468,10 @@ else
                                           style="font-size:.9rem;line-height:1;">●</span>
                                 }
                             </div>
-                            @if (evalData?.ValidationManager == true)
-                            {
-                                <span class="ey-pill active flex-shrink-0">Validé manager</span>
-                            }
-                            else
-                            {
-                                <span class="ey-pill active flex-shrink-0">@comp.NiveauActuel/@comp.NiveauCible</span>
-                            }
+                            <div class="flex-shrink-0">
+                                <partial name="_EvaluationStatusBadge"
+                                         model='new SIRH.EY.Models.CompetenceEvaluationStatusViewModel { Competence = comp, IsManager = isManager }' />
+                            </div>
                             <div class="d-flex gap-1 flex-shrink-0">
                                 <a asp-action="AutoEvaluation" asp-route-id="@comp.Id"
                                    class="btn btn-sm btn-link text-muted text-decoration-none p-1" title="Auto-évaluation">
@@ -565,3 +558,7 @@ else
         <i class="fas fa-arrow-left me-1"></i>Retour au répertoire
     </a>
 </div>
+
+@section Scripts {
+    <script src="~/js/ceb-evaluation-status.js" asp-append-version="true"></script>
+}

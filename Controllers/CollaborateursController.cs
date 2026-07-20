@@ -31,6 +31,7 @@ public class CollaborateursController : Controller
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ITeamAccessService _teamAccess;
     private readonly IManagerActionCenterService _managerActionCenter;
+    private readonly IUserContextService _userContext;
 
     private readonly Microsoft.AspNetCore.Identity.UI.Services.IEmailSender _emailSender;
 
@@ -40,6 +41,7 @@ public class CollaborateursController : Controller
         UserManager<ApplicationUser> userManager,
         ITeamAccessService teamAccess,
         IManagerActionCenterService managerActionCenter,
+        IUserContextService userContext,
         Microsoft.AspNetCore.Identity.UI.Services.IEmailSender emailSender)
     {
         _context = context;
@@ -47,6 +49,7 @@ public class CollaborateursController : Controller
         _userManager = userManager;
         _teamAccess = teamAccess;
         _managerActionCenter = managerActionCenter;
+        _userContext = userContext;
         _emailSender = emailSender;
     }
 
@@ -179,7 +182,12 @@ public async Task<IActionResult> AskIA([FromBody] RecommendationRequest request)
         .ToListAsync();
 
     // Smart HR Inbox — pending validations, development plans and expiring certifications for this manager's team.
-    ViewBag.HrInbox = (!_teamAccess.IsPrivileged(User) && User.IsInRole(Roles.Manager))
+    // isManagerView is the single source of truth for both the inbox gate below and the
+    // "Copilot" banner/card treatment in the view — computed once via IUserContextService
+    // so the two can never disagree on who counts as a manager here.
+    var isManagerView = !_teamAccess.IsPrivileged(User) && await _userContext.IsUserInRoleAsync(User, Roles.Manager);
+    ViewBag.IsManagerView = isManagerView;
+    ViewBag.HrInbox = isManagerView
         ? await _managerActionCenter.GetInboxAsync(User)
         : new HrInboxSummary(Array.Empty<PendingValidationItem>(), Array.Empty<PendingDevelopmentPlanItem>(), Array.Empty<ExpiringCertificationItem>());
 

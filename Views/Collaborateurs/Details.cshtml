@@ -66,10 +66,31 @@
     }
 
     // ── Career timeline events ───────────────────────────────────────────────
-    var tlEvents = new List<(DateTime Date, string Label, string Sub, string Type)>();
-    tlEvents.Add((Model.DateEmbauche, "Recrutement EY", Model.Grade ?? "", "start"));
+    // Url: where a certif dot should take you when clicked. Resolved via the
+    // real Formation.SkillId ↔ Competence.SkillId bridge (built earlier this
+    // session) — when a matching competence exists for this collaborator,
+    // the dot deep-links straight into that competence's auto-évaluation
+    // page (which now hosts the training feedback history panel) with a
+    // highlight parameter for that exact inscription. When no matching
+    // competence exists, it falls back to the certifications tab, which
+    // already lists every completed formation with its own feedback state —
+    // there's no page to fabricate a link into otherwise.
+    var competenceBySkillId = competences.Where(c => c.SkillId.HasValue)
+        .GroupBy(c => c.SkillId!.Value)
+        .ToDictionary(g => g.Key, g => g.First());
+
+    string TlUrlForInscription(SIRH.EY.Models.Inscription insc)
+    {
+        var skillId = insc.Formation?.SkillId;
+        if (skillId.HasValue && competenceBySkillId.TryGetValue(skillId.Value, out var matched))
+            return Url.Action("AutoEvaluation", "Competences", new { id = matched.Id, highlightInscription = insc.Id })!;
+        return Url.Action("Index", "Formations", new { collaborateurId = Model.Id })!;
+    }
+
+    var tlEvents = new List<(DateTime Date, string Label, string Sub, string Type, string? Url)>();
+    tlEvents.Add((Model.DateEmbauche, "Recrutement EY", Model.Grade ?? "", "start", null));
     if (Model.DatePrisePoste.HasValue)
-        tlEvents.Add((Model.DatePrisePoste.Value, "Prise de poste", Model.Poste ?? "", "milestone"));
+        tlEvents.Add((Model.DatePrisePoste.Value, "Prise de poste", Model.Poste ?? "", "milestone", null));
 
     // Most recent completion always gets its own highlighted node — the
     // previous ".Take(4)" after an ascending sort could silently drop the
@@ -82,12 +103,12 @@
         .ToList();
     var latestCompleted = completedDesc.FirstOrDefault();
     foreach (var c in completedDesc.Skip(latestCompleted != null ? 1 : 0).Take(3))
-        tlEvents.Add(((c.DateCompletion ?? c.DateInscription), c.Formation?.Titre ?? "Formation", "Certification", "certif"));
+        tlEvents.Add(((c.DateCompletion ?? c.DateInscription), c.Formation?.Titre ?? "Formation", "Certification", "certif", TlUrlForInscription(c)));
     if (latestCompleted != null)
         tlEvents.Add(((latestCompleted.DateCompletion ?? latestCompleted.DateInscription),
-            latestCompleted.Formation?.Titre ?? "Formation", "Dernière formation complétée", "latest-certif"));
+            latestCompleted.Formation?.Titre ?? "Formation", "Dernière formation complétée", "latest-certif", TlUrlForInscription(latestCompleted)));
 
-    tlEvents.Add((DateTime.Today, "Aujourd'hui", $"{Model.Anciennete} an(s) EY", "today"));
+    tlEvents.Add((DateTime.Today, "Aujourd'hui", $"{Model.Anciennete} an(s) EY", "today", null));
     tlEvents = tlEvents.OrderBy(e => e.Date).ToList();
 }
 
@@ -386,7 +407,11 @@
     background:linear-gradient(90deg, var(--ey-navy), var(--ey-border-strong) 15%, var(--ey-border-strong) 85%, var(--ey-yellow));
     opacity:.5;
 }
-.ep-tl-event { display:flex; flex-direction:column; align-items:center; position:relative; z-index:1; flex:1; min-width:100px; padding:0 8px; }
+.ep-tl-event {
+    display:flex; flex-direction:column; align-items:center; position:relative; z-index:1; flex:1; min-width:100px; padding:0 8px;
+    text-decoration:none; color:inherit; cursor:pointer;
+}
+.ep-tl-event-static { cursor:default; pointer-events:none; }
 .ep-tl-dot {
     width:36px; height:36px; border-radius:50%; background:#fff; border:2px solid var(--ey-border-strong);
     display:flex; align-items:center; justify-content:center; font-size:12px; color:var(--gray-400);
@@ -734,7 +759,8 @@
                 "today"         => "fa-circle-dot",
                 _               => "fa-circle"
             };
-            <div class="ep-tl-event">
+            <a class="ep-tl-event @(ev.Url == null ? "ep-tl-event-static" : "")" href="@(ev.Url ?? "javascript:void(0)")"
+               title="@(ev.Url != null ? "Voir le retour de formation associé" : "")">
                 <div class="ep-tl-dot @ev.Type"><i class="fas @tlIcon" style="font-size:11px"></i></div>
                 @if (ev.Type == "latest-certif")
                 {
@@ -746,7 +772,7 @@
                 {
                     <div class="ep-tl-sub">@ev.Sub</div>
                 }
-            </div>
+            </a>
         }
     </div>
 </div>

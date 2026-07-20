@@ -1,0 +1,2 @@
+-- Superseded / unused: created by mistake during a naming-collision fix.
+-- See Database/StarSchema/003_DataWarehouse.sql for the real dim/fact schema.

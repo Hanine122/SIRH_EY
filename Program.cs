@@ -302,6 +302,9 @@ using (var scope = app.Services.CreateScope())
     // 19. Pont Skill — peuple le référentiel canonique et relie Competence/Formation
     await SkillBridgeSeeder.SeedAsync(context);
 
+    // 20. Enrichissement des profils collaborateurs sans compétences/formations
+    await CollaborateurEnrichmentSeeder.SeedCollaborateurDataAsync(context);
+
 }
 
 // ── MIDDLEWARE ────────────────────────────────────────────────────────────────

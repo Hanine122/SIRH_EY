@@ -133,6 +133,15 @@ public class TalentController : Controller
             .Where(t => t.Actif && collaborateurIds.Contains(t.CollaborateurId))
             .ToListAsync();
 
+        // Qui a un plan de coaching réel (au moins un OKR) — utilisé pour ne pas
+        // afficher un bouton "Coaching" qui mènerait vers une page vide.
+        var collaborateursAvecOkr = (await _context.OKRs
+            .Where(o => collaborateurIds.Contains(o.CollaborateurId))
+            .Select(o => o.CollaborateurId)
+            .Distinct()
+            .ToListAsync())
+            .ToHashSet();
+
         var matrix = new Dictionary<NineBoxCategory, List<MatrixItemViewModel>>();
         foreach (var cat in Enum.GetValues<NineBoxCategory>())
         {
@@ -151,7 +160,8 @@ public class TalentController : Controller
                 Collaborateur = c,
                 Perf = perf,
                 Pot = pot,
-                HasManualEval = manualEval != null
+                HasManualEval = manualEval != null,
+                HasCoachingPlan = collaborateursAvecOkr.Contains(c.Id)
             });
         }
 
@@ -443,6 +453,7 @@ public class MatrixItemViewModel
     public int Perf { get; set; }
     public int Pot { get; set; }
     public bool HasManualEval { get; set; }
+    public bool HasCoachingPlan { get; set; }
 }
 
 public class EvaluatePanelViewModel
