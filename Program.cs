@@ -305,6 +305,16 @@ using (var scope = app.Services.CreateScope())
     // 20. Enrichissement des profils collaborateurs sans compétences/formations
     await CollaborateurEnrichmentSeeder.SeedCollaborateurDataAsync(context);
 
+    // 21. Complétude des données (Data Integrity Seeder) — Genre/DateNaissance,
+    // SubDepartmentId, profils legacy (Departement/Grade/Poste -> FK), ManagerId
+    // manquant, compétences insuffisantes (<3), sous-départements orphelins.
+    await DataIntegritySeeder.SeedAsync(context);
+
+    // 22. Référentiel métiers Consulting/Delivery ERP-CRM (alignement AD Ports) —
+    // 6 postes clés (Business Analyst, MSD CRM Architect, Technical Consultant,
+    // Project Manager, Quality Analyst, Data Entry Operator) + compétences requises.
+    await ConsultingDeliveryReferentielSeeder.SeedAsync(context);
+
 }
 
 // ── MIDDLEWARE ────────────────────────────────────────────────────────────────

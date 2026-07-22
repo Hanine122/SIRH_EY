@@ -76,8 +76,8 @@
                     </div>
 
                     <div class="col-md-4">
-                        <label asp-for="SubDepartmentId" class="ey-label">Sous-département</label>
-                        <select asp-for="SubDepartmentId" class="ey-input js-subdept-select" id="SubDepartmentId">
+                        <label asp-for="SubDepartmentId" class="ey-label">Sous-département <span class="text-danger">*</span></label>
+                        <select asp-for="SubDepartmentId" class="ey-input js-subdept-select" id="SubDepartmentId" required>
                             <option value="">— Sélectionnez d'abord un département —</option>
                             @foreach (var s in subDepartments) {
                                 <option value="@s.Id" data-dept="@s.DepartmentId">@s.Department?.Name / @s.Name</option>
@@ -103,18 +103,19 @@
 
                     <div class="col-md-4">
                         <label asp-for="BusinessUnitId" class="ey-label">Business Unit</label>
-                        <select asp-for="BusinessUnitId" class="ey-input">
+                        <select asp-for="BusinessUnitId" class="ey-input" id="BusinessUnitId">
                             <option value="">Selectionnez</option>
                             @foreach (var b in buEntities) { <option value="@b.Id">@b.Name</option> }
                         </select>
                     </div>
 
                     <div class="col-md-4">
-                        <label asp-for="ManagerId" class="ey-label">Manager direct</label>
-                        <select asp-for="ManagerId" class="ey-input">
+                        <label asp-for="ManagerId" class="ey-label">Manager direct <span class="text-danger">*</span></label>
+                        <select asp-for="ManagerId" class="ey-input" id="ManagerId">
                             <option value="">Aucun manager</option>
                             @foreach (var m in managers) { <option value="@m.Id">@m.Prenom @m.Nom</option> }
                         </select>
+                        <small class="text-muted">Requis, sauf pour le sommet de la hiérarchie (Grade = Partner).</small>
                     </div>
 
                     <div class="col-md-4">
@@ -201,6 +202,45 @@
 
             deptSel.addEventListener('change', filter);
             filter();
+        })();
+
+        // Business Unit : auto-suggestion (pas de redondance exacte avec le
+        // Departement -- CBS n'a pas d'equivalent -- donc le champ reste
+        // visible/modifiable ; on se contente de pre-selectionner la BU dont
+        // le nom correspond au departement choisi, tant que l'utilisateur n'a
+        // pas lui-meme modifie manuellement ce champ).
+        (function () {
+            const deptSel = document.getElementById('DepartmentId');
+            const buSel   = document.getElementById('BusinessUnitId');
+            if (!deptSel || !buSel) return;
+
+            let userTouchedBU = false;
+            buSel.addEventListener('change', function () { userTouchedBU = true; });
+
+            function syncBusinessUnit() {
+                if (userTouchedBU) return;
+                const deptText = deptSel.selectedOptions[0]?.textContent?.trim();
+                if (!deptText) return;
+                const match = Array.from(buSel.options).find(o => o.textContent.trim() === deptText);
+                if (match) buSel.value = match.value;
+            }
+
+            deptSel.addEventListener('change', syncBusinessUnit);
+        })();
+
+        // Manager direct : requis, sauf pour le sommet de la hierarchie (Partner)
+        (function () {
+            const gradeSel   = document.getElementById('GradeId');
+            const managerSel = document.getElementById('ManagerId');
+            if (!gradeSel || !managerSel) return;
+
+            function syncRequired() {
+                const isPartner = /partner/i.test(gradeSel.selectedOptions[0]?.textContent || '');
+                managerSel.required = !isPartner;
+            }
+
+            gradeSel.addEventListener('change', syncRequired);
+            syncRequired();
         })();
     </script>
 }
