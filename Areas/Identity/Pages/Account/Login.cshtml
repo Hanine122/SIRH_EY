@@ -2,42 +2,40 @@
 @model LoginModel
 @{
     ViewData["Title"] = "Connexion";
-}
-
-@section Styles {
-    <link rel="stylesheet" href="~/css/auth-ey.css" asp-append-version="true" />
+    Layout = "/Areas/Identity/Pages/_AuthLayout.cshtml";
 }
 
 <div class="auth-ey-wrapper">
     <div class="auth-ey-card">
+        <div class="auth-ey-card-bar"></div>
         <div class="auth-ey-logo">
             <img src="~/images/ey-logo.png" alt="EY Logo" />
             <h1 class="auth-ey-title">Connexion</h1>
-            <p class="auth-ey-subtitle">Portail RH EY - Bâtir un monde du travail plus performant</p>
+            <p class="auth-ey-subtitle">Portail RH EY — Bâtir un monde du travail plus performant</p>
         </div>
 
         <form id="account" method="post">
             <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
-            
+
             <div class="mb-3">
                 <label asp-for="Input.Email" class="auth-ey-label">Email EY</label>
                 <input asp-for="Input.Email" class="form-control auth-ey-input" autocomplete="username" aria-required="true" placeholder="prenom.nom@ey.com" />
                 <span asp-validation-for="Input.Email" class="text-danger"></span>
             </div>
-            
+
             <div class="mb-3">
                 <label asp-for="Input.Password" class="auth-ey-label">Mot de passe</label>
                 <input asp-for="Input.Password" class="form-control auth-ey-input" autocomplete="current-password" aria-required="true" placeholder="••••••••" />
                 <span asp-validation-for="Input.Password" class="text-danger"></span>
             </div>
-            
+
             <div class="mb-4">
                 <label class="auth-ey-checkbox">
                     <input asp-for="Input.RememberMe" />
                     <span>Se souvenir de moi</span>
                 </label>
             </div>
-            
+
             <button id="login-submit" type="submit" class="btn-ey-auth">
                 <i class="fas fa-sign-in-alt me-2"></i>Se connecter
             </button>

@@ -1,80 +1,22 @@
 @model SIRH.EY.Models.Collaborateur
 @{
-    ViewData["Title"] = $"Intelligence · {Model.Prenom} {Model.Nom}";
+    ViewData["Title"] = $"{Model.Prenom} {Model.Nom}";
 
     var competences  = ViewBag.Competences  as List<SIRH.EY.Models.Competence>  ?? new List<SIRH.EY.Models.Competence>();
     var inscriptions = ViewBag.Inscriptions as List<SIRH.EY.Models.Inscription> ?? new List<SIRH.EY.Models.Inscription>();
-    var plansDev     = ViewBag.PlanDeveloppement as List<SIRH.EY.Models.PlanDeveloppement> ?? new List<SIRH.EY.Models.PlanDeveloppement>();
     var manager      = ViewBag.Manager as SIRH.EY.Models.Collaborateur;
 
-    // ── Derived metrics ──────────────────────────────────────────────────────
-    var totalFormations = inscriptions.Count;
-    var totalCertifs    = inscriptions.Count(i => i.Terminee);
-    var enCours         = inscriptions.Count(i => !i.Terminee);
-    var successionPct   = Model.NiveauPreparationSuccession ?? 0;
-    var potentiel       = Model.PotentielCarriere ?? "";
-    var statutPresence  = !Model.Actif ? "INACTIF" : (Model.Id % 7 == 0 ? "CONGÉ" : "ACTIF");
+    // Formations vs Certificats : meme collection (ViewBag.Inscriptions,
+    // deja chargee par le controller), simplement filtree cote vue — aucune
+    // nouvelle donnee, aucune requete supplementaire.
+    var formationsEnCours  = inscriptions.Where(i => !i.Terminee).ToList();
+    var certificatsObtenus = inscriptions.Where(i => i.Terminee).ToList();
 
-    var compTotal   = competences.Count;
-    var compOk      = competences.Count(c => c.NiveauActuel >= c.NiveauCible);
-    var compCrit    = competences.Count(c => c.NiveauCible - c.NiveauActuel >= 2);
-    var compWarn    = competences.Count(c => c.NiveauCible - c.NiveauActuel == 1);
-    var scoreGlobal = compTotal > 0 ? (int)Math.Round(competences.Average(c => c.NiveauActuel / 5.0 * 100)) : 0;
+    var statutPresence = !Model.Actif ? "Inactif" : (Model.Id % 7 == 0 ? "Congé" : "Actif");
+    var heroInitials = $"{(string.IsNullOrWhiteSpace(Model.Prenom) ? "?" : Model.Prenom[0])}{(string.IsNullOrWhiteSpace(Model.Nom) ? "?" : Model.Nom[0])}".ToUpperInvariant();
 
-    // ── Promotion readiness signal ───────────────────────────────────────────
-    var (promoSignal, promoColor) = (potentiel, successionPct) switch {
-        ("Haut potentiel" or "Succession prioritaire", >= 70) => ("PRÊT", "green"),
-        ("Haut potentiel" or "Solide", _)                    => ("EN COURS", "amber"),
-        (_, >= 50)                                            => ("EN COURS", "amber"),
-        _                                                     => ("À PRÉPARER", "red")
-    };
-
-    var successionColor = successionPct >= 70 ? "green" : successionPct >= 40 ? "amber" : "red";
-    var compColor       = compCrit == 0 ? "green" : compCrit <= 1 ? "amber" : "red";
-
-    // ── AI Intelligence Summary (multi-sentence executive analysis) ──────────
-    var strengths = competences.Where(c => c.NiveauActuel >= c.NiveauCible)
-                               .Select(c => c.Nom).Take(2).ToList();
-    var critiques = competences.Where(c => c.NiveauCible - c.NiveauActuel >= 2)
-                               .OrderByDescending(c => c.NiveauCible - c.NiveauActuel)
-                               .Select(c => c.Nom).Take(2).ToList();
-
-    string aiParagraph;
-    if (!Model.Actif) {
-        aiParagraph = $"{Model.Prenom} {Model.Nom} est actuellement inactif(ve). Ce profil est archivé et n'est plus soumis aux cycles de revue RH.";
-    } else {
-        var opening = potentiel switch {
-            "Haut potentiel"         => $"{Model.Prenom} est identifié(e) comme haut potentiel dans le département {Model.Departement ?? "EY"}.",
-            "Succession prioritaire" => $"{Model.Prenom} figure en tête des plans de succession critiques pour le grade {Model.Grade ?? "actuel"}.",
-            "Solide"                 => $"{Model.Prenom} présente un profil solide et stable au sein du département {Model.Departement ?? "EY"}.",
-            "Emergent"               => $"{Model.Prenom} est un profil émergent à surveiller dans les prochains cycles de revue.",
-            _                        => $"{Model.Prenom} {Model.Nom} est {statutPresence.ToLower()} au sein du département {Model.Departement ?? "EY"}."
-        };
-        var succession = $"La préparation succession atteint {successionPct}%.";
-        var compStr = compTotal > 0
-            ? (compCrit > 0
-                ? $" {compCrit} lacune(s) critique(s) identifiée(s)" + (critiques.Any() ? $" — {string.Join(", ", critiques)} — nécessitent une action prioritaire." : ".")
-                : $" Les {compOk}/{compTotal} objectifs de compétences sont atteints ou dépassés.")
-            : " Aucune donnée de compétence disponible.";
-        var formStr = totalCertifs > 0
-            ? $" {totalCertifs} certification(s) validée(s){(enCours > 0 ? $", {enCours} en cours" : "")}."
-            : (totalFormations > 0 ? $" {enCours} formation(s) en cours." : "");
-        var reco = compCrit >= 2
-            ? $" Recommandation : planifier un parcours de développement accéléré avant la prochaine revue de performance."
-            : (promoSignal == "PRÊT" ? $" Recommandation : soumettre au comité de promotion lors du prochain cycle." : "");
-        aiParagraph = opening + " " + succession + compStr + formStr + reco;
-    }
-
-    // ── Career timeline events ───────────────────────────────────────────────
-    // Url: where a certif dot should take you when clicked. Resolved via the
-    // real Formation.SkillId ↔ Competence.SkillId bridge (built earlier this
-    // session) — when a matching competence exists for this collaborator,
-    // the dot deep-links straight into that competence's auto-évaluation
-    // page (which now hosts the training feedback history panel) with a
-    // highlight parameter for that exact inscription. When no matching
-    // competence exists, it falls back to the certifications tab, which
-    // already lists every completed formation with its own feedback state —
-    // there's no page to fabricate a link into otherwise.
+    // ── Parcours EY — timeline chronologique (logique inchangee des versions
+    //    precedentes, reutilise certificatsObtenus au lieu d'un filtre redondant) ──
     var competenceBySkillId = competences.Where(c => c.SkillId.HasValue)
         .GroupBy(c => c.SkillId!.Value)
         .ToDictionary(g => g.Key, g => g.First());
@@ -92,13 +34,7 @@
     if (Model.DatePrisePoste.HasValue)
         tlEvents.Add((Model.DatePrisePoste.Value, "Prise de poste", Model.Poste ?? "", "milestone", null));
 
-    // Most recent completion always gets its own highlighted node — the
-    // previous ".Take(4)" after an ascending sort could silently drop the
-    // latest formation once a collaborator had more than 4 completions.
-    // DateCompletion (the real completion date) is used where set, falling
-    // back to DateInscription for older rows completed before that column
-    // existed.
-    var completedDesc = inscriptions.Where(i => i.Terminee)
+    var completedDesc = certificatsObtenus
         .OrderByDescending(i => i.DateCompletion ?? i.DateInscription)
         .ToList();
     var latestCompleted = completedDesc.FirstOrDefault();
@@ -114,705 +50,379 @@
 
 @section Styles {
 <style>
-/* ══════════════════════════════════════════════════════════════════════════
-   EY Employee Profile — handcrafted premium pass
-   Presentation only, zero HTML/Razor changes. Every color derives from the
-   shared EY tokens already loaded globally (ey-design-system.css /
-   ey-modern-overrides.css) — no new palette. Typography pairs the already-
-   loaded Playfair Display (see _Layout.cshtml Google Fonts link) with Inter
-   for an editorial, luxury-enterprise contrast instead of a generic dashboard.
-   ══════════════════════════════════════════════════════════════════════════ */
+    /* ══ EY — Fiche Collaborateur, layout 2 colonnes ═════════════════════════ */
+    .fc-page { background:#F9FAFB; margin:-1rem -1rem -1rem; padding:20px; }
 
-.ep {
-    font-family:var(--font-sans); color:var(--ey-ink); -webkit-font-smoothing:antialiased; padding-bottom:8px;
-    background:
-        radial-gradient(1100px circle at 12% -8%, rgba(255,230,0,.07), transparent 42%),
-        radial-gradient(900px circle at 105% 4%, rgba(30,41,59,.05), transparent 40%),
-        var(--gray-50);
-}
-.ep *, .ep *::before, .ep *::after { box-sizing:border-box; }
-.ep a { text-decoration:none; }
+    .fc-grid {
+        display: grid;
+        grid-template-columns: 320px 1fr;
+        gap: 24px;
+        align-items: start;
+    }
+    @@media (max-width: 900px) {
+        .fc-grid { grid-template-columns: 1fr; }
+    }
 
-/* Soft choreographed entrance — every major block rises in, once, on load */
-@@keyframes epRise { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
-@@keyframes epGrow  { from { transform:scaleX(0); } to { transform:scaleX(1); } }
-@@keyframes epGlow  { 0%,100% { box-shadow:0 0 0 4px rgba(255,230,0,.35), 0 2px 10px rgba(15,23,42,.18); } 50% { box-shadow:0 0 0 7px rgba(255,230,0,.16), 0 2px 10px rgba(15,23,42,.18); } }
+    .fc-right-col { display:flex; flex-direction:column; gap:20px; min-width:0; }
 
-.ep-hero, .ep-summary, .ep-exec-card, .ep-kpi-row, .row.g-3.mb-3, .ep-timeline {
-    animation:epRise .7s cubic-bezier(.16,1,.3,1) backwards;
-}
-.ep-hero      { animation-delay:.02s; }
-.ep-summary   { animation-delay:.08s; }
-.ep-exec-card { animation-delay:.14s; }
-.ep-kpi-row   { animation-delay:.2s;  }
-.row.g-3.mb-3 { animation-delay:.26s; }
-.ep-timeline  { animation-delay:.32s; }
+    .fc-card {
+        background:#FFFFFF; border-radius:12px; box-shadow:0 2px 10px rgba(0,0,0,0.05);
+        overflow:hidden;
+    }
 
-/* ── HERO ────────────────────────────────────────────────────────────── */
-.ep-hero {
-    position:relative; overflow:hidden; isolation:isolate;
-    background:linear-gradient(180deg, #fff, #fff 60%, #FEFDF6);
-    border:1px solid var(--ey-border); border-radius:var(--ey-radius-lg);
-    padding:30px 34px; margin-bottom:18px;
-    display:flex; flex-direction:column; gap:18px;
-    box-shadow:0 1px 2px rgba(15,23,42,.04), 0 12px 32px -12px rgba(15,23,42,.14);
-}
-.ep-hero::before {
-    content:''; position:absolute; inset:0 0 auto 0; height:3px; z-index:2;
-    background:linear-gradient(90deg, var(--ey-yellow) 0%, #FFF3A0 45%, var(--ey-yellow) 100%);
-}
-.ep-hero::after {
-    content:''; position:absolute; top:-120px; right:-90px; width:340px; height:340px; z-index:0;
-    border-radius:50%; pointer-events:none;
-    background:radial-gradient(circle, rgba(255,230,0,.16), rgba(30,41,59,.05) 55%, transparent 72%);
-    filter:blur(6px);
-}
-.ep-hero-top, .ep-hero-main { position:relative; z-index:1; }
-.ep-hero-top { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; }
-.ep-back { font-size:12px; font-weight:600; color:var(--gray-500); display:inline-flex; align-items:center; gap:6px; transition:color 200ms ease, transform 200ms ease; }
-.ep-back:hover { color:var(--blue-600); transform:translateX(-2px); }
-.ep-edit-btn {
-    position:relative; overflow:hidden;
-    display:inline-flex; align-items:center; gap:7px; padding:9px 18px; border-radius:var(--ey-radius-sm);
-    border:1px solid var(--ey-border); background:#fff; color:var(--ey-ink); font-size:13px; font-weight:700;
-    cursor:pointer; box-shadow:0 1px 2px rgba(15,23,42,.05);
-    transition:background-color 220ms ease, border-color 220ms ease, transform 220ms ease, box-shadow 220ms ease;
-}
-.ep-edit-btn:hover {
-    background:var(--ey-yellow); border-color:var(--ey-yellow); transform:translateY(-2px);
-    box-shadow:0 10px 22px -8px rgba(255,230,0,.55);
-}
-.ep-edit-btn:active { transform:translateY(0); }
-.ep-edit-btn:focus-visible { outline:2px solid var(--ey-yellow); outline-offset:2px; }
+    /* ── Actions rapides (fonctions existantes, non supprimées, discrètes) ── */
+    .fc-quick-actions { display:flex; justify-content:flex-end; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
+    .fc-quick-btn {
+        display:inline-flex; align-items:center; gap:6px; padding:7px 12px; border-radius:8px;
+        border:1px solid #E5E7EB; background:#fff; color:#374151; font-size:12px; font-weight:600;
+        text-decoration:none; cursor:pointer; transition:all .15s ease;
+    }
+    .fc-quick-btn:hover { border-color:#FFE600; background:#FFFDF0; color:#1A1A1A; }
 
-.ep-hero-main { display:flex; align-items:center; gap:22px; flex-wrap:wrap; }
-.ep-avatar {
-    width:80px; height:80px; border-radius:50%; flex-shrink:0; position:relative;
-    background:linear-gradient(155deg, var(--ey-navy) 0%, #16202E 55%, #0B111A 100%);
-    color:#fff; font-family:'Playfair Display',serif;
-    display:flex; align-items:center; justify-content:center; font-size:27px; font-weight:700; letter-spacing:.01em;
-    border:3px solid #fff;
-    box-shadow:
-        0 0 0 1px rgba(255,230,0,.55),
-        0 14px 26px -10px rgba(15,23,42,.45),
-        inset 0 1px 1px rgba(255,255,255,.18);
-}
-.ep-identity h1 {
-    font-family:'Playfair Display',serif; font-weight:700; font-size:31px; color:var(--ey-ink);
-    margin:0 0 5px; letter-spacing:-.015em; line-height:1.12;
-}
-.ep-identity-role { font-size:14px; color:var(--gray-500); font-weight:500; margin-bottom:12px; letter-spacing:.01em; }
-.ep-pill-row { display:flex; gap:9px; flex-wrap:wrap; }
+    /* ── Colonne gauche : Carte Info Profil ─────────────────────────────── */
+    .fc-profile-card { padding:28px 24px 24px; text-align:center; }
+    .fc-avatar {
+        width:84px; height:84px; margin:0 auto 16px; border-radius:50%;
+        background:#FFE600; color:#1A1A1A; font-weight:800; font-size:28px;
+        display:flex; align-items:center; justify-content:center;
+        font-family:'Playfair Display',Georgia,serif;
+    }
+    .fc-name { font-size:19px; font-weight:700; color:#111827; margin-bottom:2px; }
+    .fc-role { font-size:13px; color:#6B7280; font-weight:500; margin-bottom:18px; }
+    .fc-sep { height:1px; background:#E5E7EB; margin:0 -24px 18px; }
 
-.ep-pill {
-    position:relative; display:inline-flex; align-items:center; gap:6px;
-    padding:5px 13px 5px 11px; border-radius:999px; font-size:11px; font-weight:700; letter-spacing:.04em;
-    border:1px solid; box-shadow:0 1px 2px rgba(15,23,42,.04);
-    transition:transform 200ms ease, box-shadow 200ms ease;
-}
-.ep-pill:hover { transform:translateY(-1px); box-shadow:0 6px 14px -6px rgba(15,23,42,.22); }
-.ep-pill::before { content:''; width:6px; height:6px; border-radius:50%; background:currentColor; flex-shrink:0; box-shadow:0 0 0 3px currentColor; opacity:.9; }
-.ep-pill-active { background:linear-gradient(180deg,#F0FDF6,var(--green-50)); color:var(--green-600); border-color:#BBF7D0; }
-.ep-pill-leave  { background:linear-gradient(180deg,#FFFDF5,var(--amber-50)); color:var(--amber-600); border-color:#FDE68A; }
-.ep-pill-none   { background:linear-gradient(180deg,#FAFBFC,var(--gray-100)); color:var(--gray-500); border-color:var(--gray-200); }
-.ep-pill-hp     { background:linear-gradient(180deg,#F4F9FF,var(--blue-50));  color:var(--blue-600);  border-color:#BFDBFE; }
-.ep-pill-succ   { background:linear-gradient(180deg,#F0FDF6,var(--green-50)); color:var(--green-600); border-color:#BBF7D0; }
+    .fc-detail-list { display:flex; flex-direction:column; gap:14px; text-align:left; margin-bottom:22px; }
+    .fc-detail-row { display:flex; align-items:flex-start; gap:12px; }
+    .fc-detail-icon {
+        width:32px; height:32px; border-radius:9px; flex-shrink:0; background:#F9FAFB; border:1px solid #E5E7EB;
+        display:flex; align-items:center; justify-content:center; color:#6B7280; font-size:13px;
+    }
+    .fc-detail-label { font-size:10.5px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:#9CA3AF; margin-bottom:1px; }
+    .fc-detail-value { font-size:13px; font-weight:600; color:#111827; word-break:break-word; }
+    .fc-detail-value.muted { color:#9CA3AF; font-weight:500; font-style:italic; }
 
-/* ── PROFILE SUMMARY — floating fact chips ──────────────────────────── */
-.ep-summary { display:flex; flex-wrap:wrap; gap:12px; margin-bottom:22px; }
-.ep-fact {
-    display:flex; align-items:center; gap:11px; font-size:13px; flex:1 1 200px;
-    background:#fff; border:1px solid var(--ey-border); border-radius:var(--ey-radius-md);
-    padding:13px 16px; box-shadow:0 1px 2px rgba(15,23,42,.04), 0 8px 20px -14px rgba(15,23,42,.18);
-    transition:transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease;
-}
-.ep-fact:hover { transform:translateY(-2px); box-shadow:0 1px 2px rgba(15,23,42,.05), 0 14px 26px -14px rgba(15,23,42,.26); border-color:var(--ey-border-strong); }
-.ep-fact-icon {
-    width:34px; height:34px; border-radius:10px; flex-shrink:0;
-    background:linear-gradient(155deg,#fff,var(--gray-50));
-    border:1px solid var(--ey-border);
-    display:flex; align-items:center; justify-content:center; color:var(--gray-500); font-size:12.5px;
-    box-shadow:inset 0 1px 1px rgba(255,255,255,.6);
-}
-.ep-fact-label { color:var(--gray-400); display:block; font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:700; margin-bottom:1px; }
-.ep-fact-value { color:var(--ey-ink); font-weight:600; }
+    .fc-status-badge {
+        display:inline-flex; align-items:center; gap:6px; padding:6px 18px; border-radius:999px;
+        font-size:12px; font-weight:700; letter-spacing:.03em; margin-bottom:14px;
+    }
+    .fc-status-active   { background:#16A34A; color:#fff; }
+    .fc-status-leave    { background:#F59E0B; color:#fff; }
+    .fc-status-inactive { background:#9CA3AF; color:#fff; }
 
-/* ── EXECUTIVE SUMMARY CARD ──────────────────────────────────────────── */
-.ep-exec-card {
-    position:relative; background:#fff; border:1px solid var(--ey-border); border-radius:var(--ey-radius-lg);
-    padding:28px 32px 28px 34px; margin-bottom:22px; overflow:hidden;
-    box-shadow:0 1px 2px rgba(15,23,42,.04), 0 16px 34px -18px rgba(15,23,42,.22);
-}
-.ep-exec-card::before {
-    content:''; position:absolute; top:0; bottom:0; left:0; width:4px;
-    background:linear-gradient(180deg, var(--ey-yellow), var(--ey-navy));
-}
-.ep-exec-eyebrow {
-    font-size:10.5px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--gray-400);
-    margin-bottom:15px; display:flex; align-items:center; gap:8px;
-}
-.ep-exec-eyebrow::after { content:''; flex:1; height:1px; background:linear-gradient(90deg,var(--ey-border),transparent); }
-.ep-exec-text { font-size:16.5px; line-height:1.75; color:var(--gray-700); font-weight:400; max-width:820px; letter-spacing:.001em; }
-.ep-exec-text strong { font-weight:700; color:var(--ey-navy); font-family:'Playfair Display',serif; font-size:1.04em; }
+    .fc-edit-btn {
+        display:flex; align-items:center; justify-content:center; gap:8px; width:100%;
+        padding:10px 16px; border-radius:10px; border:1.5px solid #1E3A8A; background:transparent;
+        color:#1E3A8A; font-size:13px; font-weight:700; text-decoration:none; cursor:pointer;
+        transition:background-color .15s ease, color .15s ease;
+    }
+    .fc-edit-btn:hover { background:#1E3A8A; color:#fff; }
 
-/* ── KPI CARDS ───────────────────────────────────────────────────────── */
-.ep-kpi-row { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:26px; }
-.ep-kpi-card {
-    position:relative; overflow:hidden;
-    background:#fff; border:1px solid var(--ey-border); border-radius:var(--ey-radius-md); padding:21px 22px 20px;
-    box-shadow:0 1px 2px rgba(15,23,42,.04), 0 10px 24px -16px rgba(15,23,42,.2);
-    transition:box-shadow 260ms cubic-bezier(.16,1,.3,1), transform 260ms cubic-bezier(.16,1,.3,1), border-color 260ms ease;
-    display:flex; flex-direction:column; gap:7px;
-    animation:epRise .6s cubic-bezier(.16,1,.3,1) backwards;
-}
-.ep-kpi-row .ep-kpi-card:nth-child(1) { animation-delay:.22s; }
-.ep-kpi-row .ep-kpi-card:nth-child(2) { animation-delay:.28s; }
-.ep-kpi-row .ep-kpi-card:nth-child(3) { animation-delay:.34s; }
-.ep-kpi-row .ep-kpi-card:nth-child(4) { animation-delay:.40s; }
-.ep-kpi-card::before {
-    content:''; position:absolute; top:0; left:0; right:0; height:3px; transform:scaleX(0); transform-origin:left;
-    transition:transform 320ms cubic-bezier(.16,1,.3,1); background:var(--gray-300);
-}
-.ep-kpi-card:hover {
-    box-shadow:0 1px 2px rgba(15,23,42,.05), 0 22px 40px -18px rgba(15,23,42,.3);
-    transform:translateY(-4px); border-color:var(--ey-border-strong);
-}
-.ep-kpi-card:hover::before { transform:scaleX(1); }
-.ep-kpi-card:has(.ep-kpi-icon.green)::before { background:linear-gradient(90deg,var(--green-600),var(--green-500)); }
-.ep-kpi-card:has(.ep-kpi-icon.amber)::before { background:linear-gradient(90deg,var(--amber-600),var(--amber-500)); }
-.ep-kpi-card:has(.ep-kpi-icon.red)::before   { background:linear-gradient(90deg,var(--red-600),var(--red-500)); }
-.ep-kpi-card:has(.ep-kpi-icon.blue)::before  { background:linear-gradient(90deg,var(--blue-600),var(--blue-500)); }
-.ep-kpi-icon {
-    width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center;
-    font-size:14px; margin-bottom:3px; transition:transform 260ms cubic-bezier(.16,1,.3,1);
-}
-.ep-kpi-card:hover .ep-kpi-icon { transform:scale(1.08) rotate(-4deg); }
-.ep-kpi-icon.green { background:linear-gradient(155deg,#fff,var(--green-50)); color:var(--green-600); box-shadow:0 0 0 1px #BBF7D0 inset, 0 6px 14px -8px var(--green-600); }
-.ep-kpi-icon.amber { background:linear-gradient(155deg,#fff,var(--amber-50)); color:var(--amber-600); box-shadow:0 0 0 1px #FDE68A inset, 0 6px 14px -8px var(--amber-600); }
-.ep-kpi-icon.red   { background:linear-gradient(155deg,#fff,var(--red-50));   color:var(--red-600);   box-shadow:0 0 0 1px #FECACA inset, 0 6px 14px -8px var(--red-600); }
-.ep-kpi-icon.blue  { background:linear-gradient(155deg,#fff,var(--blue-50));  color:var(--blue-600);  box-shadow:0 0 0 1px #BFDBFE inset, 0 6px 14px -8px var(--blue-600); }
-.ep-kpi-label { font-size:10.5px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--gray-400); }
-.ep-kpi-value { font-size:27px; font-weight:800; letter-spacing:-.03em; color:var(--ey-ink); line-height:1; font-variant-numeric:tabular-nums; }
-.ep-kpi-signal { font-size:11px; font-weight:700; letter-spacing:.03em; display:inline-flex; align-items:center; gap:6px; }
-.ep-kpi-signal::before { content:''; width:6px; height:6px; border-radius:50%; background:currentColor; flex-shrink:0; box-shadow:0 0 0 3px currentColor; opacity:.85; }
-.ep-sig-green { color:var(--green-600); } .ep-sig-amber { color:var(--amber-600); } .ep-sig-red { color:var(--red-600); } .ep-sig-blue { color:var(--blue-600); }
-.ep-kpi-meta { font-size:11.5px; color:var(--gray-500); }
+    /* ── Étape 1 : Bloc "Parcours EY" — timeline horizontale ────────────── */
+    .fc-timeline-card { padding:22px 26px; }
+    .fc-timeline-title {
+        font-size:11px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:#9CA3AF;
+        margin-bottom:18px; display:flex; align-items:center; gap:8px;
+    }
+    .fc-timeline-title i { color:#FFE600; -webkit-text-stroke:1px #1A1A1A; }
+    .fc-tl-track { position:relative; display:flex; align-items:flex-start; padding-top:6px; overflow-x:auto; scrollbar-width:none; }
+    .fc-tl-track::-webkit-scrollbar { display:none; }
+    .fc-tl-track::before {
+        content:''; position:absolute; top:23px; left:0; right:0; height:2px; z-index:0;
+        background:linear-gradient(90deg,#1A1A1A,#E5E7EB 15%,#E5E7EB 85%,#FFE600); opacity:.6;
+    }
+    .fc-tl-event {
+        display:flex; flex-direction:column; align-items:center; position:relative; z-index:1;
+        flex:1; min-width:110px; padding:0 8px; text-decoration:none; color:inherit; cursor:pointer;
+    }
+    .fc-tl-event-static { cursor:default; pointer-events:none; }
+    .fc-tl-dot {
+        width:36px; height:36px; border-radius:50%; background:#fff; border:2px solid #CBD5E1;
+        display:flex; align-items:center; justify-content:center; font-size:12px; color:#9CA3AF;
+        margin-bottom:10px; flex-shrink:0; transition:transform .2s ease;
+    }
+    .fc-tl-event:hover .fc-tl-dot { transform:scale(1.1) translateY(-2px); }
+    .fc-tl-dot.start     { border-color:#1A1A1A; color:#1A1A1A; }
+    .fc-tl-dot.milestone { border-color:#2563EB; color:#2563EB; }
+    .fc-tl-dot.certif    { border-color:#16A34A; color:#16A34A; }
+    .fc-tl-dot.today     { border-color:#FFE600; background:#FFE600; color:#1A1A1A; }
+    .fc-tl-dot.latest-certif { border-color:#FFE600; background:#FFE600; color:#1A1A1A; }
+    .fc-tl-new-badge {
+        font-size:9px; font-weight:800; letter-spacing:.04em; text-transform:uppercase;
+        background:#16A34A; color:#fff; padding:2px 7px; border-radius:99px; margin-bottom:4px;
+    }
+    .fc-tl-date  { font-size:10px; font-weight:700; color:#9CA3AF; letter-spacing:.05em; margin-bottom:3px; }
+    .fc-tl-label { font-size:12px; font-weight:700; color:#111827; text-align:center; line-height:1.3; }
+    .fc-tl-sub   { font-size:10.5px; color:#6B7280; text-align:center; margin-top:2px; line-height:1.3; }
 
-/* ── SECTION LABEL ───────────────────────────────────────────────────── */
-.ep-sec-label {
-    font-size:11px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--gray-400);
-    margin-bottom:13px; display:flex; align-items:center; justify-content:space-between;
-}
-.ep-sec-link { font-size:11.5px; font-weight:700; color:var(--blue-600); text-transform:none; letter-spacing:0; transition:opacity 150ms ease; }
-.ep-sec-link:hover { opacity:.7; text-decoration:underline; }
+    /* ── Étape 2 & 3 : Onglets & listes ──────────────────────────────────── */
+    .fc-tabs-bar { display:flex; gap:4px; padding:6px; border-bottom:1px solid #E5E7EB; }
+    .fc-tab-btn {
+        padding:11px 20px; border-radius:8px; border:none; background:transparent;
+        color:#6B7280; font-size:13.5px; font-weight:700; cursor:pointer; transition:all .15s ease;
+    }
+    .fc-tab-btn:hover { color:#111827; background:#F9FAFB; }
+    .fc-tab-btn.active { color:#1A1A1A; background:#FFE600; }
+    .fc-tab-pane { display:none; }
+    .fc-tab-pane.active { display:block; }
 
-/* ── PANEL — layered floating surface ───────────────────────────────── */
-.ep-panel {
-    background:#fff; border:1px solid var(--ey-border); border-radius:var(--ey-radius-md); overflow:hidden;
-    box-shadow:0 1px 2px rgba(15,23,42,.04), 0 14px 30px -20px rgba(15,23,42,.22);
-}
-.ep-panel-head {
-    padding:17px 22px; border-bottom:1px solid var(--ey-border); display:flex; align-items:center; justify-content:space-between;
-    background:linear-gradient(180deg,#FCFCFD,#fff);
-}
-.ep-panel-title { font-size:14px; font-weight:700; color:var(--ey-ink); letter-spacing:-.005em; }
-.ep-panel-meta { font-size:11.5px; color:var(--gray-500); font-variant-numeric:tabular-nums; }
+    .fc-list-item { padding:16px 22px; border-bottom:1px solid #F3F4F6; }
+    .fc-list-item:last-child { border-bottom:none; }
+    .fc-list-row { display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+    .fc-list-main { flex:1; min-width:200px; }
+    .fc-list-title { font-size:14px; font-weight:700; color:#111827; margin-bottom:3px; }
+    .fc-list-meta { font-size:12px; color:#9CA3AF; }
+    .fc-list-meta i { margin-right:4px; }
+    .fc-list-meta + .fc-list-meta { margin-left:14px; }
 
-/* Competence rows with premium progress bar */
-.ep-skill-row { padding:15px 22px; border-bottom:1px solid var(--ey-border); transition:background-color 200ms ease; }
-.ep-skill-row:last-child { border-bottom:none; }
-.ep-skill-row:hover { background:linear-gradient(90deg,var(--gray-50),transparent); }
-.ep-skill-top { display:flex; align-items:center; gap:10px; margin-bottom:9px; }
-.ep-skill-name { font-size:13.5px; font-weight:600; color:var(--ey-ink); flex:1; min-width:0; }
-.ep-skill-levels { font-size:11.5px; color:var(--gray-500); font-variant-numeric:tabular-nums; flex-shrink:0; }
-.ep-skill-badge {
-    font-size:10px; font-weight:700; padding:3px 10px; border-radius:99px; letter-spacing:.03em; flex-shrink:0;
-    box-shadow:0 1px 2px rgba(15,23,42,.04);
-}
-.ep-badge-ok   { background:linear-gradient(180deg,#F0FDF6,var(--green-50)); color:var(--green-600); }
-.ep-badge-warn { background:linear-gradient(180deg,#FFFDF5,var(--amber-50)); color:var(--amber-600); }
-.ep-badge-crit { background:linear-gradient(180deg,#FFF6F6,var(--red-50));   color:var(--red-600); }
-.ep-skill-bar { position:relative; height:10px; background:var(--gray-100); border-radius:99px; overflow:hidden; box-shadow:inset 0 1px 2px rgba(15,23,42,.06); }
-.ep-skill-fill {
-    position:relative; height:100%; border-radius:99px; transform-origin:left;
-    animation:epGrow .9s cubic-bezier(.16,1,.3,1) backwards; animation-delay:.3s;
-}
-.ep-skill-fill::after {
-    content:''; position:absolute; inset:0; border-radius:99px;
-    background:linear-gradient(180deg, rgba(255,255,255,.35), transparent 55%);
-}
-.ep-skill-fill.g { background:linear-gradient(90deg,var(--green-600),var(--green-500)); }
-.ep-skill-fill.a { background:linear-gradient(90deg,var(--amber-600),var(--amber-500)); }
-.ep-skill-fill.r { background:linear-gradient(90deg,var(--red-600),var(--red-500)); }
-.ep-skill-target { position:absolute; top:-3px; bottom:-3px; width:2px; background:var(--ey-ink); opacity:.4; }
-.ep-skill-target::after {
-    content:''; position:absolute; top:-4px; left:50%; transform:translateX(-50%);
-    width:0; height:0; border-left:4px solid transparent; border-right:4px solid transparent; border-top:5px solid var(--ey-ink); opacity:.55;
-}
+    .fc-badge { display:inline-flex; align-items:center; padding:4px 13px; border-radius:999px; font-size:11px; font-weight:700; flex-shrink:0; }
+    .fc-badge-done      { background:#DCFCE7; color:#15803D; }
+    .fc-badge-progress  { background:#FEF3C7; color:#B45309; }
 
-/* Formation rows */
-.ep-form-row { display:flex; align-items:center; gap:14px; padding:14px 22px; border-bottom:1px solid var(--ey-border); transition:background-color 200ms ease; }
-.ep-form-row:last-child { border-bottom:none; }
-.ep-form-row:hover { background:linear-gradient(90deg,var(--gray-50),transparent); }
-.ep-form-name { font-size:13px; font-weight:600; color:var(--ey-ink); flex:1; min-width:0; }
-.ep-form-bar { position:relative; width:100px; height:9px; background:var(--gray-100); border-radius:99px; overflow:hidden; flex-shrink:0; box-shadow:inset 0 1px 2px rgba(15,23,42,.06); }
-.ep-form-fill {
-    position:relative; height:100%; border-radius:99px; background:linear-gradient(90deg,var(--blue-600),var(--blue-500));
-    transform-origin:left; animation:epGrow .9s cubic-bezier(.16,1,.3,1) backwards; animation-delay:.35s;
-}
-.ep-form-fill::after { content:''; position:absolute; inset:0; border-radius:99px; background:linear-gradient(180deg, rgba(255,255,255,.35), transparent 55%); }
-.ep-form-fill.done { background:linear-gradient(90deg,var(--green-600),var(--green-500)); }
-.ep-form-pct { font-size:12px; font-weight:700; color:var(--ey-ink); width:36px; text-align:right; flex-shrink:0; font-variant-numeric:tabular-nums; }
+    .fc-list-action { margin-top:10px; }
+    .fc-btn-terminer {
+        display:inline-flex; align-items:center; gap:6px; padding:7px 15px; border-radius:8px;
+        border:none; background:#16A34A; color:#fff; font-size:12px; font-weight:700; cursor:pointer;
+        transition:background-color .15s ease;
+    }
+    .fc-btn-terminer:hover { background:#15803D; }
 
-/* ── TALENT & REPORTING PANEL ────────────────────────────────────────── */
-.ep-talent-badge { display:flex; align-items:center; gap:13px; padding:19px 22px; border-bottom:1px solid var(--ey-border); }
-.ep-talent-icon {
-    width:40px; height:40px; border-radius:11px; display:flex; align-items:center; justify-content:center;
-    font-size:16px; flex-shrink:0; box-shadow:inset 0 1px 1px rgba(255,255,255,.6);
-}
-.ep-talent-icon.succ { background:linear-gradient(155deg,#fff,var(--green-50)); color:var(--green-600); box-shadow:0 0 0 1px #BBF7D0 inset, 0 6px 14px -8px var(--green-600); }
-.ep-talent-icon.hp   { background:linear-gradient(155deg,#fff,var(--blue-50));  color:var(--blue-600);  box-shadow:0 0 0 1px #BFDBFE inset, 0 6px 14px -8px var(--blue-600); }
-.ep-talent-icon.none { background:linear-gradient(155deg,#fff,var(--gray-100)); color:var(--gray-400); }
-.ep-talent-icon.green { background:linear-gradient(155deg,#fff,var(--green-50)); color:var(--green-600); box-shadow:0 0 0 1px #BBF7D0 inset, 0 6px 14px -8px var(--green-600); }
-.ep-talent-icon.amber { background:linear-gradient(155deg,#fff,var(--amber-50)); color:var(--amber-600); box-shadow:0 0 0 1px #FDE68A inset, 0 6px 14px -8px var(--amber-600); }
-.ep-talent-icon.red    { background:linear-gradient(155deg,#fff,var(--red-50));  color:var(--red-600);   box-shadow:0 0 0 1px #FECACA inset, 0 6px 14px -8px var(--red-600); }
-.ep-talent-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--gray-400); }
-.ep-talent-value { font-size:13.5px; font-weight:700; color:var(--ey-ink); }
+    .fc-empty { padding:36px 22px; text-align:center; color:#9CA3AF; font-size:13px; }
 
-.ep-mgr-wrap { padding:17px 22px; }
-.ep-mgr-title { font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--gray-400); margin-bottom:11px; }
-.ep-mgr-chip {
-    display:flex; align-items:center; gap:11px; padding:12px 15px;
-    background:linear-gradient(155deg,#fff,var(--gray-50)); border:1px solid var(--ey-border); border-radius:var(--ey-radius-sm);
-    box-shadow:0 1px 2px rgba(15,23,42,.04); transition:transform 200ms ease, box-shadow 200ms ease;
-}
-.ep-mgr-chip:hover { transform:translateY(-1px); box-shadow:0 8px 18px -10px rgba(15,23,42,.28); }
-.ep-mgr-av {
-    width:34px; height:34px; border-radius:50%; flex-shrink:0;
-    background:linear-gradient(155deg,var(--ey-navy),#0B111A); color:#fff; font-size:11px; font-weight:700;
-    display:flex; align-items:center; justify-content:center; box-shadow:0 4px 10px -4px rgba(15,23,42,.5);
-}
-.ep-mgr-name { font-size:12.5px; font-weight:700; color:var(--ey-ink); }
-.ep-mgr-role { font-size:11px; color:var(--gray-500); }
-
-/* ── TIMELINE ────────────────────────────────────────────────────────── */
-.ep-timeline {
-    background:#fff; border:1px solid var(--ey-border); border-radius:var(--ey-radius-md); padding:26px 32px; margin-top:22px;
-    box-shadow:0 1px 2px rgba(15,23,42,.04), 0 14px 30px -20px rgba(15,23,42,.2);
-}
-.ep-timeline-track { position:relative; display:flex; align-items:flex-start; padding-top:6px; overflow-x:auto; scrollbar-width:none; }
-.ep-timeline-track::-webkit-scrollbar { display:none; }
-.ep-timeline-track::before {
-    content:''; position:absolute; top:23px; left:0; right:0; height:2px; z-index:0;
-    background:linear-gradient(90deg, var(--ey-navy), var(--ey-border-strong) 15%, var(--ey-border-strong) 85%, var(--ey-yellow));
-    opacity:.5;
-}
-.ep-tl-event {
-    display:flex; flex-direction:column; align-items:center; position:relative; z-index:1; flex:1; min-width:100px; padding:0 8px;
-    text-decoration:none; color:inherit; cursor:pointer;
-}
-.ep-tl-event-static { cursor:default; pointer-events:none; }
-.ep-tl-dot {
-    width:36px; height:36px; border-radius:50%; background:#fff; border:2px solid var(--ey-border-strong);
-    display:flex; align-items:center; justify-content:center; font-size:12px; color:var(--gray-400);
-    margin-bottom:11px; flex-shrink:0; transition:transform 220ms cubic-bezier(.16,1,.3,1);
-    box-shadow:0 2px 8px -4px rgba(15,23,42,.18);
-}
-.ep-tl-event:hover .ep-tl-dot { transform:scale(1.12) translateY(-2px); }
-.ep-tl-dot.start     { border-color:var(--ey-navy); color:var(--ey-navy); box-shadow:0 0 0 4px rgba(30,41,59,.08), 0 2px 8px -4px rgba(15,23,42,.18); }
-.ep-tl-dot.milestone { border-color:var(--blue-600); color:var(--blue-600); box-shadow:0 0 0 4px var(--blue-50), 0 2px 8px -4px rgba(15,23,42,.18); }
-.ep-tl-dot.certif    { border-color:var(--green-600); color:var(--green-600); box-shadow:0 0 0 4px var(--green-50), 0 2px 8px -4px rgba(15,23,42,.18); }
-.ep-tl-dot.today     { border-color:var(--ey-yellow); background:var(--ey-yellow); color:var(--ey-ink); animation:epGlow 2.6s ease-in-out infinite; }
-.ep-tl-dot.latest-certif {
-    border-color:var(--ey-yellow); background:var(--ey-yellow); color:var(--ey-ink);
-    box-shadow:0 0 0 4px rgba(255,230,0,.22), 0 4px 12px -4px rgba(15,23,42,.28);
-}
-.ep-tl-new-badge {
-    font-size:9px; font-weight:800; letter-spacing:.04em; text-transform:uppercase;
-    background:var(--green-600); color:#fff; padding:2px 7px; border-radius:99px; margin-bottom:4px;
-}
-.ep-tl-date  { font-size:10px; font-weight:600; color:var(--gray-400); letter-spacing:.05em; margin-bottom:3px; }
-.ep-tl-label { font-size:12px; font-weight:700; color:var(--ey-ink); text-align:center; line-height:1.3; transition:color 200ms ease; }
-.ep-tl-event:hover .ep-tl-label { color:var(--ey-navy); }
-.ep-tl-sub   { font-size:10.5px; color:var(--gray-500); text-align:center; margin-top:2px; line-height:1.3; }
-
-/* ── STICKY ACTION BAR — floating glass dock ─────────────────────────── */
-.ep-stickybar {
-    position:sticky; bottom:0; z-index:20; margin-top:26px; padding:14px 4px;
-    display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end;
-    background:rgba(255,255,255,.78);
-    -webkit-backdrop-filter:blur(16px) saturate(160%); backdrop-filter:blur(16px) saturate(160%);
-    border-top:1px solid rgba(226,229,236,.9);
-    box-shadow:0 -18px 34px -18px rgba(15,23,42,.16);
-}
-.ep-stickybar-btn {
-    position:relative; overflow:hidden;
-    display:inline-flex; align-items:center; gap:7px; padding:11px 19px; border-radius:var(--ey-radius-sm);
-    border:1px solid var(--ey-border); background:#fff; color:var(--ey-ink); font-size:13px; font-weight:700;
-    cursor:pointer; transition:background-color 220ms ease, border-color 220ms ease, transform 220ms ease, box-shadow 220ms ease;
-    font-family:var(--font-sans); box-shadow:0 1px 2px rgba(15,23,42,.05);
-}
-.ep-stickybar-btn:hover {
-    background:var(--ey-navy); color:#fff; border-color:var(--ey-navy);
-    transform:translateY(-2px); box-shadow:0 14px 26px -12px rgba(15,23,42,.45);
-}
-.ep-stickybar-btn.primary { background:linear-gradient(155deg,var(--ey-yellow),#F5DC00); border-color:var(--ey-yellow); color:var(--ey-ink); }
-.ep-stickybar-btn.primary:hover {
-    background:linear-gradient(155deg,#FFEE4D,var(--ey-yellow)); border-color:var(--ey-yellow); color:var(--ey-ink);
-    box-shadow:0 14px 30px -10px rgba(255,230,0,.55);
-}
-.ep-stickybar-btn:active { transform:translateY(0); }
-.ep-stickybar-btn:focus-visible { outline:2px solid var(--ey-yellow); outline-offset:2px; }
-
-/* ── EMPTY STATES / ALERTS ───────────────────────────────────────────── */
-.ep-empty { padding:28px 22px; text-align:center; color:var(--gray-500); font-size:13px; }
-.ep-alert {
-    display:flex; align-items:flex-start; gap:10px; padding:13px 17px; border-radius:var(--ey-radius-sm);
-    margin-bottom:16px; font-size:13px; box-shadow:0 1px 2px rgba(15,23,42,.04), 0 8px 18px -12px rgba(15,23,42,.18);
-    animation:epRise .5s cubic-bezier(.16,1,.3,1) backwards;
-}
-.ep-alert-ok  { background:linear-gradient(180deg,#F0FDF6,var(--green-50)); color:var(--green-600); border:1px solid #A7F3D0; }
-.ep-alert-err { background:linear-gradient(180deg,#FFF6F6,var(--red-50));   color:var(--red-600);   border:1px solid #FECACA; }
-
-/* ── RESPONSIVE ──────────────────────────────────────────────────────── */
-@@media (max-width:991px) {
-    .ep-kpi-row { grid-template-columns:repeat(2,1fr); }
-    .ep-hero { padding:24px 22px; }
-    .ep-identity h1 { font-size:26px; }
-    .ep-exec-text { font-size:14.5px; }
-    .ep-stickybar { justify-content:center; }
-}
-@@media (max-width:575px) {
-    .ep-kpi-row { grid-template-columns:1fr 1fr; }
-    .ep-summary { flex-direction:column; gap:12px; }
-    .ep-fact { flex:1 1 auto; }
-}
-@@media (prefers-reduced-motion:reduce) {
-    *,*::before,*::after { animation-duration:.01ms!important; transition-duration:.01ms!important; }
-}
+    /* Compétences : barre de progression (donnée = niveau, pas de date/durée) */
+    .fc-skill-top { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+    .fc-skill-name { font-size:14px; font-weight:700; color:#111827; flex:1; }
+    .fc-skill-levels { font-size:12px; color:#9CA3AF; }
+    .fc-skill-bar { position:relative; height:8px; background:#F3F4F6; border-radius:99px; overflow:hidden; }
+    .fc-skill-fill { height:100%; border-radius:99px; }
+    .fc-skill-fill.g { background:#16A34A; } .fc-skill-fill.a { background:#D97706; } .fc-skill-fill.r { background:#DB2777; }
 </style>
 }
 
-<div class="ep">
+<div class="fc-page">
 
 @if (TempData["Success"] != null)
 {
-    <div class="ep-alert ep-alert-ok"><i class="fas fa-check-circle"></i> @TempData["Success"]</div>
+    <div class="alert alert-success">@TempData["Success"]</div>
 }
 @if (TempData["Error"] != null)
 {
-    <div class="ep-alert ep-alert-err"><i class="fas fa-exclamation-triangle"></i> @TempData["Error"]</div>
+    <div class="alert alert-danger">@TempData["Error"]</div>
 }
 
-<!-- ══ HERO ═══════════════════════════════════════════════════════════════ -->
-<div class="ep-hero">
-    <div class="ep-hero-top">
-        <a asp-controller="Collaborateurs" asp-action="Index" class="ep-back">
-            <i class="fas fa-arrow-left" style="font-size:10px"></i> Répertoire
-        </a>
-        <a asp-action="Edit" asp-route-id="@Model.Id" class="ep-edit-btn">
-            <i class="fas fa-pen" style="font-size:11px"></i> Modifier le profil
-        </a>
-    </div>
-    <div class="ep-hero-main">
-        @{
-            var heroInitials = $"{(string.IsNullOrWhiteSpace(Model.Prenom) ? "?" : Model.Prenom[0])}{(string.IsNullOrWhiteSpace(Model.Nom) ? "?" : Model.Nom[0])}".ToUpperInvariant();
-        }
-        <div class="ep-avatar">@heroInitials</div>
-        <div class="ep-identity">
-            <h1>@Model.Prenom @Model.Nom</h1>
-            @if (!string.IsNullOrEmpty(Model.Poste) || !string.IsNullOrEmpty(Model.Grade))
-            {
-                <div class="ep-identity-role">@Model.Poste@(!string.IsNullOrEmpty(Model.Grade) ? $" · {Model.Grade}" : "")@(!string.IsNullOrEmpty(Model.Departement) ? $" · {Model.Departement}" : "")</div>
-            }
-            <div class="ep-pill-row">
-                @{
-                    var statusCls = statutPresence switch { "ACTIF" => "active", "CONGÉ" => "leave", _ => "none" };
-                }
-                <span class="ep-pill ep-pill-@statusCls">@statutPresence</span>
-                @if (!string.IsNullOrEmpty(potentiel))
-                {
-                    var talentPillCls = potentiel.Contains("Haut") || potentiel.Contains("Succession") ? "ep-pill-succ" : "ep-pill-hp";
-                    <span class="ep-pill @talentPillCls">@potentiel.ToUpper()</span>
-                }
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- ══ PROFILE SUMMARY ════════════════════════════════════════════════════ -->
-<div class="ep-summary">
-    <div class="ep-fact">
-        <div class="ep-fact-icon"><i class="far fa-envelope"></i></div>
-        <div>
-            <span class="ep-fact-label">Email</span>
-            <span class="ep-fact-value">@Model.Email</span>
-        </div>
-    </div>
-    <div class="ep-fact">
-        <div class="ep-fact-icon"><i class="far fa-calendar-alt"></i></div>
-        <div>
-            <span class="ep-fact-label">Embauche EY</span>
-            <span class="ep-fact-value">@Model.DateEmbauche.ToString("dd/MM/yyyy")</span>
-        </div>
-    </div>
-    <div class="ep-fact">
-        <div class="ep-fact-icon"><i class="far fa-clock"></i></div>
-        <div>
-            <span class="ep-fact-label">Ancienneté</span>
-            <span class="ep-fact-value">@Model.Anciennete an(s)</span>
-        </div>
-    </div>
-    @if (!string.IsNullOrEmpty(Model.Departement))
-    {
-        <div class="ep-fact">
-            <div class="ep-fact-icon"><i class="fas fa-building"></i></div>
-            <div>
-                <span class="ep-fact-label">Département</span>
-                <span class="ep-fact-value">@Model.Departement</span>
-            </div>
-        </div>
-    }
-</div>
-
-<!-- ══ EXECUTIVE SUMMARY ══════════════════════════════════════════════════ -->
-<div class="ep-exec-card">
-    <div class="ep-exec-eyebrow">Synthèse RH</div>
-    <div class="ep-exec-text">
-        @{
-            var parts = aiParagraph.Split(new[]{". "}, StringSplitOptions.RemoveEmptyEntries);
-        }
-        @if (parts.Length > 0)
-        {
-            <strong>@parts[0].</strong>
-            @if (parts.Length > 1)
-            {
-                @Html.Raw(" " + string.Join(". ", parts.Skip(1).Select(p => p.TrimEnd('.'))) + ".")
-            }
-        }
-    </div>
-</div>
-
-<!-- ══ KPI CARDS ══════════════════════════════════════════════════════════ -->
-<div class="ep-kpi-row">
-    <div class="ep-kpi-card">
-        <div class="ep-kpi-icon @promoColor"><i class="fas fa-arrow-trend-up"></i></div>
-        <div class="ep-kpi-label">Promotion</div>
-        <div class="ep-kpi-value">@promoSignal</div>
-        <div class="ep-kpi-signal ep-sig-@promoColor">@promoColor.ToUpper()</div>
-        <div class="ep-kpi-meta">@(string.IsNullOrEmpty(potentiel) ? "Non évalué" : potentiel)</div>
-    </div>
-    <div class="ep-kpi-card">
-        <div class="ep-kpi-icon @successionColor"><i class="fas fa-sitemap"></i></div>
-        <div class="ep-kpi-label">Succession</div>
-        <div class="ep-kpi-value">@successionPct%</div>
-        <div class="ep-kpi-signal ep-sig-@successionColor">@(successionPct >= 70 ? "PRÊT" : successionPct >= 40 ? "EN COURS" : "FAIBLE")</div>
-        <div class="ep-kpi-meta">Préparation au poste suivant</div>
-    </div>
-    <div class="ep-kpi-card">
-        <div class="ep-kpi-icon @compColor"><i class="fas fa-bullseye"></i></div>
-        <div class="ep-kpi-label">Compétences</div>
-        <div class="ep-kpi-value">@scoreGlobal%</div>
-        <div class="ep-kpi-signal ep-sig-@compColor">@compOk / @compTotal ATTEINTS</div>
-        <div class="ep-kpi-meta">@(compCrit > 0 ? $"{compCrit} écart(s) critique(s)" : "Aucun écart critique")</div>
-    </div>
-    <div class="ep-kpi-card">
-        <div class="ep-kpi-icon blue"><i class="fas fa-certificate"></i></div>
-        <div class="ep-kpi-label">Formation</div>
-        <div class="ep-kpi-value">@totalCertifs</div>
-        <div class="ep-kpi-signal ep-sig-blue">CERTIFICATION@(totalCertifs != 1 ? "S" : "")</div>
-        <div class="ep-kpi-meta">@enCours en cours · @totalFormations total</div>
-    </div>
-</div>
-
-<!-- ══ COMPÉTENCES/FORMATIONS + TALENT & REPORTING ══════════════════════════ -->
-<div class="row g-3 mb-3">
-
-    <!-- Left: Compétences & Formations -->
-    <div class="col-lg-7">
-        <div class="ep-sec-label">
-            <span>Compétences &amp; formations</span>
-            <a asp-controller="Competences" asp-action="Create" asp-route-collaborateurId="@Model.Id" class="ep-sec-link">
-                <i class="fas fa-plus" style="font-size:10px"></i> Ajouter une compétence
-            </a>
-        </div>
-        <div class="ep-panel">
-            <div class="ep-panel-head">
-                <div class="ep-panel-title">Signaux de compétences</div>
-                <div class="ep-panel-meta">@compTotal compétence@(compTotal != 1 ? "s" : "") · Score @scoreGlobal%</div>
-            </div>
-
-            @if (!competences.Any())
-            {
-                <div class="ep-empty">
-                    Aucune compétence renseignée.
-                    <a asp-controller="Competences" asp-action="Create" asp-route-collaborateurId="@Model.Id" style="color:var(--blue-600);font-weight:600;margin-left:6px">Ajouter →</a>
-                </div>
-            }
-            @foreach (var comp in competences.OrderByDescending(c => c.NiveauCible - c.NiveauActuel))
-            {
-                var ecart    = comp.NiveauCible - comp.NiveauActuel;
-                var dotCls   = ecart >= 2 ? "r" : ecart == 1 ? "a" : "g";
-                var badgeCls = ecart >= 2 ? "ep-badge-crit" : ecart == 1 ? "ep-badge-warn" : "ep-badge-ok";
-                var badgeTxt = ecart >= 2 ? "CRITIQUE" : ecart == 1 ? "ATTENTION" : "ATTEINT";
-                var niveauPct = comp.NiveauActuel * 20;
-                var ciblePct  = comp.NiveauCible * 20;
-
-                <div class="ep-skill-row">
-                    <div class="ep-skill-top">
-                        <span class="ep-skill-name">@comp.Nom</span>
-                        <span class="ep-skill-levels">@comp.NiveauActuel / @comp.NiveauCible</span>
-                        <span class="ep-skill-badge @badgeCls">@badgeTxt</span>
-                    </div>
-                    <div class="ep-skill-bar">
-                        <div class="ep-skill-fill @dotCls" style="width:@niveauPct%"></div>
-                        <div class="ep-skill-target" style="left:@ciblePct%"></div>
-                    </div>
-                </div>
-            }
-
-            @if (inscriptions.Any())
-            {
-                <div style="padding:14px 22px 0;border-top:1px solid var(--ey-border)">
-                    <div style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--gray-400);margin-bottom:2px">
-                        Formations
-                    </div>
-                </div>
-                @foreach (var insc in inscriptions.Take(5))
-                {
-                    var form     = insc.Formation;
-                    if (form == null) { continue; }
-                    var prog = insc.Terminee ? 100 : Math.Clamp(insc.Progression, 0, 100);
-                    if (!insc.Terminee && prog == 0)
-                        prog = Math.Min(95, Math.Max(15, (DateTime.Today - insc.DateInscription.Date).Days * 6));
-
-                    <div class="ep-form-row">
-                        <span class="ep-form-name">@form.Titre</span>
-                        <div class="ep-form-bar">
-                            <div class="ep-form-fill @(insc.Terminee ? "done" : "")" style="width:@prog%"></div>
-                        </div>
-                        <span class="ep-form-pct">@prog%</span>
-                        <span class="ep-skill-badge @(insc.Terminee ? "ep-badge-ok" : "ep-badge-warn")" style="width:72px;text-align:center">
-                            @(insc.Terminee ? "CERTIFIÉ" : "EN COURS")
-                        </span>
-                    </div>
-                }
-            }
-        </div>
-    </div>
-
-    <!-- Right: Talent & Reporting -->
-    <div class="col-lg-5">
-        <div class="ep-sec-label">Talent &amp; reporting</div>
-        <div class="ep-panel">
-            @{
-                var talentIconCls = string.IsNullOrEmpty(potentiel) ? "none"
-                    : (potentiel.Contains("Haut") || potentiel.Contains("Succession") ? "succ" : "hp");
-                var talentIcon = talentIconCls == "succ" ? "fa-sitemap" : talentIconCls == "hp" ? "fa-star" : "fa-user";
-            }
-            <div class="ep-talent-badge">
-                <div class="ep-talent-icon @talentIconCls"><i class="fas @talentIcon"></i></div>
-                <div>
-                    <div class="ep-talent-label">Potentiel carrière</div>
-                    <div class="ep-talent-value">@(string.IsNullOrEmpty(potentiel) ? "Non évalué" : potentiel)</div>
-                </div>
-            </div>
-            <div class="ep-talent-badge" style="border-bottom:@(manager != null ? "1px solid var(--ey-border)" : "none")">
-                <div class="ep-talent-icon @promoColor"><i class="fas fa-arrow-trend-up"></i></div>
-                <div>
-                    <div class="ep-talent-label">Signal de promotion</div>
-                    <div class="ep-talent-value">@promoSignal</div>
-                </div>
-            </div>
-
-            @if (manager != null)
-            {
-                <div class="ep-mgr-wrap">
-                    <div class="ep-mgr-title">Rattachement hiérarchique</div>
-                    @{
-                        var mInit = $"{(string.IsNullOrWhiteSpace(manager.Prenom) ? "?" : manager.Prenom[0])}{(string.IsNullOrWhiteSpace(manager.Nom) ? "?" : manager.Nom[0])}".ToUpperInvariant();
-                    }
-                    <div class="ep-mgr-chip">
-                        <div class="ep-mgr-av">@mInit</div>
-                        <div>
-                            <div class="ep-mgr-name">@manager.Prenom @manager.Nom</div>
-                            <div class="ep-mgr-role">@(manager.Poste ?? "Manager")</div>
-                        </div>
-                    </div>
-                </div>
-            }
-        </div>
-    </div>
-</div>
-
-<!-- ══ CAREER TIMELINE ════════════════════════════════════════════════════ -->
-<div class="ep-timeline">
-    <div class="ep-sec-label" style="margin-bottom:20px">Parcours EY</div>
-    <div class="ep-timeline-track">
-        @foreach (var ev in tlEvents)
-        {
-            var tlIcon = ev.Type switch {
-                "start"         => "fa-briefcase",
-                "milestone"     => "fa-flag",
-                "certif"        => "fa-award",
-                "latest-certif" => "fa-award",
-                "today"         => "fa-circle-dot",
-                _               => "fa-circle"
-            };
-            <a class="ep-tl-event @(ev.Url == null ? "ep-tl-event-static" : "")" href="@(ev.Url ?? "javascript:void(0)")"
-               title="@(ev.Url != null ? "Voir le retour de formation associé" : "")">
-                <div class="ep-tl-dot @ev.Type"><i class="fas @tlIcon" style="font-size:11px"></i></div>
-                @if (ev.Type == "latest-certif")
-                {
-                    <span class="ep-tl-new-badge">Récent</span>
-                }
-                <div class="ep-tl-date">@ev.Date.ToString("MM/yyyy")</div>
-                <div class="ep-tl-label">@ev.Label</div>
-                @if (!string.IsNullOrEmpty(ev.Sub))
-                {
-                    <div class="ep-tl-sub">@ev.Sub</div>
-                }
-            </a>
-        }
-    </div>
-</div>
-
-<!-- ══ STICKY ACTION BAR ═════════════════════════════════════════════════ -->
-<div class="ep-stickybar">
+<div class="fc-quick-actions">
     <form asp-controller="Competences" asp-action="GenererPlanDeveloppement" method="post" style="display:contents">
         @Html.AntiForgeryToken()
         <input type="hidden" name="collaborateurId" value="@Model.Id" />
         <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
-        <button type="submit" class="ep-stickybar-btn">
-            <i class="fas fa-route" style="font-size:11px"></i> Générer le plan de développement
-        </button>
+        <button type="submit" class="fc-quick-btn"><i class="fas fa-route"></i> Générer le plan de développement</button>
     </form>
-    <a asp-controller="Collaborateurs" asp-action="ChoisirRemplacant" asp-route-id="@Model.Id" class="ep-stickybar-btn">
-        <i class="fas fa-people-arrows" style="font-size:11px"></i> Analyse succession
+    <a asp-controller="Collaborateurs" asp-action="ChoisirRemplacant" asp-route-id="@Model.Id" class="fc-quick-btn">
+        <i class="fas fa-people-arrows"></i> Analyse succession
     </a>
-    <a asp-controller="Copilot" asp-action="Index" class="ep-stickybar-btn primary">
-        <i class="fas fa-robot" style="font-size:11px"></i> Ouvrir dans Copilot
+    <a asp-controller="Copilot" asp-action="Index" class="fc-quick-btn">
+        <i class="fas fa-robot"></i> Ouvrir dans Copilot
     </a>
 </div>
 
-</div><!-- /ep -->
+<div class="fc-grid">
+
+    <!-- ══ COLONNE GAUCHE — Carte Info Profil (320px) — INCHANGÉE ═══════════ -->
+    <div class="fc-card fc-profile-card">
+        <div class="fc-avatar">@heroInitials</div>
+        <div class="fc-name">@Model.Prenom @Model.Nom</div>
+        <div class="fc-role">@(Model.Poste ?? "Poste non renseigné")</div>
+
+        <div class="fc-sep"></div>
+
+        <div class="fc-detail-list">
+            <div class="fc-detail-row">
+                <div class="fc-detail-icon"><i class="far fa-envelope"></i></div>
+                <div><div class="fc-detail-label">Email</div><div class="fc-detail-value">@Model.Email</div></div>
+            </div>
+            <div class="fc-detail-row">
+                <div class="fc-detail-icon"><i class="fas fa-building"></i></div>
+                <div><div class="fc-detail-label">Département</div>
+                    <div class="fc-detail-value @(string.IsNullOrEmpty(Model.Departement) ? "muted" : "")">@(Model.Departement ?? "Non renseigné")</div>
+                </div>
+            </div>
+            <div class="fc-detail-row">
+                <div class="fc-detail-icon"><i class="fas fa-medal"></i></div>
+                <div><div class="fc-detail-label">Grade</div>
+                    <div class="fc-detail-value @(string.IsNullOrEmpty(Model.Grade) ? "muted" : "")">@(Model.Grade ?? "Non renseigné")</div>
+                </div>
+            </div>
+            <div class="fc-detail-row">
+                <div class="fc-detail-icon"><i class="far fa-calendar-alt"></i></div>
+                <div><div class="fc-detail-label">Date d'embauche</div><div class="fc-detail-value">@Model.DateEmbauche.ToString("dd/MM/yyyy")</div></div>
+            </div>
+            <div class="fc-detail-row">
+                <div class="fc-detail-icon"><i class="fas fa-phone"></i></div>
+                <div><div class="fc-detail-label">Téléphone</div>
+                    <div class="fc-detail-value @(string.IsNullOrEmpty(Model.TelephonePersonnel) ? "muted" : "")">@(Model.TelephonePersonnel ?? "Non renseigné")</div>
+                </div>
+            </div>
+            <div class="fc-detail-row">
+                <div class="fc-detail-icon"><i class="fas fa-map-marker-alt"></i></div>
+                <div><div class="fc-detail-label">Adresse</div>
+                    <div class="fc-detail-value @(string.IsNullOrEmpty(Model.Adresse) ? "muted" : "")">@(Model.Adresse ?? "Non renseignée")</div>
+                </div>
+            </div>
+            <div class="fc-detail-row">
+                <div class="fc-detail-icon"><i class="fas fa-user-tie"></i></div>
+                <div><div class="fc-detail-label">Manager</div>
+                    <div class="fc-detail-value @(manager == null ? "muted" : "")">@(manager != null ? $"{manager.Prenom} {manager.Nom}" : "Aucun")</div>
+                </div>
+            </div>
+            <div class="fc-detail-row">
+                <div class="fc-detail-icon"><i class="fas fa-file-contract"></i></div>
+                <div><div class="fc-detail-label">Type de contrat</div>
+                    <div class="fc-detail-value @(string.IsNullOrEmpty(Model.TypeContrat) ? "muted" : "")">@(Model.TypeContrat ?? "Non renseigné")</div>
+                </div>
+            </div>
+        </div>
+
+        @{
+            var statusCls = statutPresence switch { "Actif" => "fc-status-active", "Congé" => "fc-status-leave", _ => "fc-status-inactive" };
+        }
+        <span class="fc-status-badge @statusCls">@statutPresence.ToUpper()</span>
+
+        <a asp-action="Edit" asp-route-id="@Model.Id" class="fc-edit-btn">
+            <i class="fas fa-pen" style="font-size:11px"></i> Modifier le profil
+        </a>
+    </div>
+
+    <!-- ══ COLONNE DROITE ═════════════════════════════════════════════════════ -->
+    <div class="fc-right-col">
+
+        <!-- ── Étape 1 : Parcours EY ────────────────────────────────────────── -->
+        <div class="fc-card fc-timeline-card">
+            <div class="fc-timeline-title"><i class="fas fa-route"></i> Parcours EY</div>
+            <div class="fc-tl-track">
+                @foreach (var ev in tlEvents)
+                {
+                    var tlIcon = ev.Type switch {
+                        "start"         => "fa-briefcase",
+                        "milestone"     => "fa-flag",
+                        "certif"        => "fa-award",
+                        "latest-certif" => "fa-award",
+                        "today"         => "fa-circle-dot",
+                        _               => "fa-circle"
+                    };
+                    <a class="fc-tl-event @(ev.Url == null ? "fc-tl-event-static" : "")" href="@(ev.Url ?? "javascript:void(0)")"
+                       title="@(ev.Url != null ? "Voir le retour de formation associé" : "")">
+                        <div class="fc-tl-dot @ev.Type"><i class="fas @tlIcon" style="font-size:11px"></i></div>
+                        @if (ev.Type == "latest-certif")
+                        {
+                            <span class="fc-tl-new-badge">Récent</span>
+                        }
+                        <div class="fc-tl-date">@ev.Date.ToString("MM/yyyy")</div>
+                        <div class="fc-tl-label">@ev.Label</div>
+                        @if (!string.IsNullOrEmpty(ev.Sub))
+                        {
+                            <div class="fc-tl-sub">@ev.Sub</div>
+                        }
+                    </a>
+                }
+            </div>
+        </div>
+
+        <!-- ── Étape 2 & 3 : Onglets & listes ───────────────────────────────── -->
+        <div class="fc-card">
+            <div class="fc-tabs-bar" role="tablist">
+                <button type="button" class="fc-tab-btn active" data-fc-tab="competences">Compétences</button>
+                <button type="button" class="fc-tab-btn" data-fc-tab="formations">Formations</button>
+                <button type="button" class="fc-tab-btn" data-fc-tab="certificats">Certificats</button>
+            </div>
+
+            <!-- Compétences -->
+            <div class="fc-tab-pane active" id="fc-tab-competences">
+                @if (!competences.Any())
+                {
+                    <div class="fc-empty">Aucune compétence renseignée.</div>
+                }
+                @foreach (var comp in competences.OrderByDescending(c => c.NiveauCible - c.NiveauActuel))
+                {
+                    var ecart = comp.NiveauCible - comp.NiveauActuel;
+                    var dotCls = ecart >= 2 ? "r" : ecart == 1 ? "a" : "g";
+                    var niveauPct = comp.NiveauActuel * 20;
+                    <div class="fc-list-item">
+                        <div class="fc-skill-top">
+                            <span class="fc-skill-name">@comp.Nom</span>
+                            <span class="fc-skill-levels">@comp.NiveauActuel / @comp.NiveauCible</span>
+                        </div>
+                        <div class="fc-skill-bar"><div class="fc-skill-fill @dotCls" style="width:@niveauPct%"></div></div>
+                    </div>
+                }
+            </div>
+
+            <!-- Formations (en cours) -->
+            <div class="fc-tab-pane" id="fc-tab-formations">
+                @if (!formationsEnCours.Any())
+                {
+                    <div class="fc-empty">Aucune formation en cours.</div>
+                }
+                @foreach (var insc in formationsEnCours)
+                {
+                    var form = insc.Formation;
+                    if (form == null) { continue; }
+                    <div class="fc-list-item">
+                        <div class="fc-list-row">
+                            <div class="fc-list-main">
+                                <div class="fc-list-title">@form.Titre</div>
+                                <span class="fc-list-meta"><i class="far fa-calendar"></i>@insc.DateInscription.ToString("dd/MM/yyyy")</span>
+                                <span class="fc-list-meta"><i class="far fa-clock"></i>@form.DureeHeures h</span>
+                            </div>
+                            <span class="fc-badge fc-badge-progress">EN COURS</span>
+                        </div>
+                        <div class="fc-list-action">
+                            <form asp-controller="Inscriptions" asp-action="Terminer" asp-route-id="@insc.Id" method="post" style="display:inline">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="fc-btn-terminer"><i class="fas fa-check" style="font-size:10px"></i> Marquer terminée</button>
+                            </form>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <!-- Certificats (formations terminées) -->
+            <div class="fc-tab-pane" id="fc-tab-certificats">
+                @if (!certificatsObtenus.Any())
+                {
+                    <div class="fc-empty">Aucun certificat obtenu pour le moment.</div>
+                }
+                @foreach (var insc in certificatsObtenus)
+                {
+                    var form = insc.Formation;
+                    if (form == null) { continue; }
+                    <div class="fc-list-item">
+                        <div class="fc-list-row">
+                            <div class="fc-list-main">
+                                <div class="fc-list-title">@form.Titre</div>
+                                <span class="fc-list-meta"><i class="far fa-calendar"></i>@((insc.DateCompletion ?? insc.DateInscription).ToString("dd/MM/yyyy"))</span>
+                                <span class="fc-list-meta"><i class="far fa-clock"></i>@form.DureeHeures h</span>
+                            </div>
+                            <span class="fc-badge fc-badge-done">TERMINÉE</span>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+    </div><!-- /fc-right-col -->
+
+</div><!-- /fc-grid -->
+</div><!-- /fc-page -->
 
 @section Scripts {
 <script>
-/* EY Employee Profile — no framework needed */
-(function() {
-    /* Animate KPI values on load */
-    document.querySelectorAll('.ep-kpi-value').forEach(function(el) {
-        el.style.opacity = '0';
-        el.style.transform = 'translateY(6px)';
-        el.style.transition = 'opacity .3s ease, transform .3s ease';
-    });
-    requestAnimationFrame(function() {
-        document.querySelectorAll('.ep-kpi-value').forEach(function(el, i) {
-            setTimeout(function() {
-                el.style.opacity = '1';
-                el.style.transform = 'translateY(0)';
-            }, i * 60);
+(function () {
+    var tabButtons = document.querySelectorAll('.fc-tab-btn');
+    var tabPanes   = document.querySelectorAll('.fc-tab-pane');
+    tabButtons.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var target = btn.getAttribute('data-fc-tab');
+            tabButtons.forEach(function (b) { b.classList.toggle('active', b === btn); });
+            tabPanes.forEach(function (p) { p.classList.toggle('active', p.id === 'fc-tab-' + target); });
         });
     });
 })();

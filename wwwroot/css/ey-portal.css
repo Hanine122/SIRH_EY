@@ -790,7 +790,7 @@
     --r-badge:   5px;
 
     /* Border tokens */
-    --b-soft:   1px solid rgba(222,226,236,0.9);
+    --b-soft:   1px solid #E2E8F0; /* slate-200 — was a faint 0.9-alpha wash, now a clear, deliberate line */
     --b-std:    1px solid rgba(205,212,225,0.9);
 }
 
@@ -808,7 +808,7 @@
     font-weight:    700              !important;
     letter-spacing: 0.14em          !important;
     text-transform: uppercase        !important;
-    color:          #8592a7          !important;
+    color:          #334155          !important; /* was #8592a7 — too washed out for an executive read */
     display:        block            !important;
     margin-bottom:  6px              !important;
     line-height:    1                !important;
@@ -826,7 +826,8 @@
 
 .ey-page-lead {
     font-size:   13.5px !important;
-    color:       #5a6680 !important;
+    font-weight: 500    !important; /* medium — was default 400, read as too light */
+    color:       #334155 !important; /* was #5a6680 — darkened for AA+ contrast */
     line-height: 1.62   !important;
     margin-top:  6px    !important;
 }
@@ -846,7 +847,7 @@
     font-weight:    700              !important;
     letter-spacing: 0.1em           !important;
     text-transform: uppercase        !important;
-    color:          #8592a7          !important;
+    color:          #334155          !important; /* was #8592a7 — too washed out */
     margin-bottom:  2px              !important;
 }
 
@@ -1041,6 +1042,9 @@
     position:             sticky                             !important;
     top:                  0                                  !important;
     z-index:              100                                !important;
+    display:              flex                               !important;
+    justify-content:      space-between                      !important;
+    align-items:          center                              !important;
     gap:                  16px                               !important;
 }
 
@@ -1053,12 +1057,53 @@
     flex-shrink:    0       !important;
 }
 
-/* Search */
-.ey-search { max-width: 420px !important; }
+/* Left: user profile (avatar + name/role) */
+.ey-topbar-user {
+    display:     flex     !important;
+    align-items: center   !important;
+    gap:         10px     !important;
+    flex-shrink: 0        !important;
+    min-width:   0        !important;
+}
+
+.ey-topbar-user-info {
+    display:   flex        !important;
+    flex-direction: column !important;
+    line-height: 1.25      !important;
+    min-width: 0           !important;
+}
+
+.ey-topbar-user-name {
+    font-size:     12.5px !important;
+    font-weight:   700    !important;
+    color:         #0d1120 !important;
+    white-space:   nowrap !important;
+    overflow:      hidden !important;
+    text-overflow: ellipsis !important;
+    max-width:     160px  !important;
+}
+
+.ey-topbar-user-role {
+    font-size:      10px   !important;
+    font-weight:    600    !important;
+    letter-spacing: 0.05em !important;
+    color:          #8b93a3 !important;
+}
+
+/* Center: search — flex-1, centered, max-w-md equivalent (28rem/448px) */
+.ey-search {
+    flex:            1 1 auto !important;
+    max-width:       none     !important;
+    display:         flex     !important;
+    justify-content: center   !important;
+    min-width:       0        !important;
+}
 
 .ey-search-input,
 .ey-topbar .ey-search input,
 .ey-topbar .ey-search-input {
+    width:          100%             !important;
+    max-width:      448px            !important;
     height:         34px             !important;
     border-radius:  99px             !important;
     font-size:      12.5px           !important;
@@ -1081,6 +1126,14 @@
     outline:      none                               !important;
 }
 
+/* Right: actions/icons, grouped */
+.ey-topbar-actions {
+    display:     flex     !important;
+    align-items: center   !important;
+    gap:         6px      !important;
+    flex-shrink: 0        !important;
+}
+
 /* Icon buttons in topbar */
 .ey-icon-btn {
     width:         34px                             !important;
@@ -1088,12 +1141,14 @@
     border-radius: 8px                              !important;
     font-size:     15px                             !important;
     cursor:        pointer                          !important;
+    flex-shrink:   0                                !important;
     /* Reset: some icon buttons are real <button>/<a> elements now (were
        inert <span>s), so native chrome and text-decoration must not leak. */
     background:      transparent                    !important;
     border:          none                            !important;
     padding:         0                               !important;
     text-decoration: none                            !important;
+    display:         inline-flex                    !important;
     align-items:     center                          !important;
     justify-content: center                          !important;
     color:           inherit                         !important;
@@ -1111,11 +1166,27 @@
     font-size:   11px    !important;
     font-weight: 800     !important;
     cursor:      pointer !important;
+    flex-shrink: 0       !important;
     transition:  box-shadow var(--t-fast) !important;
 }
 .ey-user-avatar:hover {
     box-shadow: 0 0 0 3px rgba(37,99,235,0.22) !important;
 }
+
+/* Minimal chrome-only dark toggle (see ey-theme-toggle.js) — scoped to the
+   topbar/sidebar only; the rest of the app has no dark theme yet. */
+:root[data-theme="dark"] .ey-topbar {
+    background: rgba(20,22,30,0.97) !important;
+    border-bottom-color: rgba(255,255,255,0.08) !important;
+}
+:root[data-theme="dark"] .ey-topbar-user-name { color: #f4f5f7 !important; }
+:root[data-theme="dark"] .ey-search-input,
+:root[data-theme="dark"] .ey-topbar .ey-search-input {
+    background: rgba(255,255,255,0.06) !important;
+    color: #f4f5f7 !important;
+}
+:root[data-theme="dark"] .ey-icon-btn { color: #d7dae0 !important; }
+:root[data-theme="dark"] .ey-icon-btn:hover { background: rgba(255,255,255,0.08) !important; color: #fff !important; }
 
 
 /* ── Q6. Card System Precision ───────────────────────────────────────────────
@@ -1748,7 +1819,9 @@ body.modal-open { overflow: hidden !important; }
 }
 
 @media (max-width: 767.98px) {
-    .ey-topbar  { padding: 0 14px !important; }
+    .ey-topbar  { padding: 0 14px !important; gap: 10px !important; }
+    .ey-search  { padding: 0 4px !important; }
+    .ey-topbar-actions { gap: 2px !important; }
     .ey-content { padding: 20px 0 48px !important; }
     .ey-page-title { font-size: 1.55rem !important; }
     .ey-dark-hero,
@@ -1765,6 +1838,12 @@ body.modal-open { overflow: hidden !important; }
     .ey-content { width: min(100% - 20px, 460px) !important; }
     .ey-page-title { font-size: 1.4rem !important; }
     .ey-btn-main, .ey-btn-yellow, .ey-btn-ghost { width: 100% !important; }
+    /* Prevent the search input from squishing against the avatar/icons on
+       very narrow viewports — cap it instead of letting flex fight for space. */
+    .ey-search-input,
+    .ey-topbar .ey-search-input { max-width: 140px !important; padding-inline: 10px !important; }
+    .ey-icon-btn { width: 30px !important; height: 30px !important; font-size: 13px !important; }
+    .ey-user-avatar { width: 30px !important; height: 30px !important; }
 }
 
 
@@ -2069,4 +2148,139 @@ body.modal-open { overflow: hidden !important; }
     font-weight: 600;
     color:       #111827;
     line-height: 1.4;
+}
+
+
+/* ── Q27. Dashboard (Home/Index) — alignement sur le Tableau de bord exécutif ─
+   CSS uniquement : aucune classe HTML ajoutée/retirée, aucune donnée ni
+   logique touchée. Toutes les regles ci-dessous ciblent les classes ds-*/
+   db-* deja presentes dans Views/Home/Index.cshtml et gagnent sur le
+   <style> local de la page via !important (meme convention que Q1-Q26).
+
+   1. KPI cards : icone coloree en haut a gauche (::before, pas de <i> ajoute
+      dans le HTML), bordure fine, ombre douce, badge de variation mieux
+      integre.
+   2. En-tetes de section : fond sombre #1A1A1A + accents #FFE600 (charte EY),
+      remplace le bandeau blanc simple.
+   3. Badges : deja des pills (radius-full) — .ds-badge-red vire au rose doux
+      pour completer le quatuor Vert/Orange/Rose/Bleu sans nouvelle classe.
+   4. Boutons/liens : .db-action (Actions rapides) reprend au hover le meme
+      remplissage jaune plein que .ds-btn-primary, avec un hover epure.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+/* 1. KPI cards ------------------------------------------------------------ */
+.ds-kpi {
+    position:      relative                                          !important;
+    padding-top:   54px                                               !important;
+    border:        1px solid #E2E8F0                                  !important;
+    border-radius: 14px                                               !important;
+    box-shadow:    0 1px 2px rgba(15,23,42,0.04), 0 2px 8px rgba(15,23,42,0.06) !important;
+    transition:    box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease !important;
+}
+.ds-kpi:hover {
+    box-shadow:    0 4px 16px rgba(15,23,42,0.10)                     !important;
+    transform:     translateY(-2px)                                   !important;
+}
+
+.ds-kpi.ds-card-accent-yellow { border-top: 3px solid #FFE600  !important; }
+.ds-kpi.ds-card-accent-green  { border-top: 3px solid #16A34A  !important; }
+.ds-kpi.ds-card-accent-amber  { border-top: 3px solid #D97706  !important; }
+.ds-kpi.ds-card-accent-red    { border-top: 3px solid #DB2777  !important; }
+
+/* Icone consue en CSS pur (content), rien ajoute dans le DOM */
+.ds-kpi.ds-card-accent-yellow::before,
+.ds-kpi.ds-card-accent-green::before,
+.ds-kpi.ds-card-accent-amber::before,
+.ds-kpi.ds-card-accent-red::before {
+    position:        absolute            !important;
+    top:             16px                !important;
+    left:            20px                !important;
+    width:           40px                !important;
+    height:          40px                !important;
+    border-radius:   10px                !important;
+    display:         flex                !important;
+    align-items:     center              !important;
+    justify-content: center              !important;
+    font-family:     "Font Awesome 6 Free" !important;
+    font-weight:     900                 !important;
+    font-size:       16px                !important;
+}
+.ds-kpi.ds-card-accent-yellow::before { content: "\f0c0"; background: #FFE600; color: #1A1A1A; } /* fa-users        — Collaborateurs actifs */
+.ds-kpi.ds-card-accent-green::before  { content: "\f19d"; background: #DCFCE7; color: #16A34A; } /* fa-graduation-cap — Formations suivies */
+.ds-kpi.ds-card-accent-amber::before  { content: "\f295"; background: #FEF3C7; color: #D97706; } /* fa-percent      — Taux de complétion */
+.ds-kpi.ds-card-accent-red::before    { content: "\f0a3"; background: #FCE7F3; color: #DB2777; } /* fa-certificate  — Certifications */
+
+/* Badge de variation (% / mois) mieux integre : pilule au lieu du texte nu */
+.ds-kpi-trend {
+    padding:        3px 9px                !important;
+    border-radius:  999px                  !important;
+    background:     rgba(15,23,42,0.05)    !important;
+    width:          fit-content             !important;
+}
+.ds-kpi-trend-up   { background: #DCFCE7 !important; color: #15803D !important; }
+.ds-kpi-trend-down { background: #FEE2E2 !important; color: #B91C1C !important; }
+.ds-kpi-trend-flat { background: #F1F5F9 !important; color: #475569 !important; }
+
+/* 2. En-tetes de section : fond sombre EY + accent jaune ------------------ */
+.ds-card-header {
+    background:       #1A1A1A                          !important;
+    border-bottom:    none                              !important;
+    border-radius:    14px 14px 0 0                    !important;
+}
+.ds-card-header .ds-overline {
+    color:          #FFE600 !important;
+    letter-spacing: 0.09em  !important;
+}
+.ds-card-header .ds-ai-pulse {
+    color: #FFE600 !important;
+}
+.ds-card-header .ds-link {
+    color: #FFE600 !important;
+}
+.ds-card-header .ds-link:hover {
+    color:           #ffffff !important;
+    text-decoration: underline !important;
+}
+
+/* 3. Badges — quatuor Vert / Orange / Rose / Bleu, pilules douces --------- */
+.ds-badge {
+    border-radius: 999px !important;
+    padding:       3px 10px !important;
+    font-weight:   700 !important;
+}
+.ds-badge-red { /* re-teinte "Rose" — complete Vert/ds-badge-green, Orange/ds-badge-amber, Bleu/ds-badge-blue */
+    background:   #FCE7F3 !important;
+    color:        #DB2777 !important;
+    border-color: #FBCFE8 !important;
+}
+
+/* 4. Actions rapides : hover aligne sur .ds-btn-primary (jaune plein) ----- */
+.db-action {
+    border:        1px solid #E2E8F0                              !important;
+    box-shadow:    0 1px 2px rgba(15,23,42,0.04)                  !important;
+    transition:    background 0.18s ease, border-color 0.18s ease,
+                   box-shadow 0.18s ease, transform 0.18s ease     !important;
+}
+.db-action:hover {
+    background:   #FFE600                              !important;
+    border-color: #FFE600                              !important;
+    box-shadow:   0 6px 18px rgba(255,230,0,0.35)      !important;
+    transform:    translateY(-2px)                      !important;
+}
+.db-action:hover i {
+    color:     #1A1A1A !important;
+    transform: scale(1.12) !important;
+}
+.db-action:hover .db-action-lbl {
+    color: #1A1A1A !important;
+}
+.db-action-disabled:hover {
+    background:   #ffffff !important;
+    border-color: #E2E8F0 !important;
+    box-shadow:   0 1px 2px rgba(15,23,42,0.04) !important;
+    transform:    none !important;
+}
+.db-action-disabled:hover i,
+.db-action-disabled:hover .db-action-lbl {
+    color: inherit !important;
 }

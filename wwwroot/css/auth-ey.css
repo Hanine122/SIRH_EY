@@ -1,129 +1,156 @@
 /* ========================================
-   EY Authentication Pages - Modern Corporate
+   EY Authentication Pages — Charte EY
+   Rendues via un layout dédié (_AuthLayout.cshtml),
+   sans sidebar/topbar de l'application.
    ======================================== */
 
-/* Container pour centrer le formulaire */
+html, body.auth-ey-body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+body.auth-ey-body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Plein écran, fond sombre EY */
 .auth-ey-wrapper {
+    width: 100%;
     min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 2rem 1rem;
-    background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 50%, #1a1a1a 100%);
-    margin: -20px -24px -24px -20px;
+    background: #1A1A1A;
 }
 
-/* Card EY */
+/* Card EY — blanche, centrée, épurée */
 .auth-ey-card {
     width: 100%;
     max-width: 420px;
     background: #ffffff;
     border-radius: 12px;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45);
     padding: 2.5rem;
     position: relative;
     overflow: hidden;
 }
 
-/* Barre jaune EY en haut */
-.auth-ey-card::before {
-    content: '';
+/* Barre jaune EY en haut de la card */
+.auth-ey-card-bar {
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
     height: 4px;
-    background: #ffe600;
+    background: #FFE600;
 }
 
-/* Logo EY dans la card */
+/* Logo + titre */
 .auth-ey-logo {
     text-align: center;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1.75rem;
 }
 
 .auth-ey-logo img {
-    height: 50px;
-    margin-bottom: 0.5rem;
+    height: 48px;
+    margin-bottom: 0.75rem;
 }
 
 .auth-ey-title {
     font-family: 'Inter', sans-serif;
     font-size: 1.75rem;
-    font-weight: 700;
-    color: #1a1a1a;
-    margin-bottom: 0.25rem;
+    font-weight: 800;
+    color: #1A1A1A;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.35rem;
 }
 
 .auth-ey-subtitle {
-    font-size: 0.875rem;
-    color: #666;
-    margin-bottom: 1.5rem;
+    font-size: 0.8125rem;
+    color: #6E6E79;
+    margin-bottom: 0;
+    line-height: 1.4;
 }
 
-/* Champs de formulaire EY */
+/* Champs de formulaire — épurés */
+.auth-ey-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #1A1A1A;
+    margin-bottom: 0.4rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
 .auth-ey-input {
-    border: 1px solid #e0e0e0;
+    width: 100%;
+    border: 1.5px solid #E4E4E9;
     border-radius: 8px;
-    padding: 0.875rem 1rem;
+    padding: 0.8rem 1rem;
     font-size: 0.9375rem;
-    transition: all 0.2s ease;
-    background: #fafafa;
+    font-family: inherit;
+    color: #1A1A1A;
+    background: #FAFAFA;
+    transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.auth-ey-input::placeholder {
+    color: #B0B0B8;
 }
 
 .auth-ey-input:focus {
-    border-color: #ffe600;
+    border-color: #FFE600;
     background: #ffffff;
-    box-shadow: 0 0 0 3px rgba(255,230,0,0.1);
+    box-shadow: 0 0 0 3px rgba(255, 230, 0, 0.18);
     outline: none;
 }
 
-.auth-ey-label {
-    font-size: 0.8125rem;
-    font-weight: 600;
-    color: #333;
-    margin-bottom: 0.375rem;
-    text-transform: uppercase;
-    letter-spacing: 0.02em;
-}
-
-/* Bouton EY Jaune */
+/* Bouton principal — jaune EY, texte noir */
 .btn-ey-auth {
     width: 100%;
-    padding: 0.875rem 1.5rem;
+    padding: 0.9rem 1.5rem;
     font-size: 0.9375rem;
-    font-weight: 600;
-    color: #1a1a1a;
-    background: #ffe600;
+    font-weight: 700;
+    color: #1A1A1A;
+    background: #FFE600;
     border: none;
     border-radius: 8px;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: background-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
     text-transform: uppercase;
     letter-spacing: 0.03em;
 }
 
 .btn-ey-auth:hover {
-    background: #e6cf00;
+    background: #E6CF00;
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(255,230,0,0.3);
+    box-shadow: 0 8px 20px rgba(255, 230, 0, 0.35);
 }
 
 .btn-ey-auth:active {
     transform: translateY(0);
+    box-shadow: none;
 }
 
-/* Lien EY */
+.btn-ey-auth:focus-visible {
+    outline: 2px solid #1A1A1A;
+    outline-offset: 2px;
+}
+
+/* Liens */
 .auth-ey-link {
-    color: #1a1a1a;
+    color: #1A1A1A;
     font-size: 0.875rem;
+    font-weight: 600;
     text-decoration: none;
-    font-weight: 500;
-    transition: color 0.2s;
+    transition: color 0.2s ease;
 }
 
 .auth-ey-link:hover {
-    color: #ffe600;
+    color: #B8A700;
     text-decoration: underline;
 }
 
@@ -132,7 +159,7 @@
     display: flex;
     align-items: center;
     margin: 1.5rem 0;
-    color: #999;
+    color: #A0A0A8;
     font-size: 0.8125rem;
 }
 
@@ -141,30 +168,30 @@
     content: '';
     flex: 1;
     height: 1px;
-    background: #e0e0e0;
+    background: #E4E4E9;
 }
 
 .auth-ey-divider span {
     padding: 0 1rem;
 }
 
-/* Footer links */
+/* Footer liens */
 .auth-ey-footer {
     text-align: center;
     margin-top: 1.5rem;
 }
 
 .auth-ey-footer p {
-    margin-bottom: 0.5rem;
+    margin: 0 0 0.5rem;
 }
 
-/* Checkbox EY */
+/* Checkbox */
 .auth-ey-checkbox {
     display: flex;
     align-items: center;
     gap: 0.5rem;
     font-size: 0.875rem;
-    color: #555;
+    color: #444;
     cursor: pointer;
 }
 
@@ -174,42 +201,28 @@
     border: 2px solid #ddd;
     border-radius: 4px;
     cursor: pointer;
-    accent-color: #ffe600;
+    accent-color: #FFE600;
 }
 
-/* Validation errors */
-.text-danger {
+/* Erreurs de validation */
+.auth-ey-card .text-danger {
     font-size: 0.8125rem;
-    color: #dc3545;
+    color: #DC3545;
     margin-top: 0.25rem;
+    display: block;
 }
 
 /* Responsive */
 @media (max-width: 576px) {
     .auth-ey-card {
         padding: 1.75rem;
-        margin: 0.5rem;
     }
-    
+
     .auth-ey-title {
         font-size: 1.5rem;
     }
-    
+
     .auth-ey-wrapper {
         padding: 1rem;
     }
-}
-
-/* Cacher la sidebar et topbar sur les pages auth si nécessaire */
-body.auth-page .ey-sidebar,
-body.auth-page .ey-topbar {
-    display: none;
-}
-
-body.auth-page .ey-main {
-    margin-left: 0;
-}
-
-body.auth-page .ey-content {
-    padding: 0;
 }

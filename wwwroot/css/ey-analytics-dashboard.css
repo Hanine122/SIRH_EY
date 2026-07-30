@@ -1185,3 +1185,66 @@
         border: 1px solid #ddd;
     }
 }
+
+/* ========================================
+   CONTRAST & EY BRAND ACCENT PASS (2026)
+   - --ey-gray (#6c757d, ~4.6:1 on white) was used for subtitles, KPI labels
+     and filter labels — too low-contrast for an executive-ready read.
+     Darkened to slate-700 (#334155, ~8.4:1 on white).
+   - Cards (.ey-kpi-card, .ey-executive-section, .ey-dashboard-header,
+     .ey-filters-bar, .ey-heatmap-section) had no border at all, floating on
+     shadow alone — added a clear white background + subtle shadow-sm +
+     visible slate-200 border for definition.
+   - .ey-section-badge and .ey-filter-tag used a 10-15%-opacity yellow wash
+     with yellow text on top of it — low contrast on both light and dark
+     backgrounds. Switched to solid EY Yellow with black text.
+   - .ey-kpi-card's top accent stripe was invisible until hover (opacity:0);
+     made it a permanent strong accent.
+   ======================================== */
+
+:root {
+    --ey-gray: #334155;
+}
+
+.ey-dashboard-subtitle {
+    font-weight: 500;
+}
+
+.ey-kpi-card,
+.ey-executive-section,
+.ey-dashboard-header,
+.ey-filters-bar,
+.ey-heatmap-section {
+    background: #ffffff;
+    border: 1px solid #E2E8F0;
+    box-shadow: var(--shadow-sm);
+}
+
+.ey-kpi-card:hover,
+.ey-executive-section:hover {
+    border-color: #CBD5E1;
+}
+
+/* Permanent strong yellow accent on every KPI card, not just on hover */
+.ey-kpi-card::before {
+    opacity: 1;
+    height: 4px;
+}
+
+/* Strong, opaque yellow accents — replacing washed-out tints */
+.ey-section-badge {
+    background: var(--ey-yellow);
+    color: var(--ey-black);
+}
+
+.ey-filter-tag {
+    background: var(--ey-yellow);
+    border-color: var(--ey-yellow);
+    color: var(--ey-black);
+    font-weight: 600;
+}
+
+.ey-filter-tag:hover {
+    background: var(--ey-yellow-hover);
+    color: var(--ey-black);
+}

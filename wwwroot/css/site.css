@@ -985,9 +985,12 @@ html, body {
 }
 
 .report-kpi-icon--yellow {
-    background: #fffbeb;
-    color: #b45309;
-    border: 1px solid #fde68a;
+    /* Strong EY Yellow accent — was a washed generic-amber tint (#fffbeb/
+       #b45309), not even the brand colour. Solid fill reads as a deliberate
+       EY accent instead of a low-contrast "warning" badge. */
+    background: #FFE600;
+    color: #1A1A1A;
+    border: none;
 }
 
 .report-kpi-icon--green {
