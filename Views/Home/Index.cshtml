@@ -114,7 +114,10 @@
 <div class="row g-3 mb-4">
     <div class="col-6 col-md-3">
         <div class="ds-kpi ds-card-accent-yellow" data-ds-animate="ds-animate-fade-up" style="animation-delay:0ms">
-            <div class="ds-kpi-label">Collaborateurs actifs</div>
+            <div class="ds-kpi-head">
+                <span class="ds-kpi-icon-badge"><i class="fas fa-users"></i></span>
+                <div class="ds-kpi-label">Collaborateurs actifs</div>
+            </div>
             <div class="ds-kpi-value" data-ds-counter="@ViewBag.NbCollaborateursActifs">0</div>
             <div class="ds-kpi-trend ds-kpi-trend-up">
                 <i class="fas fa-arrow-up"></i> 12% vs mois dernier
@@ -123,7 +126,10 @@
     </div>
     <div class="col-6 col-md-3">
         <div class="ds-kpi ds-card-accent-green" data-ds-animate="ds-animate-fade-up" style="animation-delay:60ms">
-            <div class="ds-kpi-label">Formations suivies</div>
+            <div class="ds-kpi-head">
+                <span class="ds-kpi-icon-badge"><i class="fas fa-graduation-cap"></i></span>
+                <div class="ds-kpi-label">Formations suivies</div>
+            </div>
             <div class="ds-kpi-value" data-ds-counter="@ViewBag.NbFormationsSuivies">0</div>
             <div class="ds-kpi-trend ds-kpi-trend-flat">
                 <i class="fas fa-minus"></i> Stable
@@ -132,7 +138,10 @@
     </div>
     <div class="col-6 col-md-3">
         <div class="ds-kpi ds-card-accent-amber" data-ds-animate="ds-animate-fade-up" style="animation-delay:120ms">
-            <div class="ds-kpi-label">Taux de complétion</div>
+            <div class="ds-kpi-head">
+                <span class="ds-kpi-icon-badge"><i class="fas fa-percent"></i></span>
+                <div class="ds-kpi-label">Taux de complétion</div>
+            </div>
             <div class="ds-kpi-value"
                  data-ds-counter="@ViewBag.TauxCompletion"
                  data-ds-counter-suffix="%">0</div>
@@ -143,7 +152,10 @@
     </div>
     <div class="col-6 col-md-3">
         <div class="ds-kpi ds-card-accent-red" data-ds-animate="ds-animate-fade-up" style="animation-delay:180ms">
-            <div class="ds-kpi-label">Certifications</div>
+            <div class="ds-kpi-head">
+                <span class="ds-kpi-icon-badge"><i class="fas fa-certificate"></i></span>
+                <div class="ds-kpi-label">Certifications</div>
+            </div>
             <div class="ds-kpi-value" data-ds-counter="@certifications.Count">0</div>
             <div class="ds-kpi-trend ds-kpi-trend-up">
                 <i class="fas fa-arrow-up"></i> Nouvelles ce mois

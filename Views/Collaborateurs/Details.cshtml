@@ -70,8 +70,15 @@
         overflow:hidden;
     }
 
-    /* ── Actions rapides (fonctions existantes, non supprimées, discrètes) ── */
-    .fc-quick-actions { display:flex; justify-content:flex-end; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
+    /* ── Barre du haut : retour au répertoire + actions rapides ─────────── */
+    .fc-top-bar { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:14px; flex-wrap:wrap; }
+    .fc-back-link {
+        display:inline-flex; align-items:center; gap:7px; font-size:12.5px; font-weight:600;
+        color:#6B7280; text-decoration:none; transition:color .15s ease; cursor:pointer;
+    }
+    .fc-back-link:hover { color:#1A1A1A; }
+    .fc-inline-form { display:inline-flex; }
+    .fc-quick-actions { display:flex; justify-content:flex-end; gap:8px; flex-wrap:wrap; }
     .fc-quick-btn {
         display:inline-flex; align-items:center; gap:6px; padding:7px 12px; border-radius:8px;
         border:1px solid #E5E7EB; background:#fff; color:#374151; font-size:12px; font-weight:600;
@@ -165,6 +172,15 @@
     .fc-tab-pane { display:none; }
     .fc-tab-pane.active { display:block; }
 
+    .fc-pane-head { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 22px; border-bottom:1px solid #F3F4F6; flex-wrap:wrap; }
+    .fc-pane-head-title { font-size:13px; font-weight:700; color:#111827; }
+    .fc-pane-add-link {
+        display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:700;
+        color:#1A1A1A; text-decoration:none; padding:6px 12px; border-radius:8px; border:1px solid #E5E7EB;
+        transition:all .15s ease;
+    }
+    .fc-pane-add-link:hover { border-color:#FFE600; background:#FFFDF0; }
+
     .fc-list-item { padding:16px 22px; border-bottom:1px solid #F3F4F6; }
     .fc-list-item:last-child { border-bottom:none; }
     .fc-list-row { display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
@@ -177,6 +193,44 @@
     .fc-badge { display:inline-flex; align-items:center; padding:4px 13px; border-radius:999px; font-size:11px; font-weight:700; flex-shrink:0; }
     .fc-badge-done      { background:#DCFCE7; color:#15803D; }
     .fc-badge-progress  { background:#FEF3C7; color:#B45309; }
+
+    /* ── Certificats — cartes premium ─────────────────────────────────────── */
+    .fc-cert-list {
+        display:flex; flex-direction:column; gap:12px; padding:16px 18px;
+        background:linear-gradient(180deg,#FFFFFF,#F8FAFC);
+    }
+    .fc-cert-card {
+        display:flex; align-items:center; gap:14px; padding:14px 16px; border-radius:12px;
+        background:#FFFFFF; border:1px solid #EEF2F7; box-shadow:0 1px 3px rgba(15,23,42,.05);
+        transition: box-shadow .18s ease, transform .18s ease, border-color .18s ease;
+    }
+    .fc-cert-card:hover { box-shadow:0 10px 24px rgba(15,23,42,.09); transform:translateY(-2px); border-color:#E2E8F0; }
+    .fc-cert-icon {
+        width:44px; height:44px; border-radius:12px; flex-shrink:0;
+        background:linear-gradient(155deg,#FFE600,#F5DC00); color:#1A1A1A;
+        display:flex; align-items:center; justify-content:center; font-size:18px;
+        box-shadow:0 3px 8px rgba(255,230,0,.35);
+    }
+    .fc-cert-main { flex:1; min-width:180px; }
+    .fc-cert-title { font-size:14px; font-weight:600; color:#1E293B; margin-bottom:4px; }
+    .fc-cert-meta { display:flex; gap:16px; font-size:12px; color:#64748B; }
+    .fc-cert-meta i { margin-right:5px; color:#94A3B8; font-size:11px; }
+    .fc-cert-badge {
+        display:inline-flex; align-items:center; gap:5px; padding:5px 13px; border-radius:999px;
+        background:#DCFCE7; color:#15803D; font-size:11px; font-weight:700; flex-shrink:0;
+    }
+    .fc-cert-badge i { font-size:9px; }
+    .fc-cert-download {
+        display:inline-flex; align-items:center; gap:6px; padding:8px 15px; border-radius:8px;
+        border:1.5px solid #FFE600; background:transparent; color:#1A1A1A; font-size:12px; font-weight:700;
+        text-decoration:none; flex-shrink:0; white-space:nowrap;
+        transition: background-color .18s ease, box-shadow .18s ease, transform .18s ease;
+    }
+    .fc-cert-download:hover { background:#FFE600; box-shadow:0 6px 14px -6px rgba(255,230,0,.5); color:#1A1A1A; transform:translateY(-1px); }
+    @@media (max-width:560px) {
+        .fc-cert-card { flex-wrap:wrap; }
+        .fc-cert-download { width:100%; justify-content:center; }
+    }
 
     .fc-list-action { margin-top:10px; }
     .fc-btn-terminer {
@@ -209,19 +263,24 @@
     <div class="alert alert-danger">@TempData["Error"]</div>
 }
 
-<div class="fc-quick-actions">
-    <form asp-controller="Competences" asp-action="GenererPlanDeveloppement" method="post" style="display:contents">
-        @Html.AntiForgeryToken()
-        <input type="hidden" name="collaborateurId" value="@Model.Id" />
-        <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
-        <button type="submit" class="fc-quick-btn"><i class="fas fa-route"></i> Générer le plan de développement</button>
-    </form>
-    <a asp-controller="Collaborateurs" asp-action="ChoisirRemplacant" asp-route-id="@Model.Id" class="fc-quick-btn">
-        <i class="fas fa-people-arrows"></i> Analyse succession
+<div class="fc-top-bar">
+    <a asp-controller="Collaborateurs" asp-action="Index" class="fc-back-link">
+        <i class="fas fa-arrow-left" style="font-size:11px"></i> Retour au répertoire
     </a>
-    <a asp-controller="Copilot" asp-action="Index" class="fc-quick-btn">
-        <i class="fas fa-robot"></i> Ouvrir dans Copilot
-    </a>
+    <div class="fc-quick-actions">
+        <form asp-controller="Competences" asp-action="GenererPlanDeveloppement" method="post" class="fc-inline-form">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="collaborateurId" value="@Model.Id" />
+            <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
+            <button type="submit" class="fc-quick-btn"><i class="fas fa-route"></i> Générer le plan de développement</button>
+        </form>
+        <a asp-controller="Collaborateurs" asp-action="ChoisirRemplacant" asp-route-id="@Model.Id" class="fc-quick-btn">
+            <i class="fas fa-people-arrows"></i> Analyse succession
+        </a>
+        <a asp-controller="Copilot" asp-action="Index" class="fc-quick-btn">
+            <i class="fas fa-robot"></i> Ouvrir dans Copilot
+        </a>
+    </div>
 </div>
 
 <div class="fc-grid">
@@ -336,6 +395,12 @@
 
             <!-- Compétences -->
             <div class="fc-tab-pane active" id="fc-tab-competences">
+                <div class="fc-pane-head">
+                    <span class="fc-pane-head-title">Signaux de compétences</span>
+                    <a asp-controller="Competences" asp-action="Create" asp-route-collaborateurId="@Model.Id" class="fc-pane-add-link">
+                        <i class="fas fa-plus" style="font-size:10px"></i> Ajouter une compétence
+                    </a>
+                </div>
                 @if (!competences.Any())
                 {
                     <div class="fc-empty">Aucune compétence renseignée.</div>
@@ -386,25 +451,32 @@
 
             <!-- Certificats (formations terminées) -->
             <div class="fc-tab-pane" id="fc-tab-certificats">
-                @if (!certificatsObtenus.Any())
-                {
-                    <div class="fc-empty">Aucun certificat obtenu pour le moment.</div>
-                }
-                @foreach (var insc in certificatsObtenus)
-                {
-                    var form = insc.Formation;
-                    if (form == null) { continue; }
-                    <div class="fc-list-item">
-                        <div class="fc-list-row">
-                            <div class="fc-list-main">
-                                <div class="fc-list-title">@form.Titre</div>
-                                <span class="fc-list-meta"><i class="far fa-calendar"></i>@((insc.DateCompletion ?? insc.DateInscription).ToString("dd/MM/yyyy"))</span>
-                                <span class="fc-list-meta"><i class="far fa-clock"></i>@form.DureeHeures h</span>
+                <div class="fc-cert-list">
+                    @if (!certificatsObtenus.Any())
+                    {
+                        <div class="fc-empty">Aucun certificat obtenu pour le moment.</div>
+                    }
+                    @foreach (var insc in certificatsObtenus)
+                    {
+                        var form = insc.Formation;
+                        if (form == null) { continue; }
+                        <div class="fc-cert-card">
+                            <div class="fc-cert-icon"><i class="fas fa-certificate"></i></div>
+                            <div class="fc-cert-main">
+                                <div class="fc-cert-title">@form.Titre</div>
+                                <div class="fc-cert-meta">
+                                    <span><i class="far fa-calendar"></i>@((insc.DateCompletion ?? insc.DateInscription).ToString("dd/MM/yyyy"))</span>
+                                    <span><i class="far fa-clock"></i>@form.DureeHeures h</span>
+                                </div>
                             </div>
-                            <span class="fc-badge fc-badge-done">TERMINÉE</span>
+                            <span class="fc-cert-badge"><i class="fas fa-check"></i> Terminée</span>
+                            <a asp-controller="Formations" asp-action="TelechargerCertificat" asp-route-inscriptionId="@insc.Id"
+                               class="fc-cert-download" title="Télécharger le certificat PDF">
+                                <i class="fas fa-download"></i> Télécharger PDF
+                            </a>
                         </div>
-                    </div>
-                }
+                    }
+                </div>
             </div>
         </div>
 
