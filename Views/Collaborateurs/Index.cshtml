@@ -139,6 +139,20 @@
     </div>
 }
 
+@* ── Manager action center trigger — reuses the existing HrInboxSummary already
+   computed by ManagerActionCenterService (approbations de formation, plans de
+   développement, certifications expirantes, auto-évaluations) and renders it via
+   the existing _ManagerActionCenterModal partial. *@
+@if (isManagerView && hrInbox != null && hrInbox.TotalCount > 0)
+{
+    <div class="d-flex justify-content-end mb-3">
+        <button type="button" class="ey-btn-main text-decoration-none" data-bs-toggle="modal" data-bs-target="#managerActionCenterModal">
+            <i class="fas fa-inbox me-2"></i>Centre d'actions manager
+            <span class="badge bg-danger rounded-pill ms-2">@hrInbox.TotalCount</span>
+        </button>
+    </div>
+}
+
 @* ── Team composition KPIs ──────────────────────────────────────────────────── *@
 <div class="row g-3 mb-4">
     <div class="col-6 col-md-3 col-xl-2">
@@ -310,6 +324,13 @@
 @if (!Model.Any())
 {
     <div class="alert alert-info mt-3">Aucun collaborateur trouvé.</div>
+}
+
+@if (isManagerView && hrInbox != null)
+{
+    @* ── Unified manager inbox modal — pré-existant, jamais inclus dans une vue
+       jusqu'ici ; réutilisé tel quel, aucune nouvelle logique métier. *@
+    <partial name="_ManagerActionCenterModal" model="hrInbox" />
 }
 
 @if (isManagerView)

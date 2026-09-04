@@ -20,19 +20,22 @@ namespace SIRH.EY.Controllers
         private readonly ITeamAccessService _teamAccess;
         private readonly IOwnershipService _ownership;
         private readonly ICompetenceLifecycleService _competenceLifecycle;
+        private readonly INotificationService _notifications;
 
         public FormationsController(
             ApplicationDbContext context,
             IParametreService parametreService,
             ITeamAccessService teamAccess,
             IOwnershipService ownership,
-            ICompetenceLifecycleService competenceLifecycle)
+            ICompetenceLifecycleService competenceLifecycle,
+            INotificationService notifications)
         {
             _context = context;
             _parametreService = parametreService;
             _teamAccess = teamAccess;
             _ownership = ownership;
             _competenceLifecycle = competenceLifecycle;
+            _notifications = notifications;
         }
 
         // GET: Formations (version simplifiée : catalogue complet)
@@ -153,6 +156,14 @@ namespace SIRH.EY.Controllers
             if (inscription == null || inscription.Terminee)
                 return NotFound();
 
+            if (inscription.Statut == StatutInscription.PendingApproval || inscription.Statut == StatutInscription.Rejected)
+            {
+                TempData["Error"] = inscription.Statut == StatutInscription.PendingApproval
+                    ? "Cette inscription est en attente d'approbation de votre manager."
+                    : "Cette demande d'inscription a été refusée par votre manager.";
+                return RedirectToAction(nameof(Index), new { collaborateurId = inscription.CollaborateurId });
+            }
+
             return View("ModuleFormation", inscription);
         }
 
@@ -168,6 +179,12 @@ namespace SIRH.EY.Controllers
                 .FirstOrDefaultAsync(i => i.Id == inscriptionId);
             if (inscription == null || inscription.Terminee)
                 return NotFound();
+
+            if (inscription.Statut != StatutInscription.Approved && inscription.Statut != StatutInscription.InProgress)
+                return Forbid();
+
+            if (inscription.Statut == StatutInscription.Approved)
+                inscription.Statut = StatutInscription.InProgress;
 
             inscription.Progression = Math.Min(100, Math.Max(0, inscription.Progression + deltaPourcent));
             await _context.SaveChangesAsync();
@@ -231,12 +248,23 @@ namespace SIRH.EY.Controllers
                     FormationId = formationId,
                     CollaborateurId = collaborateurId,
                     DateInscription = DateTime.Now,
-                    Terminee = false
+                    Terminee = false,
+                    Statut = StatutInscription.PendingApproval
                 };
                 _context.Inscriptions.Add(inscription);
                 formation.PlacesPrises++;
+
+                var collaborateur = await _context.Collaborateurs.FindAsync(collaborateurId);
+                if (collaborateur?.ManagerId != null)
+                {
+                    await _notifications.NotifyAsync(
+                        collaborateur.ManagerId.Value,
+                        $"{collaborateur.Prenom} {collaborateur.Nom} demande votre approbation pour la formation « {formation.Titre} ».",
+                        Url.Action(nameof(ApprobationsFormation)));
+                }
+
                 await _context.SaveChangesAsync();
-                TempData["Message"] = "Inscription réussie !";
+                TempData["Message"] = "Demande d'inscription envoyée, en attente d'approbation du manager.";
             }
             else
             {
@@ -268,6 +296,110 @@ namespace SIRH.EY.Controllers
             await _context.SaveChangesAsync();
             TempData["Success"] = "Inscription annulée.";
             return RedirectToAction(nameof(Index), new { collaborateurId = inscription.CollaborateurId });
+        }
+
+        // GET: Formations/ApprobationsFormation — manager inbox of pending enrollment requests
+        // for their direct reports (same team scope as ManagerActionCenterService).
+        [Authorize(Roles = Roles.ITAdminOrRHOrManager)]
+        public async Task<IActionResult> ApprobationsFormation()
+        {
+            var teamQuery = await _teamAccess.ApplyAccessFilterAsync(User, _context.Collaborateurs);
+            var teamIds = await teamQuery.Select(c => c.Id).ToListAsync();
+            var ownId = await _teamAccess.GetCurrentCollaborateurIdAsync(User);
+
+            var pending = await _context.Inscriptions
+                .Include(i => i.Formation)
+                .Include(i => i.Collaborateur)
+                .Where(i => teamIds.Contains(i.CollaborateurId)
+                         && i.CollaborateurId != ownId
+                         && i.Statut == StatutInscription.PendingApproval)
+                .OrderBy(i => i.DateInscription)
+                .ToListAsync();
+
+            return View(pending);
+        }
+
+        // POST: Formations/ApprouverInscription
+        [HttpPost]
+        [Authorize(Roles = Roles.ITAdminOrRHOrManager)]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ApprouverInscription(int inscriptionId)
+        {
+            var inscription = await _context.Inscriptions
+                .Include(i => i.Formation)
+                .Include(i => i.Collaborateur)
+                .FirstOrDefaultAsync(i => i.Id == inscriptionId);
+            if (inscription == null) return NotFound();
+
+            if (!await CanDecideOnInscriptionAsync(inscription))
+                return Forbid();
+
+            if (inscription.Statut != StatutInscription.PendingApproval)
+            {
+                TempData["Error"] = "Cette demande a déjà été traitée.";
+                return RedirectToAction(nameof(ApprobationsFormation));
+            }
+
+            inscription.Statut = StatutInscription.Approved;
+            await _notifications.NotifyAsync(
+                inscription.CollaborateurId,
+                $"Votre inscription à « {inscription.Formation?.Titre} » a été approuvée par votre manager.",
+                Url.Action(nameof(Details), new { id = inscription.FormationId, collaborateurId = inscription.CollaborateurId }));
+
+            await _context.SaveChangesAsync();
+            TempData["Success"] = "Inscription approuvée.";
+            return RedirectToAction(nameof(ApprobationsFormation));
+        }
+
+        // POST: Formations/RejeterInscription
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = Roles.ITAdminOrRHOrManager)]
+        public async Task<IActionResult> RejeterInscription(int inscriptionId, string? motif = null)
+        {
+            var inscription = await _context.Inscriptions
+                .Include(i => i.Formation)
+                .FirstOrDefaultAsync(i => i.Id == inscriptionId);
+            if (inscription == null) return NotFound();
+
+            if (!await CanDecideOnInscriptionAsync(inscription))
+                return Forbid();
+
+            if (inscription.Statut != StatutInscription.PendingApproval)
+            {
+                TempData["Error"] = "Cette demande a déjà été traitée.";
+                return RedirectToAction(nameof(ApprobationsFormation));
+            }
+
+            inscription.Statut = StatutInscription.Rejected;
+            if (inscription.Formation != null)
+                inscription.Formation.PlacesPrises = Math.Max(0, inscription.Formation.PlacesPrises - 1);
+
+            var message = string.IsNullOrWhiteSpace(motif)
+                ? $"Votre demande d'inscription à « {inscription.Formation?.Titre} » a été refusée par votre manager."
+                : $"Votre demande d'inscription à « {inscription.Formation?.Titre} » a été refusée : {motif}";
+            await _notifications.NotifyAsync(inscription.CollaborateurId, message);
+
+            await _context.SaveChangesAsync();
+            TempData["Success"] = "Inscription refusée.";
+            return RedirectToAction(nameof(ApprobationsFormation));
+        }
+
+        // 4-eyes guard, same rule as CompetencesController.ValidationManager: a manager may
+        // decide for their direct reports but never for themselves; RH/ITAdmin are unrestricted.
+        private async Task<bool> CanDecideOnInscriptionAsync(Inscription inscription)
+        {
+            if (!await _teamAccess.CanAccessCollaborateurAsync(User, inscription.CollaborateurId))
+                return false;
+
+            if (User.IsInRole(Roles.Manager) && !User.IsInRole(Roles.RH) && !User.IsInRole(Roles.ITAdmin))
+            {
+                var ownId = await _teamAccess.GetCurrentCollaborateurIdAsync(User);
+                if (ownId.HasValue && inscription.CollaborateurId == ownId.Value)
+                    return false;
+            }
+
+            return true;
         }
 
         // GET: Formations/Create
@@ -344,6 +476,7 @@ namespace SIRH.EY.Controllers
     }
 
     inscription.Terminee        = true;
+    inscription.Statut          = StatutInscription.Completed;
     inscription.DateCompletion  = DateTime.Now;
     inscription.Progression     = 100;
     inscription.SourceCertification ??= inscription.Formation?.Plateforme ?? "EY Learning";
@@ -534,6 +667,66 @@ namespace SIRH.EY.Controllers
                 : RedirectToAction(nameof(Index), new { collaborateurId = inscription.CollaborateurId });
         }
 
+        // POST: Formations/ValiderSuivi — manager validates the J+90 follow-up assessment and,
+        // on validation, upgrades the collaborateur's skill level. Mirrors
+        // CompetencesController.ValidationManager's 4-eyes rule and reuses
+        // ICompetenceLifecycleService so both entry points share one audit trail.
+        [HttpPost]
+        [Authorize(Roles = Roles.ITAdminOrRHOrManager)]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ValiderSuivi(int inscriptionId, int niveauValide)
+        {
+            if (niveauValide < 1 || niveauValide > 5)
+            {
+                TempData["Error"] = "Le niveau validé doit être compris entre 1 et 5.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            var inscription = await _context.Inscriptions
+                .Include(i => i.Formation)
+                .Include(i => i.EvaluationSuiviFormation)
+                .FirstOrDefaultAsync(i => i.Id == inscriptionId);
+            if (inscription == null || inscription.EvaluationSuiviFormation == null) return NotFound();
+
+            if (!await CanDecideOnInscriptionAsync(inscription))
+                return Forbid();
+
+            var formation = inscription.Formation;
+            Competence? competence = formation?.SkillId != null
+                ? await _context.Competences.FirstOrDefaultAsync(c =>
+                    c.CollaborateurId == inscription.CollaborateurId && c.SkillId == formation.SkillId)
+                : null;
+            competence ??= !string.IsNullOrEmpty(formation?.CompetenceVisee)
+                ? await _context.Competences.FirstOrDefaultAsync(c =>
+                    c.CollaborateurId == inscription.CollaborateurId && c.Nom == formation.CompetenceVisee)
+                : null;
+
+            if (competence == null)
+            {
+                TempData["Error"] = "Aucune compétence associée à cette formation.";
+                return RedirectToAction(nameof(Index), new { collaborateurId = inscription.CollaborateurId });
+            }
+
+            var suivi = inscription.EvaluationSuiviFormation;
+            suivi.NiveauValide = niveauValide;
+            suivi.ValidationManager = true;
+            suivi.DateValidationManager = DateTime.Now;
+
+            var ancienNiveau = competence.NiveauActuel;
+            competence.NiveauActuel = niveauValide;
+            competence.DateEvaluation = DateTime.Now;
+            await _competenceLifecycle.RecordLevelChangeAsync(
+                competence, ancienNiveau, competence.NiveauActuel, CompetenceChangeReason.ValidationManager);
+
+            await _notifications.NotifyAsync(
+                inscription.CollaborateurId,
+                $"Votre manager a validé le suivi à 90 jours de « {formation?.Titre} » : compétence '{competence.Nom}' à {niveauValide}/5.");
+
+            await _context.SaveChangesAsync();
+            TempData["Success"] = "Évaluation de suivi validée, niveau de compétence mis à jour.";
+            return RedirectToAction(nameof(Index), new { collaborateurId = inscription.CollaborateurId });
+        }
+
         // GET: Formations/Details/5
         public async Task<IActionResult> Details(int id, int? collaborateurId)
         {
@@ -656,10 +849,10 @@ namespace SIRH.EY.Controllers
                     continue;
                 }
 
-                // Par compétence manquante
+                // Par compétence manquante — bridge SkillId prioritaire, repli sur le texte
+                // CompetenceVisee (même convention que SkillGapEngine/FormationsController.Terminer).
                 var matchComp = competencesManquantes
-                    .FirstOrDefault(c => !string.IsNullOrEmpty(f.CompetenceVisee) &&
-                                        f.CompetenceVisee.Equals(c.Nom, StringComparison.OrdinalIgnoreCase));
+                    .FirstOrDefault(c => SkillGapEngine.FormationCombleGap(f, c));
                 if (matchComp != null && !inscrit)
                 {
                     vm.ParCompetence.Add(new RecommandationFormationViewModel

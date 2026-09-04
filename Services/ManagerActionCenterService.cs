@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
 using SIRH.EY.Data;
+using SIRH.EY.Models;
 
 namespace SIRH.EY.Services;
 
@@ -28,8 +29,10 @@ public class ManagerActionCenterService : IManagerActionCenterService
         var validations = await GetPendingValidationsForTeamAsync(teamIds);
         var plans = await GetPendingDevelopmentPlansForTeamAsync(teamIds);
         var certifications = await GetExpiringCertificationsForTeamAsync(teamIds);
+        var ownId = await _teamAccess.GetCurrentCollaborateurIdAsync(user);
+        var inscriptions = await GetPendingInscriptionApprovalsForTeamAsync(teamIds, ownId);
 
-        return new HrInboxSummary(validations, plans, certifications);
+        return new HrInboxSummary(validations, plans, certifications, inscriptions);
     }
 
     private async Task<List<int>> GetTeamIdsAsync(ClaimsPrincipal user)
@@ -85,6 +88,32 @@ public class ManagerActionCenterService : IManagerActionCenterService
                 p.Formation?.Titre ?? "Formation",
                 p.DateRecommandation,
                 Math.Max(0, (int)(now - p.DateRecommandation).TotalDays)))
+            .ToList();
+    }
+
+    private async Task<IReadOnlyList<PendingInscriptionApprovalItem>> GetPendingInscriptionApprovalsForTeamAsync(
+        IReadOnlyList<int> teamIds, int? ownId)
+    {
+        if (!teamIds.Any()) return Array.Empty<PendingInscriptionApprovalItem>();
+
+        var pending = await _context.Inscriptions
+            .Include(i => i.Formation)
+            .Include(i => i.Collaborateur)
+            .Where(i => teamIds.Contains(i.CollaborateurId)
+                     && i.CollaborateurId != ownId
+                     && i.Statut == StatutInscription.PendingApproval)
+            .OrderBy(i => i.DateInscription)
+            .ToListAsync();
+
+        var now = DateTime.Now;
+        return pending
+            .Select(i => new PendingInscriptionApprovalItem(
+                i.Id,
+                i.CollaborateurId,
+                $"{i.Collaborateur?.Prenom} {i.Collaborateur?.Nom}".Trim(),
+                i.Formation?.Titre ?? "Formation",
+                i.DateInscription,
+                Math.Max(0, (int)(now - i.DateInscription).TotalDays)))
             .ToList();
     }
 

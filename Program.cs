@@ -76,6 +76,7 @@ builder.Services.AddScoped<IParametreService, ParametreService>();
 builder.Services.AddScoped<IReferentielRhService, ReferentielRhService>();
 builder.Services.AddScoped<IPlanDeveloppementService, PlanDeveloppementService>();
 builder.Services.AddScoped<ICompetenceLifecycleService, CompetenceLifecycleService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IManagerActionCenterService, ManagerActionCenterService>();
 builder.Services.AddScoped<IPromotionReadinessService, PromotionReadinessService>();
 builder.Services.AddScoped<IWorkforceImpactService, WorkforceImpactService>();

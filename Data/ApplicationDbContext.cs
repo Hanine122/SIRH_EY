@@ -17,6 +17,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<CategorieCompetence> CategoriesCompetences { get; set; }
     public DbSet<Formation> Formations { get; set; }
     public DbSet<Inscription> Inscriptions { get; set; }
+    public DbSet<Notification> Notifications { get; set; }
     public DbSet<FormationCompetence> FormationCompetences { get; set; }
     public DbSet<CompetenceRequiseParPoste> CompetencesRequisesParPoste { get; set; }
     public DbSet<EvaluationCompetence> EvaluationsCompetences { get; set; }
@@ -241,6 +242,13 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         modelBuilder.Entity<EvaluationSuiviFormation>()
             .HasIndex(e => e.InscriptionId)
             .IsUnique();
+
+        // ── Notification → Collaborateur ──────────────────────────────────────
+        modelBuilder.Entity<Notification>()
+            .HasOne(n => n.Collaborateur)
+            .WithMany()
+            .HasForeignKey(n => n.CollaborateurId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         // ── SystemParameter unique key ────────────────────────────────────────
         modelBuilder.Entity<SystemParameter>()

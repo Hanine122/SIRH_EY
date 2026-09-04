@@ -19,6 +19,14 @@ public record PendingDevelopmentPlanItem(
     DateTime DateRecommandation,
     int JoursEnAttente);
 
+public record PendingInscriptionApprovalItem(
+    int InscriptionId,
+    int CollaborateurId,
+    string CollaborateurNom,
+    string FormationTitre,
+    DateTime DateInscription,
+    int JoursEnAttente);
+
 public record ExpiringCertificationItem(
     int CollaborateurCertificationId,
     int CollaborateurId,
@@ -31,9 +39,11 @@ public record ExpiringCertificationItem(
 public record HrInboxSummary(
     IReadOnlyList<PendingValidationItem> PendingValidations,
     IReadOnlyList<PendingDevelopmentPlanItem> PendingDevelopmentPlans,
-    IReadOnlyList<ExpiringCertificationItem> ExpiringCertifications)
+    IReadOnlyList<ExpiringCertificationItem> ExpiringCertifications,
+    IReadOnlyList<PendingInscriptionApprovalItem> PendingInscriptionApprovals)
 {
-    public int TotalCount => PendingValidations.Count + PendingDevelopmentPlans.Count + ExpiringCertifications.Count;
+    public int TotalCount => PendingValidations.Count + PendingDevelopmentPlans.Count
+        + ExpiringCertifications.Count + PendingInscriptionApprovals.Count;
 }
 
 public interface IManagerActionCenterService

@@ -7,6 +7,11 @@ public class Inscription
     public int Id { get; set; }
     public DateTime DateInscription { get; set; } = DateTime.Now;
     public bool Terminee { get; set; } = false;
+
+    // ── Approval workflow ────────────────────────────────────────────────────
+    // Existing "Terminee"/"Progression" fields are unchanged and still drive the
+    // certificate/completion logic; Statut only tracks the manager-approval stage.
+    public StatutInscription Statut { get; set; } = StatutInscription.PendingApproval;
     public virtual ICollection<EvaluationCompetence> EvaluationsFormation { get; set; }
     public virtual EvaluationPostFormation? EvaluationPostFormation { get; set; }
     public virtual EvaluationSuiviFormation? EvaluationSuiviFormation { get; set; }

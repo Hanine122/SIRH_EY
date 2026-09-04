@@ -23,4 +23,15 @@ public class EvaluationSuiviFormation
     public string? Commentaire { get; set; }
 
     public DateTime DateEvaluation { get; set; } = DateTime.Now;
+
+    // ── J+90 manager validation ──────────────────────────────────────────────
+    // Mirrors EvaluationCompetence.ValidationManager (4-eyes pattern already used
+    // for auto-évaluation). Only once ValidationManager is true does the manager's
+    // NiveauValide get written back to Competence.NiveauActuel.
+    [Range(1, 5)]
+    public int? NiveauValide { get; set; }
+
+    public bool ValidationManager { get; set; } = false;
+
+    public DateTime? DateValidationManager { get; set; }
 }

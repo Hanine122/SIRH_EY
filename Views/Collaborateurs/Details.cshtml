@@ -17,16 +17,11 @@
 
     // ── Parcours EY — timeline chronologique (logique inchangee des versions
     //    precedentes, reutilise certificatsObtenus au lieu d'un filtre redondant) ──
-    var competenceBySkillId = competences.Where(c => c.SkillId.HasValue)
-        .GroupBy(c => c.SkillId!.Value)
-        .ToDictionary(g => g.Key, g => g.First());
-
     string TlUrlForInscription(SIRH.EY.Models.Inscription insc)
     {
-        var skillId = insc.Formation?.SkillId;
-        if (skillId.HasValue && competenceBySkillId.TryGetValue(skillId.Value, out var matched))
-            return Url.Action("AutoEvaluation", "Competences", new { id = matched.Id, highlightInscription = insc.Id })!;
-        return Url.Action("Index", "Formations", new { collaborateurId = Model.Id })!;
+        // Routes strictly to the Training details page (decoupled from the Skill/
+        // auto-évaluation forms), per the training navigation requirement.
+        return Url.Action("Details", "Formations", new { id = insc.FormationId, collaborateurId = Model.Id })!;
     }
 
     var tlEvents = new List<(DateTime Date, string Label, string Sub, string Type, string? Url)>();

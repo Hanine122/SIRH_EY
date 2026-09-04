@@ -55,9 +55,17 @@
 {
     <div class="alert alert-success border-0 shadow-sm rounded-3 mb-3"><i class="fas fa-check-circle me-2"></i> @TempData["Success"]</div>
 }
+@if (TempData["Message"] != null)
+{
+    <div class="alert alert-info border-0 shadow-sm rounded-3 mb-3"><i class="fas fa-info-circle me-2"></i> @TempData["Message"]</div>
+}
 @if (TempData["Error"] != null)
 {
     <div class="alert alert-danger border-0 shadow-sm rounded-3 mb-3"><i class="fas fa-exclamation-triangle me-2"></i> @TempData["Error"]</div>
+}
+@if (TempData["Erreur"] != null)
+{
+    <div class="alert alert-danger border-0 shadow-sm rounded-3 mb-3"><i class="fas fa-exclamation-triangle me-2"></i> @TempData["Erreur"]</div>
 }
 
 <div class="formations-container container-fluid px-0">
@@ -260,12 +268,20 @@
                         {
                             var formation = insc.Formation;
                             if (formation == null) continue;
-                            var statut = insc.Terminee ? "Terminée" : (insc.DateInscription.Date == DateTime.Today ? "Non commencée" : "En cours");
+                            var isPendingApproval = insc.Statut == SIRH.EY.Models.StatutInscription.PendingApproval;
+                            var isRejected = insc.Statut == SIRH.EY.Models.StatutInscription.Rejected;
+                            var statut = insc.Terminee ? "Terminée"
+                                : isPendingApproval ? "En attente d'approbation"
+                                : isRejected ? "Demande refusée"
+                                : (insc.DateInscription.Date == DateTime.Today ? "Non commencée" : "En cours");
                             var progression = insc.Terminee ? 100 : Math.Clamp(insc.Progression, 0, 100);
-                            if (!insc.Terminee && progression == 0 && statut != "Non commencée")
+                            if (!insc.Terminee && !isPendingApproval && !isRejected && progression == 0 && statut != "Non commencée")
                                 progression = Math.Min(95, Math.Max(15, (DateTime.Today - insc.DateInscription.Date).Days * 5));
 
-                            var statusBadgeClass = insc.Terminee ? "bg-success text-white" : (statut == "Non commencée" ? "bg-secondary text-white" : "bg-warning text-dark");
+                            var statusBadgeClass = insc.Terminee ? "bg-success text-white"
+                                : isPendingApproval ? "bg-warning text-dark"
+                                : isRejected ? "bg-danger text-white"
+                                : (statut == "Non commencée" ? "bg-secondary text-white" : "bg-warning text-dark");
 
                             // Urgency computation
                             var joursExamen = insc.DateExamen.HasValue && insc.DateExamen.Value >= DateTime.Today
@@ -325,8 +341,20 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div class="mt-2 border-top pt-2 d-flex gap-2 flex-wrap justify-content-end">
-                                    @if (!insc.Terminee)
+                                <div class="mt-2 border-top pt-2 d-flex gap-2 flex-wrap justify-content-end align-items-center">
+                                    @if (isPendingApproval)
+                                    {
+                                        <div class="small text-warning fw-semibold me-auto">
+                                            <i class="fas fa-hourglass-half me-1"></i> En attente d'approbation de votre manager.
+                                        </div>
+                                    }
+                                    else if (isRejected)
+                                    {
+                                        <div class="small text-danger fw-semibold me-auto">
+                                            <i class="fas fa-times-circle me-1"></i> Demande refusée par votre manager.
+                                        </div>
+                                    }
+                                    else if (!insc.Terminee)
                                     {
                                         <a asp-action="ReprendreFormation" asp-route-inscriptionId="@insc.Id" class="@(statut == "Non commencée" ? "ey-btn-premium-gold" : "ey-btn-premium-main") px-4 py-2 text-decoration-none">
                                             @((statut == "Non commencée") ? "Démarrer" : "Reprendre")

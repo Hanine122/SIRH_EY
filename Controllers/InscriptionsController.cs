@@ -141,6 +141,7 @@ namespace SIRH.EY.Controllers
             if (inscription == null) return NotFound();
 
             inscription.Terminee = true;
+            inscription.Statut = StatutInscription.Completed;
             await _context.SaveChangesAsync();
 
             var formation = inscription.Formation;

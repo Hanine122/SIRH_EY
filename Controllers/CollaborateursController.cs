@@ -189,7 +189,7 @@ public async Task<IActionResult> AskIA([FromBody] RecommendationRequest request)
     ViewBag.IsManagerView = isManagerView;
     ViewBag.HrInbox = isManagerView
         ? await _managerActionCenter.GetInboxAsync(User)
-        : new HrInboxSummary(Array.Empty<PendingValidationItem>(), Array.Empty<PendingDevelopmentPlanItem>(), Array.Empty<ExpiringCertificationItem>());
+        : new HrInboxSummary(Array.Empty<PendingValidationItem>(), Array.Empty<PendingDevelopmentPlanItem>(), Array.Empty<ExpiringCertificationItem>(), Array.Empty<PendingInscriptionApprovalItem>());
 
     return View(await collaborateurs.ToListAsync());
 }

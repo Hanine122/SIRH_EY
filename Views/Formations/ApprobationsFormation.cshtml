@@ -1,0 +1,56 @@
+@model List<SIRH.EY.Models.Inscription>
+@{
+    ViewData["Title"] = "Approbations de formation";
+}
+
+<div class="mb-3">
+    <a asp-controller="Collaborateurs" asp-action="Index" class="text-decoration-none small text-muted">
+        <i class="fas fa-arrow-left me-1"></i> Retour au répertoire
+    </a>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success">@TempData["Success"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+
+<div class="ey-card ey-form-shell p-4">
+    <div class="text-warning fw-semibold small mb-2">CENTRE D'APPROBATION</div>
+    <h1 class="ey-serif-title mb-4">Demandes d'inscription en attente</h1>
+
+    @if (!Model.Any())
+    {
+        <p class="text-muted">Aucune demande en attente d'approbation.</p>
+    }
+    else
+    {
+        @foreach (var insc in Model)
+        {
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 p-3 mb-3"
+                 style="border:1px solid #E5E7EB;border-radius:12px;">
+                <div>
+                    <div class="fw-semibold">@insc.Collaborateur?.Prenom @insc.Collaborateur?.Nom</div>
+                    <div class="text-muted small">
+                        Formation : <strong>@insc.Formation?.Titre</strong> — demandée le @insc.DateInscription.ToString("dd/MM/yyyy")
+                    </div>
+                </div>
+                <div class="d-flex gap-2">
+                    <form asp-action="ApprouverInscription" method="post" class="fc-inline-form" style="display:inline-flex;">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="inscriptionId" value="@insc.Id" />
+                        <button type="submit" class="ey-btn-main">Approuver</button>
+                    </form>
+                    <form asp-action="RejeterInscription" method="post" class="fc-inline-form" style="display:inline-flex;">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="inscriptionId" value="@insc.Id" />
+                        <button type="submit" class="ey-btn-ghost">Refuser</button>
+                    </form>
+                </div>
+            </div>
+        }
+    }
+</div>

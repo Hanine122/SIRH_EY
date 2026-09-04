@@ -25,6 +25,15 @@
         ));
     }
 
+    foreach (var i in Model.PendingInscriptionApprovals)
+    {
+        rows.Add((
+            "🎓", "Demande de formation", i.CollaborateurNom, $"Inscription \"{i.FormationTitre}\" — en attente depuis {i.JoursEnAttente} jour{(i.JoursEnAttente > 1 ? "s" : "")}.",
+            DecisionEngine.ClassifyPendingUrgency(i.JoursEnAttente),
+            Url.Action("ApprobationsFormation", "Formations") ?? "#"
+        ));
+    }
+
     foreach (var c in Model.ExpiringCertifications)
     {
         var bucket = c.Urgence == "Critique" ? "Overdue" : c.Urgence == "Urgent" ? "DueSoon" : "Recent";
@@ -73,7 +82,7 @@
                                             </div>
                                         </div>
                                         <a href="@item.ActionUrl" class="btn btn-sm flex-shrink-0" style="background:var(--ey-yellow,#FFE600);color:var(--ey-navy,#1E293B);font-weight:600;">
-                                            @(item.TypeLabel == "Auto-évaluation" ? "Valider" : "Voir")
+                                            @(item.TypeLabel == "Auto-évaluation" || item.TypeLabel == "Demande de formation" ? "Valider" : "Voir")
                                         </a>
                                     </div>
                                 }
