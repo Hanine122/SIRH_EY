@@ -103,12 +103,12 @@
                 <nav class="nav flex-column ey-nav">
                     <!-- Core RH -->
                     <div class="ey-menu-item">
-                        <div class="ey-menu-header" onclick="toggleSubmenu('core-rh')">
-                            <div class="ey-menu-title">
+                        <div class="ey-menu-header">
+                            <a class="ey-menu-title text-decoration-none" asp-controller="Collaborateurs" asp-action="Index">
                                 <i class="fas fa-users-cog"></i>
                                 <span>Core RH</span>
-                            </div>
-                            <i class="fas fa-chevron-down ey-chevron" id="chevron-core-rh"></i>
+                            </a>
+                            <i class="fas fa-chevron-down ey-chevron" id="chevron-core-rh" onclick="event.stopPropagation(); toggleSubmenu('core-rh')"></i>
                         </div>
                         <ul class="ey-submenu @(openCoreRh ? "expanded" : "")" id="submenu-core-rh">
                             <li>
@@ -135,13 +135,13 @@
 
                     <!-- Formations -->
                     <div class="ey-menu-item">
-                        <div class="ey-menu-header" onclick="toggleSubmenu('formations')">
-                            <div class="ey-menu-title">
+                        <div class="ey-menu-header">
+                            <a class="ey-menu-title text-decoration-none" asp-controller="Formations" asp-action="Index">
                                 <i class="fas fa-graduation-cap"></i>
                                 <span>Formations</span>
                                 <span class="ey-badge ey-badge-warning">3</span>
-                            </div>
-                            <i class="fas fa-chevron-down ey-chevron" id="chevron-formations"></i>
+                            </a>
+                            <i class="fas fa-chevron-down ey-chevron" id="chevron-formations" onclick="event.stopPropagation(); toggleSubmenu('formations')"></i>
                         </div>
                         <ul class="ey-submenu @(openFormations ? "expanded" : "")" id="submenu-formations">
                             <li>
@@ -150,12 +150,12 @@
                                 </a>
                             </li>
                             <li>
-                                <a class="nav-link" asp-controller="Formations" asp-action="Index">
+                                <a class="nav-link" asp-controller="Formations" asp-action="Index" asp-route-tab="mes-formations">
                                     <i class="fas fa-tasks"></i><span class="nav-link-label">Parcours en cours / Suivi</span>
                                 </a>
                             </li>
                             <li>
-                                <a class="nav-link" asp-controller="Formations" asp-action="Index">
+                                <a class="nav-link" asp-controller="Formations" asp-action="Index" asp-route-tab="certifications">
                                     <i class="fas fa-certificate"></i><span class="nav-link-label">Certifications</span>
                                 </a>
                             </li>
@@ -164,12 +164,22 @@
 
                     <!-- Compétences -->
                     <div class="ey-menu-item">
-                        <div class="ey-menu-header" onclick="toggleSubmenu('competences')">
-                            <div class="ey-menu-title">
-                                <i class="fas fa-chart-bar"></i>
-                                <span>Compétences</span>
-                            </div>
-                            <i class="fas fa-chevron-down ey-chevron" id="chevron-competences"></i>
+                        <div class="ey-menu-header">
+                            @if (ownCollabId.HasValue)
+                            {
+                                <a class="ey-menu-title text-decoration-none" asp-controller="Competences" asp-action="Index" asp-route-collaborateurId="@ownCollabId">
+                                    <i class="fas fa-chart-bar"></i>
+                                    <span>Compétences</span>
+                                </a>
+                            }
+                            else
+                            {
+                                <a class="ey-menu-title text-decoration-none" asp-controller="Talent" asp-action="Index">
+                                    <i class="fas fa-chart-bar"></i>
+                                    <span>Compétences</span>
+                                </a>
+                            }
+                            <i class="fas fa-chevron-down ey-chevron" id="chevron-competences" onclick="event.stopPropagation(); toggleSubmenu('competences')"></i>
                         </div>
                         <ul class="ey-submenu @(openCompetences ? "expanded" : "")" id="submenu-competences">
                             @if (ownCollabId.HasValue)
@@ -182,11 +192,6 @@
                             }
                             @if (isManagerPlus)
                             {
-                                <li>
-                                    <a class="nav-link @(currentController == "Competences" && currentAction == "MatriceEquipe" ? "active" : "")" asp-controller="Competences" asp-action="MatriceEquipe">
-                                        <i class="fas fa-th"></i><span class="nav-link-label">Matrice de compétences</span>
-                                    </a>
-                                </li>
                                 <li>
                                     <a class="nav-link @(currentController == "Talent" && currentAction == "Index" ? "active" : "")" asp-controller="Talent" asp-action="Index">
                                         <i class="fas fa-gem"></i><span class="nav-link-label">Gestion des talents</span>
@@ -205,19 +210,14 @@
                     @if (isPrivileged)
                     {
                         <div class="ey-menu-item">
-                            <div class="ey-menu-header" onclick="toggleSubmenu('analytics')">
-                                <div class="ey-menu-title">
+                            <div class="ey-menu-header">
+                                <a class="ey-menu-title text-decoration-none" asp-controller="Reporting" asp-action="ExecutiveDashboard">
                                     <i class="fas fa-chart-pie"></i>
                                     <span>Analytique & Reporting</span>
-                                </div>
-                                <i class="fas fa-chevron-down ey-chevron" id="chevron-analytics"></i>
+                                </a>
+                                <i class="fas fa-chevron-down ey-chevron" id="chevron-analytics" onclick="event.stopPropagation(); toggleSubmenu('analytics')"></i>
                             </div>
                             <ul class="ey-submenu @(openAnalytics ? "expanded" : "")" id="submenu-analytics">
-                                <li>
-                                    <a class="nav-link @(currentController == "RhInsights" ? "active" : "")" asp-controller="RhInsights" asp-action="Index">
-                                        <i class="fas fa-brain"></i><span class="nav-link-label">RH Insights</span>
-                                    </a>
-                                </li>
                                 <li>
                                     <a class="nav-link @(currentController == "Reporting" ? "active" : "")" asp-controller="Reporting" asp-action="ExecutiveDashboard">
                                         <i class="fas fa-chart-area"></i><span class="nav-link-label">Tableau de bord exécutif</span>
@@ -231,12 +231,12 @@
                     @if (roles.Contains("ITAdmin"))
                     {
                         <div class="ey-menu-item">
-                            <div class="ey-menu-header" onclick="toggleSubmenu('admin-it')">
-                                <div class="ey-menu-title">
+                            <div class="ey-menu-header">
+                                <a class="ey-menu-title text-decoration-none" asp-area="Admin" asp-controller="AdminHome" asp-action="Index">
                                     <i class="fas fa-shield-alt"></i>
                                     <span>Administration IT</span>
-                                </div>
-                                <i class="fas fa-chevron-down ey-chevron" id="chevron-admin-it"></i>
+                                </a>
+                                <i class="fas fa-chevron-down ey-chevron" id="chevron-admin-it" onclick="event.stopPropagation(); toggleSubmenu('admin-it')"></i>
                             </div>
                             <ul class="ey-submenu @(openAdminIt ? "expanded" : "")" id="submenu-admin-it">
                                 <li>

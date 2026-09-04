@@ -965,6 +965,16 @@
         }
     });
 
+    // Deep-link a specific tab from the sidebar (?tab=mes-formations|catalogue|certifications).
+    (function () {
+        var requestedTab = new URLSearchParams(window.location.search).get('tab');
+        if (!requestedTab) return;
+        var tabButton = document.getElementById(requestedTab + '-tab');
+        if (tabButton && window.bootstrap && bootstrap.Tab) {
+            bootstrap.Tab.getOrCreateInstance(tabButton).show();
+        }
+    })();
+
     // Quick registration helper
     function quickRegister(formationId) {
         const form = document.getElementById('form-inscrire-' + formationId);
